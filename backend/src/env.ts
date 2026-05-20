@@ -19,6 +19,12 @@ const optionalUrlSchema = z.preprocess((value) => {
   return trimmed === '' ? undefined : trimmed
 }, z.string().url().optional())
 
+const optionalPositiveIntegerSchema = z.preprocess((value) => {
+  if (typeof value !== 'string') return value
+  const trimmed = value.trim()
+  return trimmed === '' ? undefined : trimmed
+}, z.coerce.number().int().positive().optional())
+
 const stringWithDefault = (defaultValue: string) =>
   z.preprocess((value) => {
     if (typeof value !== 'string') return value
@@ -54,7 +60,7 @@ const envSchema = z.object({
   SPACES_DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().positive().max(7 * 24 * 60 * 60).default(5 * 60),
   SPACES_PUBLIC_CACHE_CONTROL: stringWithDefault('public, max-age=31536000, immutable'),
   APPLE_IAP_BUNDLE_ID: optionalStringSchema,
-  APPLE_IAP_APP_APPLE_ID: z.coerce.number().int().positive().optional(),
+  APPLE_IAP_APP_APPLE_ID: optionalPositiveIntegerSchema,
   APPLE_IAP_ENVIRONMENT: z.enum(['Sandbox', 'Production']).default('Sandbox'),
   APPLE_IAP_ISSUER_ID: optionalStringSchema,
   APPLE_IAP_KEY_ID: optionalStringSchema,

@@ -38,6 +38,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const meQueryKey = ['auth', 'me'] as const;
+type MeQueryData = { user: UserDto };
 let bootstrapRefreshPromise: Promise<RefreshResponse | null> | null = null;
 
 export function AuthProvider({ children }: PropsWithChildren) {
@@ -112,15 +113,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const setSubscription = useCallback(
     (subscription: SubscriptionSnapshot) => {
-      queryClient.setQueryData<{ user: UserDto } | undefined>(meQueryKey, (current) => {
-        if (!current?.user) return current;
-        return {
-          user: {
-            ...current.user,
-            subscription,
-          },
-        };
-      });
+      queryClient.setQueryData<MeQueryData | undefined>(meQueryKey, (current) =>
+        updateCachedSubscription(current, subscription),
+      );
     },
     [queryClient],
   );
@@ -198,4 +193,37 @@ function refreshBootstrapSession(api: ApiClient) {
     });
 
   return bootstrapRefreshPromise;
+}
+
+function updateCachedSubscription(
+  current: MeQueryData | undefined,
+  subscription: SubscriptionSnapshot,
+): MeQueryData | undefined {
+  if (!current?.user) return current;
+  if (areSubscriptionSnapshotsEqual(current.user.subscription, subscription)) return current;
+
+  return {
+    user: {
+      ...current.user,
+      subscription,
+    },
+  };
+}
+
+function areSubscriptionSnapshotsEqual(
+  left: SubscriptionSnapshot,
+  right: SubscriptionSnapshot,
+) {
+  return (
+    left.entitlement === right.entitlement &&
+    left.isActive === right.isActive &&
+    left.state === right.state &&
+    left.platform === right.platform &&
+    left.productId === right.productId &&
+    left.originalTransactionId === right.originalTransactionId &&
+    left.transactionId === right.transactionId &&
+    left.expiresAt === right.expiresAt &&
+    left.willAutoRenew === right.willAutoRenew &&
+    left.updatedAt === right.updatedAt
+  );
 }

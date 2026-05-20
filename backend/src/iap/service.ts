@@ -115,8 +115,15 @@ export async function reconcileAppStoreTransactions(input: {
 
   for (const originalTransactionId of input.originalTransactionIds ?? []) {
     await recordReconcileAttempt(attemptState, async () => {
+      const environment = await resolveStatusLookupEnvironment({
+        db: input.db,
+        env: input.env,
+        userId: input.userId,
+        originalTransactionId,
+      })
       const statusItems = await input.verifier.getSubscriptionStatuses({
         transactionId: originalTransactionId,
+        environment,
       })
       return applyStatusTransactions({
         db: input.db,
@@ -246,6 +253,29 @@ async function applyStatusTransactions(input: {
   if (attemptState.firstError) throw attemptState.firstError
 
   return null
+}
+
+async function resolveStatusLookupEnvironment({
+  db,
+  env,
+  userId,
+  originalTransactionId,
+}: {
+  db: DbClient
+  env: AppEnv
+  userId: string
+  originalTransactionId: string
+}) {
+  const entitlement = await db.subscriptionEntitlement.findUnique({
+    where: { userId },
+    select: { environment: true, originalTransactionId: true },
+  })
+
+  if (entitlement?.originalTransactionId === originalTransactionId) {
+    return toAppStoreEnvironment(entitlement.environment ?? env.APPLE_IAP_ENVIRONMENT)
+  }
+
+  return toAppStoreEnvironment(env.APPLE_IAP_ENVIRONMENT)
 }
 
 async function claimAppStoreWebhook(db: DbClient, signedPayloadHash: string) {
@@ -595,6 +625,14 @@ function toDate(value: number | null | undefined) {
 function formatEnvironment(value: Environment | string | null | undefined) {
   if (!value) return null
   return String(value).toLowerCase()
+}
+
+function toAppStoreEnvironment(value: Environment | string | null | undefined) {
+  if (value === Environment.PRODUCTION || value === 'Production' || value === 'production') {
+    return Environment.PRODUCTION
+  }
+
+  return Environment.SANDBOX
 }
 
 function hashToken(value: string) {

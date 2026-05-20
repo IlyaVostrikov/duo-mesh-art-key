@@ -5,7 +5,7 @@ import type { DbClient } from '../db'
 import type { AppEnv } from '../env'
 import { SubscriptionState } from '../generated/prisma/enums'
 import type { AppStoreSubscriptionVerifier } from './apple-verifier'
-import { recordAndProcessAppStoreWebhook } from './service'
+import { reconcileAppStoreTransactions, recordAndProcessAppStoreWebhook } from './service'
 
 const env: AppEnv = {
   PORT: 3000,
@@ -72,6 +72,35 @@ test('releases webhook claims when final processed marker write fails', async ()
       id: 'webhook-1',
       processedAt: null,
     },
+  })
+})
+
+test('uses the configured production App Store environment for original transaction reconcile', async () => {
+  const getSubscriptionStatuses = mock(async () => [])
+  const db = {
+    subscriptionEntitlement: {
+      findUnique: mock(async () => null),
+    },
+  } as unknown as DbClient
+
+  await reconcileAppStoreTransactions({
+    db,
+    env: {
+      ...env,
+      APPLE_IAP_APP_APPLE_ID: 123456789,
+      APPLE_IAP_ENVIRONMENT: 'Production',
+    },
+    verifier: {
+      ...fakeVerifier(),
+      getSubscriptionStatuses,
+    },
+    userId: '018fd4f2-1f3a-7c88-bc49-333333333333',
+    originalTransactionIds: ['original-1'],
+  })
+
+  expect(getSubscriptionStatuses).toHaveBeenCalledWith({
+    transactionId: 'original-1',
+    environment: Environment.PRODUCTION,
   })
 })
 

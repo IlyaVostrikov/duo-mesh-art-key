@@ -73,6 +73,7 @@ function IosIapProvider({ children }: PropsWithChildren) {
   const auth = useAuth();
   const { api, setSubscription } = auth;
   const user = auth.user;
+  const userId = user?.id ?? null;
   const [selectedProductId, setSelectedProductId] = useState<string | null>(iosProductIds[0] ?? null);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -251,7 +252,7 @@ function IosIapProvider({ children }: PropsWithChildren) {
   );
 
   const sync = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
 
     setIsSyncing(true);
 
@@ -280,7 +281,7 @@ function IosIapProvider({ children }: PropsWithChildren) {
     } finally {
       setIsSyncing(false);
     }
-  }, [api, connected, reconcileAndFinishPurchases, setSubscription, user]);
+  }, [api, connected, reconcileAndFinishPurchases, setSubscription, userId]);
 
   const purchase = useCallback(async () => {
     if (!user || !selectedProductId) return;

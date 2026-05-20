@@ -429,6 +429,26 @@ test('IapProvider sync does not finish purchases already being processed by purc
   await unmount(root);
 });
 
+test('IapProvider does not resync just because an unchanged subscription rerenders auth state', async () => {
+  authState.setSubscription = mock((subscription: SubscriptionSnapshot) => {
+    if (!authState.user) return;
+    authState.user = {
+      ...authState.user,
+      subscription: { ...subscription },
+    };
+  });
+
+  const root = await renderProvider();
+  await waitForEffects();
+
+  expect(authState.api.iapEntitlement).toHaveBeenCalledTimes(1);
+
+  await rerenderProvider(root);
+  await waitForEffects();
+
+  expect(authState.api.iapEntitlement).toHaveBeenCalledTimes(1);
+});
+
 test('IapProvider blocks store actions while the App Store connection is not ready', async () => {
   currentIap.connected = false;
   currentIap.subscriptions = [
@@ -463,9 +483,20 @@ test('IapProvider blocks store actions while the App Store connection is not rea
 });
 
 async function renderProvider() {
-  const { IapProvider, useSubscriptionIap } = await import('../src/lib/iap');
   const container = fakeDocument.createElement('div');
   const root = createRoot(container);
+
+  await renderProviderTree(root);
+
+  return root;
+}
+
+async function rerenderProvider(root: Root) {
+  await renderProviderTree(root);
+}
+
+async function renderProviderTree(root: Root) {
+  const { IapProvider, useSubscriptionIap } = await import('../src/lib/iap');
 
   function Probe() {
     latestContext = useSubscriptionIap();
@@ -480,8 +511,6 @@ async function renderProvider() {
     );
     await waitForEffects();
   });
-
-  return root;
 }
 
 function waitForEffects() {
