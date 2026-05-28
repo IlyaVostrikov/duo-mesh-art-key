@@ -29,13 +29,25 @@ export function errorResponse(
   }
 }
 
+type ValidationHookResult = { success: true } | { success: false; error: ZodError }
+
+export function validationErrorResponse(details: unknown) {
+  return errorResponse('VALIDATION_ERROR', 'Invalid request payload', details)
+}
+
+export function validationErrorHook(result: ValidationHookResult, c: Context) {
+  if (!result.success) {
+    return c.json(validationErrorResponse(result.error.issues), 400)
+  }
+}
+
 export function handleError(error: Error, c: Context) {
   if (error instanceof AppError) {
     return c.json(errorResponse(error.code, error.message, error.details), error.status)
   }
 
   if (error instanceof ZodError) {
-    return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', error.issues), 400)
+    return c.json(validationErrorResponse(error.issues), 400)
   }
 
   if (error instanceof HTTPException) {

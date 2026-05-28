@@ -13,7 +13,7 @@ import type { Context } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 
 import type { AppEnv } from '../env'
-import { AppError, errorResponse } from '../http/errors'
+import { AppError, validationErrorHook } from '../http/errors'
 import type { AuthService } from './service'
 
 const refreshCookieName = 'web_app_demo_refresh'
@@ -181,14 +181,7 @@ const logoutRoute = createRoute({
 
 export function createAuthRoutes() {
   const routes = new OpenAPIHono<AuthRouteEnv>({
-    defaultHook: (result, c) => {
-      if (!result.success) {
-        return c.json(
-          errorResponse('VALIDATION_ERROR', 'Invalid request payload', result.error.issues),
-          400,
-        )
-      }
-    },
+    defaultHook: validationErrorHook,
   })
 
   routes.openapi(registerRoute, async (c) => {
