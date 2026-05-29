@@ -52,7 +52,7 @@ Keep dynamic pages fresh with HTTP cache headers (`Cache-Control`, `stale-while-
 
 ## Practice
 
-Keep website-specific UI and content in this workspace. Do not duplicate authenticated browser-app flows from `webapp`. If the website starts reading API data or shared DTOs (the first SSR/marketplace route), add `@web-app-demo/contracts` and, for interactive React islands, `@astrojs/react` intentionally, and validate the producer/consumer path.
+Keep website-specific UI and content in this workspace. Do not duplicate authenticated browser-app flows from `webapp`. If the website starts reading API data or shared DTOs (the first SSR/marketplace route), add `@duo-mesh/contracts` and, for interactive React islands, `@astrojs/react` intentionally, and validate the producer/consumer path.
 
 ## Current Upstream Documentation
 

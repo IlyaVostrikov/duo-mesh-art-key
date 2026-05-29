@@ -7,14 +7,38 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Extensions (managed outside Prisma migrations via --create-only + custom SQL) ───
+// CREATE EXTENSION IF NOT EXISTS pg_uuidv7;
+// CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+// ─── Users & Profiles ───
+
+enum UserRole {
+  GUEST
+  ARTIST
+  COLLECTOR
+  ADMIN
+}
+
 model User {
   id           String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
   email        String        @unique
   passwordHash String        @map("password_hash")
   displayName  String?       @map("display_name")
+  avatarUrl    String?       @map("avatar_url")
+  role         UserRole      @default(GUEST)
+  bio          String?       @db.Text
+  socialLinks  Json?         @map("social_links") @db.JsonB
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
-  sessions     AuthSession[]
+
+  sessions       AuthSession[]
+  artist         Artist?
+  collector      Collector?
+  followedArtists Follow[]      @relation("Follower")
+  notifications  Notification[]
+  provenanceFrom ProvenanceRecord[] @relation("FromOwner")
+  provenanceTo   ProvenanceRecord[] @relation("ToOwner")
 
   @@map("users")
 }
@@ -34,4 +58,388 @@ model AuthSession {
   @@index([userId], map: "auth_sessions_user_id_idx")
   @@index([expiresAt], map: "auth_sessions_expires_at_idx")
   @@map("auth_sessions")
+}
+
+enum ArtistTier {
+  FREE
+  PRO
+  GALLERY
+}
+
+model Artist {
+  id              String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId          String     @unique @db.Uuid @map("user_id")
+  artistStatement String?    @map("artist_statement") @db.Text
+  websiteUrl      String?    @map("website_url")
+  location        String?
+  verified        Boolean    @default(false)
+  tier            ArtistTier @default(FREE)
+  tierExpiresAt   DateTime?  @map("tier_expires_at")
+  totalSalesCount Int        @default(0) @map("total_sales_count")
+  totalRevenue    Decimal?   @default(0) @map("total_revenue") @db.Decimal(15, 2)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade, map: "artists_user_id_fkey")
+  artworks    Artwork[]
+  hall        ExhibitionHall?
+  exhibitions Exhibition[]
+  followers   Follow[]         @relation("FollowedArtist")
+  sales       Sale[]           @relation("Seller")
+
+  @@map("artists")
+}
+
+model Collector {
+  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId          String   @unique @db.Uuid @map("user_id")
+  shippingAddress Json?    @map("shipping_address") @db.JsonB
+  paymentMethods  Json?    @map("payment_methods") @db.JsonB
+  preferences     Json?    @db.JsonB
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade, map: "collectors_user_id_fkey")
+  purchases  Sale[]       @relation("Buyer")
+  collections Collection[]
+
+  @@map("collectors")
+}
+
+// ─── Artworks ───
+
+enum ArtworkCategory {
+  PAINTING
+  DIGITAL
+  PHOTOGRAPHY
+  SCULPTURE
+  MIXED_MEDIA
+  NFT
+  PRINT
+  DRAWING
+  OTHER
+}
+
+enum ArtworkStatus {
+  DRAFT
+  LISTED
+  IN_EXHIBITION
+  SOLD
+  RESERVED
+  ARCHIVED
+}
+
+enum EditionType {
+  UNIQUE
+  LIMITED
+  OPEN
+}
+
+model Artwork {
+  id                  String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  artistId            String         @db.Uuid @map("artist_id")
+  title               String
+  description         String?        @db.Text
+  year                Int?
+  medium              String?
+  dimensions          String?
+  category            ArtworkCategory @default(OTHER)
+  styleTags           String[]       @map("style_tags")
+  images              String[]
+  isDigitalOriginal   Boolean        @default(false) @map("is_digital_original")
+  isPhysicalDigitized Boolean        @default(false) @map("is_physical_digitized")
+  status              ArtworkStatus  @default(DRAFT)
+  price               Decimal?       @db.Decimal(15, 2)
+  currency            String         @default("RUB")
+  editionType         EditionType    @default(UNIQUE) @map("edition_type")
+  editionTotal        Int?           @map("edition_total")
+  editionNumber       Int?           @map("edition_number")
+  allowOffers         Boolean        @default(true) @map("allow_offers")
+  viewCount           Int            @default(0) @map("view_count")
+  saveCount           Int            @default(0) @map("save_count")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  artist             Artist              @relation(fields: [artistId], references: [id], onDelete: Cascade, map: "artworks_artist_id_fkey")
+  artKeys            ArtKey[]
+  provenanceRecords  ProvenanceRecord[]
+  exhibitionArtworks ExhibitionArtwork[]
+  sales              Sale[]
+  collectionItems    CollectionArtwork[]
+  inquiries          Inquiry[]
+
+  @@index([artistId], map: "artworks_artist_id_idx")
+  @@index([status], map: "artworks_status_idx")
+  @@index([category], map: "artworks_category_idx")
+  @@index([price], map: "artworks_price_idx")
+  @@index([createdAt], map: "artworks_created_at_idx")
+  @@map("artworks")
+}
+
+// ─── Exhibition Hall (each artist gets one virtual gallery) ───
+
+model ExhibitionHall {
+  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  artistId      String   @unique @db.Uuid @map("artist_id")
+  slug          String   @unique
+  title         String
+  description   String?  @db.Text
+  coverImageUrl String?  @map("cover_image_url")
+  layoutConfig  Json?    @map("layout_config") @db.JsonB
+  theme         String?  @default("default")
+  isPublished   Boolean  @default(false) @map("is_published")
+  viewCount     Int      @default(0) @map("view_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade, map: "halls_artist_id_fkey")
+
+  @@index([slug], map: "halls_slug_idx")
+  @@map("exhibition_halls")
+}
+
+// ─── Art Key (digital certificate of authenticity) ───
+
+model ArtKey {
+  id               String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  artworkId        String   @unique @db.Uuid @map("artwork_id")
+  keyCode          String   @unique @map("key_code")
+  ownerKey         String   @unique @map("owner_key")
+  certificateHash  String   @map("certificate_hash")
+  certificatePdfUrl String? @map("certificate_pdf_url")
+  qrCodeUrl        String?  @map("qr_code_url")
+  nfcId            String?  @map("nfc_id")
+  issuedAt         DateTime @default(now()) @map("issued_at")
+  revokedAt        DateTime? @map("revoked_at")
+
+  artwork           Artwork             @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "art_keys_artwork_id_fkey")
+  provenanceRecords ProvenanceRecord[]
+
+  @@index([keyCode], map: "art_keys_key_code_idx")
+  @@map("art_keys")
+}
+
+// ─── Provenance (ownership chain) ───
+
+enum TransferType {
+  CREATION
+  PRIMARY_SALE
+  SECONDARY_SALE
+  GIFT
+  INHERITANCE
+  TRANSFER
+}
+
+model ProvenanceRecord {
+  id              String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  artworkId       String       @db.Uuid @map("artwork_id")
+  artKeyId        String       @db.Uuid @map("art_key_id")
+  fromUserId      String?      @db.Uuid @map("from_user_id")
+  toUserId        String       @db.Uuid @map("to_user_id")
+  transferType    TransferType @default(CREATION) @map("transfer_type")
+  price           Decimal?     @db.Decimal(15, 2)
+  royaltyPercent  Decimal?     @default(10) @map("royalty_percent") @db.Decimal(5, 2)
+  royaltyPaid     Decimal?     @map("royalty_paid") @db.Decimal(15, 2)
+  transactionHash String?      @map("transaction_hash")
+  prevRecordHash  String?      @map("prev_record_hash")
+  notes           String?      @db.Text
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  artwork    Artwork @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "provenance_artwork_id_fkey")
+  artKey     ArtKey  @relation(fields: [artKeyId], references: [id], onDelete: Cascade, map: "provenance_art_key_id_fkey")
+  fromOwner  User?   @relation("FromOwner", fields: [fromUserId], references: [id], onDelete: SetNull, map: "provenance_from_user_id_fkey")
+  toOwner    User    @relation("ToOwner", fields: [toUserId], references: [id], onDelete: Cascade, map: "provenance_to_user_id_fkey")
+
+  @@index([artworkId, createdAt], map: "provenance_artwork_id_created_at_idx")
+  @@map("provenance_records")
+}
+
+// ─── Exhibitions (themed, curator-organized) ───
+
+enum ExhibitionType {
+  SOLO
+  GROUP
+  CURATED
+}
+
+model Exhibition {
+  id               String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  title            String
+  slug             String         @unique
+  description      String?        @db.Text
+  coverImageUrl    String?        @map("cover_image_url")
+  type             ExhibitionType @default(SOLO)
+  organizerId      String         @db.Uuid @map("organizer_id")
+  curatorId        String?        @db.Uuid @map("curator_id")
+  startsAt         DateTime?      @map("starts_at")
+  endsAt           DateTime?      @map("ends_at")
+  isPremiere       Boolean        @default(false) @map("is_premiere")
+  countdownEnabled Boolean        @default(false) @map("countdown_enabled")
+  isPublished      Boolean        @default(false) @map("is_published")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  organizer          Artist              @relation(fields: [organizerId], references: [id], onDelete: Cascade, map: "exhibitions_organizer_id_fkey")
+  exhibitionArtworks ExhibitionArtwork[]
+
+  @@index([slug], map: "exhibitions_slug_idx")
+  @@index([startsAt], map: "exhibitions_starts_at_idx")
+  @@map("exhibitions")
+}
+
+model ExhibitionArtwork {
+  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  exhibitionId  String   @db.Uuid @map("exhibition_id")
+  artworkId     String   @db.Uuid @map("artwork_id")
+  position      Int      @default(0)
+  featured      Boolean  @default(false)
+  addedAt       DateTime @default(now()) @map("added_at")
+
+  exhibition Exhibition @relation(fields: [exhibitionId], references: [id], onDelete: Cascade, map: "exhibition_artworks_exhibition_id_fkey")
+  artwork    Artwork    @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "exhibition_artworks_artwork_id_fkey")
+
+  @@unique([exhibitionId, artworkId], map: "exhibition_artworks_unique")
+  @@index([exhibitionId, position], map: "exhibition_artworks_exhibition_id_position_idx")
+  @@map("exhibition_artworks")
+}
+
+// ─── Sales ───
+
+enum SaleType {
+  DIRECT_SALE
+  AUCTION_WIN
+  OFFER_ACCEPTED
+}
+
+enum SaleStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  DISPUTED
+  CANCELLED
+}
+
+model Sale {
+  id              String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  artworkId       String     @db.Uuid @map("artwork_id")
+  sellerId        String     @db.Uuid @map("seller_id")
+  buyerId         String     @db.Uuid @map("buyer_id")
+  type            SaleType   @default(DIRECT_SALE)
+  price           Decimal    @db.Decimal(15, 2)
+  currency        String     @default("RUB")
+  commissionPercent Decimal  @default(12) @map("commission_percent") @db.Decimal(5, 2)
+  commissionAmount  Decimal? @map("commission_amount") @db.Decimal(15, 2)
+  platformFee     Decimal?   @map("platform_fee") @db.Decimal(15, 2)
+  sellerPayout    Decimal?   @map("seller_payout") @db.Decimal(15, 2)
+  status          SaleStatus @default(PENDING)
+  transactionHash String?    @map("transaction_hash")
+  completedAt     DateTime?  @map("completed_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  artwork Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "sales_artwork_id_fkey")
+  seller  Artist   @relation("Seller", fields: [sellerId], references: [id], onDelete: Cascade, map: "sales_seller_id_fkey")
+  buyer   Collector @relation("Buyer", fields: [buyerId], references: [id], onDelete: Cascade, map: "sales_buyer_id_fkey")
+
+  @@index([artworkId], map: "sales_artwork_id_idx")
+  @@index([sellerId], map: "sales_seller_id_idx")
+  @@index([buyerId], map: "sales_buyer_id_idx")
+  @@map("sales")
+}
+
+// ─── Collections (collector's curated sets) ───
+
+model Collection {
+  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectorId     String   @db.Uuid @map("collector_id")
+  title           String
+  description     String?  @db.Text
+  isPublic        Boolean  @default(false) @map("is_public")
+  coverArtworkId  String?  @db.Uuid @map("cover_artwork_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  collector Collector          @relation(fields: [collectorId], references: [id], onDelete: Cascade, map: "collections_collector_id_fkey")
+  items     CollectionArtwork[]
+
+  @@map("collections")
+}
+
+model CollectionArtwork {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId String   @db.Uuid @map("collection_id")
+  artworkId    String   @db.Uuid @map("artwork_id")
+  note         String?  @db.Text
+  addedAt      DateTime @default(now()) @map("added_at")
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade, map: "collection_artworks_collection_id_fkey")
+  artwork    Artwork    @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "collection_artworks_artwork_id_fkey")
+
+  @@unique([collectionId, artworkId], map: "collection_artworks_unique")
+  @@map("collection_artworks")
+}
+
+// ─── Social ───
+
+model Follow {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  followerId String   @db.Uuid @map("follower_id")
+  artistId   String   @db.Uuid @map("artist_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  follower User   @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade, map: "follows_follower_id_fkey")
+  artist   Artist @relation("FollowedArtist", fields: [artistId], references: [id], onDelete: Cascade, map: "follows_artist_id_fkey")
+
+  @@unique([followerId, artistId], map: "follows_unique")
+  @@index([artistId], map: "follows_artist_id_idx")
+  @@map("follows")
+}
+
+// ─── Notifications ───
+
+enum NotificationType {
+  PREMIERE_SOON
+  PREMIERE_STARTED
+  ARTWORK_SOLD
+  NEW_FOLLOWER
+  OFFER_RECEIVED
+  OFFER_ACCEPTED
+  COLLECTION_UPDATED
+  NEW_ARTWORK
+  EXHIBITION_INVITE
+}
+
+model Notification {
+  id        String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String           @db.Uuid @map("user_id")
+  type      NotificationType
+  title     String
+  body      String?          @db.Text
+  metadata  Json?            @db.JsonB
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, map: "notifications_user_id_fkey")
+
+  @@index([userId, isRead, createdAt], map: "notifications_user_id_is_read_created_at_idx")
+  @@map("notifications")
+}
+
+// ─── Contact / Inquiry (for MVP "contact to buy" flow) ───
+
+model Inquiry {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  artworkId  String   @db.Uuid @map("artwork_id")
+  fromName   String   @map("from_name")
+  fromEmail  String   @map("from_email")
+  message    String?  @db.Text
+  isResolved Boolean  @default(false) @map("is_resolved")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  artwork Artwork @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "inquiries_artwork_id_fkey")
+
+  @@index([artworkId], map: "inquiries_artwork_id_idx")
+  @@map("inquiries")
 }

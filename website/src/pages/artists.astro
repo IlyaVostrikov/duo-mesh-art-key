@@ -1,0 +1,67 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="Художники" description="Познакомьтесь с независимыми художниками на платформе DUO MESH.">
+  <div class="container">
+    <div class="page-header">
+      <h1>Художники</h1>
+      <input type="search" id="artist-search" class="search-input" placeholder="Поиск по имени..." />
+    </div>
+    <div id="artist-grid" class="artist-grid">
+      <p class="loading">Загрузка...</p>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const grid = document.getElementById('artist-grid')!
+  const searchInput = document.getElementById('artist-search') as HTMLInputElement
+  let debounceTimer: ReturnType<typeof setTimeout>
+
+  async function loadArtists(search?: string) {
+    grid.innerHTML = '<p class="loading">Загрузка...</p>'
+    try {
+      const data = await window.api.artists.list(1, search)
+      if (data.artists.length === 0) {
+        grid.innerHTML = '<p class="empty">Художники не найдены</p>'
+        return
+      }
+      grid.innerHTML = data.artists.map((a) => {
+        const name = a.displayName ?? 'Анонимный художник'
+        const link = a.hall?.slug ? `/halls/${a.hall.slug}` : `/artists/${a.id}`
+        const avatar = a.avatarUrl ? `<img src="${a.avatarUrl}" alt="${name}" />` : `<div class="avatar-placeholder">${name[0]}</div>`
+        return `<a href="${link}" class="artist-card">
+          <div class="avatar">${avatar}${a.verified ? '<span class="verified">✓</span>' : ''}</div>
+          <div class="info"><h3>${name}</h3><p>${a.location ?? ''}</p><p class="followers">${a.followersCount} подписчиков</p></div>
+        </a>`
+      }).join('')
+    } catch (err) {
+      grid.innerHTML = `<p class="error">Ошибка: ${(err as Error).message}</p>`
+    }
+  }
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => loadArtists(searchInput.value), 300)
+  })
+
+  loadArtists()
+</script>
+
+<style>
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+  .page-header h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.02em; }
+  .search-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.95rem; min-width: 240px; }
+  .artist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+  .loading, .empty, .error { grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 3rem 0; }
+  .artist-card { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; color: var(--text); transition: border-color 0.2s; }
+  .artist-card:hover { border-color: var(--accent); }
+  .avatar { position: relative; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--accent-dim); font-size: 1.5rem; font-weight: 700; color: white; }
+  .verified { position: absolute; bottom: 0; right: 0; width: 20px; height: 20px; background: var(--accent); border-radius: 50%; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; color: white; }
+  .info h3 { font-size: 1rem; font-weight: 600; }
+  .info p { font-size: 0.85rem; color: var(--text-secondary); }
+  .followers { margin-top: 0.15rem; }
+</style>

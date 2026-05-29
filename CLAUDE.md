@@ -44,7 +44,7 @@
 - In Codex shell sessions, do not assume JS tooling is on `PATH`. For `node`, `npm`, and `bun`, prefer `PATH="/opt/homebrew/bin:$HOME/.bun/bin:$PATH"`.
 - Prefer existing utilities, framework APIs, and the standard library before adding dependencies.
 - Do not add new production or tooling dependencies without explicit user approval unless the user directly requested that dependency by name.
-- Before using a new library, inspect the relevant `package.json`. Prefer installed libraries such as Zod, TanStack Query, TanStack Form, Hono, Prisma, Expo, and `@web-app-demo/contracts`.
+- Before using a new library, inspect the relevant `package.json`. Prefer installed libraries such as Zod, TanStack Query, TanStack Form, Hono, Prisma, Expo, and `@duo-mesh/contracts`.
 - If a missing dependency clearly improves the product outcome, explain the user-visible reason, maintenance/security impact, and ask before installing.
 - Before using framework-specific APIs, check current official docs, local package types, or existing examples.
 - For E2E, use Playwright for web and Maestro for mobile. Read `docs/TESTING.md` before adding flows.
@@ -61,17 +61,6 @@
 - When a surface is deferred, prefer a short note in that surface's README over extra agent instructions.
 - Prefer a monolithic backend. Do not split into microservices unless the product has a concrete operational need.
 - For real-time infrastructure decisions, follow `docs/ARCHITECTURE.md` and `docs/DEPLOYMENT.md`.
-
-## Bootstrap-Only Instructions
-
-<!-- BOOTSTRAP_ONLY_START -->
-This block exists only for fresh installs from the template. If this repository has not been initialized for a real project yet:
-
-- Read `README.md`, especially `Agent Repo Download Instructions`, before setup or feature work.
-- Follow that README section for product intake, active/deferred surfaces, repository remote handling, Docker/PostgreSQL setup, deployment scope, Expo/EAS owner setup, and mobile Maestro dev-client setup when mobile E2E is active.
-- Record durable project choices in README files and docs, not in `AGENTS.md` or `CLAUDE.md`.
-- After first-run setup is complete, delete this entire `Bootstrap-Only Instructions` block from both `AGENTS.md` and `CLAUDE.md`.
-<!-- BOOTSTRAP_ONLY_END -->
 
 ## Git And Remote Policy
 

@@ -1,2 +1,7 @@
 export * from './auth'
 export * from './errors'
+export * from './artists'
+export * from './artworks'
+export * from './halls'
+export * from './art-keys'
+export * from './social'

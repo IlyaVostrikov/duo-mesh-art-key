@@ -1,0 +1,105 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="Каталог работ" description="Просматривайте произведения искусства от независимых художников на DUO MESH.">
+  <div class="container">
+    <div class="page-header">
+      <h1>Каталог работ</h1>
+      <div class="filters">
+        <select id="filter-category" class="filter-select">
+          <option value="">Все категории</option>
+          <option value="PAINTING">Живопись</option>
+          <option value="DIGITAL">Цифровое</option>
+          <option value="PHOTOGRAPHY">Фотография</option>
+          <option value="SCULPTURE">Скульптура</option>
+          <option value="MIXED_MEDIA">Смешанная техника</option>
+          <option value="PRINT">Принт</option>
+          <option value="DRAWING">Графика</option>
+          <option value="OTHER">Другое</option>
+        </select>
+        <select id="filter-sort" class="filter-select">
+          <option value="newest">Сначала новые</option>
+          <option value="popular">Популярные</option>
+          <option value="price_asc">Цена ↑</option>
+          <option value="price_desc">Цена ↓</option>
+        </select>
+      </div>
+    </div>
+    <div id="artwork-grid" class="artwork-grid">
+      <p class="loading">Загрузка работ...</p>
+    </div>
+    <div id="pagination" class="pagination"></div>
+  </div>
+</BaseLayout>
+
+<script>
+  let page = 1
+  const grid = document.getElementById('artwork-grid')!
+  const pagination = document.getElementById('pagination')!
+  const categorySelect = document.getElementById('filter-category') as HTMLSelectElement
+  const sortSelect = document.getElementById('filter-sort') as HTMLSelectElement
+
+  async function loadArtworks() {
+    grid.innerHTML = '<p class="loading">Загрузка...</p>'
+    try {
+      const data = await window.api.artworks.list({
+        page: String(page),
+        pageSize: '12',
+        category: categorySelect.value,
+        sort: sortSelect.value,
+      })
+      if (data.artworks.length === 0) {
+        grid.innerHTML = '<p class="empty">Работы не найдены</p>'
+        pagination.innerHTML = ''
+        return
+      }
+      grid.innerHTML = data.artworks.map((aw) => {
+        const img = aw.images[0] ?? '/placeholder-art.svg'
+        const price = aw.price ? `${Number(aw.price).toLocaleString()} ${aw.currency}` : ''
+        return `<a href="/artworks/${aw.id}" class="card">
+          <div class="card-image"><img src="${img}" alt="${aw.title}" loading="lazy" /><span class="tag">${aw.category}</span></div>
+          <div class="card-body"><h3>${aw.title}</h3><p class="artist">${aw.artist?.displayName ?? ''}</p>${price ? `<p class="price">${price}</p>` : ''}</div>
+        </a>`
+      }).join('')
+      pagination.innerHTML = ''
+      if (data.total > data.pageSize) {
+        const totalPages = Math.ceil(data.total / data.pageSize)
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement('button')
+          btn.textContent = String(i)
+          btn.className = `page-btn${i === page ? ' active' : ''}`
+          btn.onclick = () => { page = i; loadArtworks(); window.scrollTo(0, 0) }
+          pagination.appendChild(btn)
+        }
+      }
+    } catch (err) {
+      grid.innerHTML = `<p class="error">Ошибка загрузки: ${(err as Error).message}</p>`
+    }
+  }
+
+  categorySelect.addEventListener('change', () => { page = 1; loadArtworks() })
+  sortSelect.addEventListener('change', () => { page = 1; loadArtworks() })
+  loadArtworks()
+</script>
+
+<style>
+  .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+  .page-header h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.02em; }
+  .filters { display: flex; gap: 0.75rem; }
+  .filter-select { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.9rem; }
+  .artwork-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+  .loading, .empty, .error { grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 3rem 0; }
+  .card { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; text-decoration: none; color: var(--text); transition: border-color 0.2s; }
+  .card:hover { border-color: var(--accent); }
+  .card-image { position: relative; aspect-ratio: 4/3; overflow: hidden; background: #1a1a20; }
+  .card-image img { width: 100%; height: 100%; object-fit: cover; }
+  .tag { position: absolute; top: 0.5rem; left: 0.5rem; background: rgba(0,0,0,0.7); color: var(--text-secondary); font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase; }
+  .card-body { padding: 1rem; }
+  .card-body h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .artist { font-size: 0.85rem; color: var(--text-secondary); }
+  .price { font-size: 0.95rem; font-weight: 600; color: var(--gold); margin-top: 0.25rem; }
+  .pagination { display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem; }
+  .page-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; }
+  .page-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+</style>

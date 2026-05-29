@@ -7,7 +7,7 @@ import {
   refreshRequestSchema,
   refreshResponseSchema,
   registerRequestSchema,
-} from '@web-app-demo/contracts'
+} from '@duo-mesh/contracts'
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi'
 import type { Context } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'

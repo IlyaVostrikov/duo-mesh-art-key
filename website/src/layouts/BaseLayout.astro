@@ -1,0 +1,78 @@
+---
+export interface Props {
+  title: string
+  description?: string
+  ogImage?: string
+}
+
+const { title, description, ogImage } = Astro.props
+const siteTitle = title.includes('DUO MESH') ? title : `${title} — DUO MESH`
+---
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{siteTitle}</title>
+    <meta name="description" content={description ?? 'Виртуальные выставочные залы для независимых художников. Открывайте, коллекционируйте, покупайте искусство.'} />
+    <meta property="og:title" content={siteTitle} />
+    <meta property="og:description" content={description ?? 'Виртуальные выставочные залы для независимых художников.'} />
+    <meta property="og:type" content="website" />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <slot name="head" />
+    <script is:inline src="/api-client.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-inner">
+        <a href="/" class="logo">DUO <span>MESH</span></a>
+        <nav class="nav" aria-label="Main">
+          <a href="/artworks">Работы</a>
+          <a href="/artists">Художники</a>
+          <a href="/about">О платформе</a>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="footer">
+      <div class="footer-inner">
+        <p>&copy; {new Date().getFullYear()} DUO MESH. Verified Art Marketplace.</p>
+      </div>
+    </footer>
+  </body>
+</html>
+<style is:global>
+  :root {
+    color-scheme: dark;
+    --bg: #0a0a0b;
+    --surface: #141416;
+    --border: #242428;
+    --text: #e8e8ed;
+    --text-secondary: #9898a0;
+    --accent: #7c5cfc;
+    --accent-dim: #5a3fd4;
+    --gold: #d4a853;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; display: flex; flex-direction: column; line-height: 1.6; }
+  main { flex: 1; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent-dim); }
+  .header { border-bottom: 1px solid var(--border); background: var(--surface); }
+  .header-inner { max-width: 1200px; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+  .logo span { color: var(--accent); }
+  .nav { display: flex; gap: 1.5rem; }
+  .nav a { color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; }
+  .nav a:hover { color: var(--text); }
+  .footer { border-top: 1px solid var(--border); background: var(--surface); margin-top: auto; }
+  .footer-inner { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .footer p { color: var(--text-secondary); font-size: 0.85rem; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+</style>

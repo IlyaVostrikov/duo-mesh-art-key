@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import type { LoginRequest, RegisterRequest } from '@web-app-demo/contracts'
+import type { LoginRequest, RegisterRequest } from '@duo-mesh/contracts'
 import {
   type PropsWithChildren,
   useCallback,

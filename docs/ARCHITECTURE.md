@@ -53,18 +53,18 @@ Refresh-token rotation creates a new session and revokes the previous one. `/api
 
 ## Frontend
 
-There are two browser surfaces, split by whether the pages need SEO. `website` (Astro, SSG by default, SSR per route) owns everything that must be public and search-indexable or share with rich previews: landing, marketing, content, and the public side of a storefront or marketplace. `webapp` (React CSR) owns everything that lives behind sign-in and needs no SEO: dashboards, account areas, authenticated tools. A marketplace typically uses both — public catalog in `website`, authenticated app in `webapp` — sharing `@web-app-demo/contracts`. The decision rule the installing agent should apply is in the root [README.md](../README.md) under "Choosing `webapp` vs `website`".
+There are two browser surfaces, split by whether the pages need SEO. `website` (Astro, SSG by default, SSR per route) owns everything that must be public and search-indexable or share with rich previews: landing, marketing, content, and the public side of a storefront or marketplace. `webapp` (React CSR) owns everything that lives behind sign-in and needs no SEO: dashboards, account areas, authenticated tools. A marketplace typically uses both — public catalog in `website`, authenticated app in `webapp` — sharing `@duo-mesh/contracts`. The decision rule the installing agent should apply is in the root [README.md](../README.md) under "Choosing `webapp` vs `website`".
 
 The webapp follows these client rules:
 
 - TanStack Query owns server state.
 - TanStack Form owns form state.
-- Zod schemas come from `@web-app-demo/contracts`.
+- Zod schemas come from `@duo-mesh/contracts`.
 - The API client centralizes base URL handling, auth headers, refresh/retry behavior, and error shape parsing.
 
 Do not create a new form, query, auth, or API abstraction until the existing pattern stops solving the current problem.
 
-`website` is a separate Astro workspace for public SSG/SSR pages (landing, content sites, marketplace). Pages prerender to static HTML by default; a route opts into SSR with `export const prerender = false` (Node adapter at runtime). It does not own the auth flow and should not duplicate the CSR client from `webapp`. If the website starts reading API data or shared DTOs, connect `@web-app-demo/contracts` and validate producer/consumer sides the same way as `webapp`.
+`website` is a separate Astro workspace for public SSG/SSR pages (landing, content sites, marketplace). Pages prerender to static HTML by default; a route opts into SSR with `export const prerender = false` (Node adapter at runtime). It does not own the auth flow and should not duplicate the CSR client from `webapp`. If the website starts reading API data or shared DTOs, connect `@duo-mesh/contracts` and validate producer/consumer sides the same way as `webapp`.
 
 ## Testing
 

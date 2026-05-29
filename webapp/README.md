@@ -17,7 +17,7 @@ This section may be updated during first-run bootstrap. If the root `README.md` 
 - TanStack Query
 - TanStack Form
 - TanStack Router
-- Zod contracts from `@web-app-demo/contracts`
+- Zod contracts from `@duo-mesh/contracts`
 - shadcn CLI
 - Playwright
 - ESLint

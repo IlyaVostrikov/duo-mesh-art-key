@@ -1,0 +1,64 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="Выставочный зал" description="Виртуальный выставочный зал художника на DUO MESH.">
+  <div class="container" id="hall-content">
+    <p class="loading">Загрузка зала...</p>
+  </div>
+</BaseLayout>
+
+<script>
+  const slug = window.location.pathname.split('/').pop()!
+  const container = document.getElementById('hall-content')!
+
+  async function load() {
+    try {
+      const hall = await window.api.halls.get(slug)
+      container.innerHTML = `
+        <a href="/artists" class="back-link">&larr; К художникам</a>
+        <div class="hall-header">
+          ${hall.coverImageUrl ? `<img src="${hall.coverImageUrl}" alt="${hall.title}" class="hall-cover" />` : ''}
+          <div class="hall-header-text">
+            <h1>${hall.title}</h1>
+            <p class="artist-name">${hall.artist.displayName ?? 'Художник'}</p>
+            ${hall.description ? `<p class="hall-desc">${hall.description}</p>` : ''}
+            <p class="view-count">${hall.viewCount} просмотров</p>
+          </div>
+        </div>
+        <div class="artwork-grid">
+          ${hall.artworks.length === 0 ? '<p class="empty">В зале пока нет работ</p>' :
+            hall.artworks.map((aw: any) => `
+              <a href="/artworks/${aw.id}" class="card">
+                <div class="card-image">${aw.images[0] ? `<img src="${aw.images[0]}" alt="${aw.title}" loading="lazy" />` : '<div class="no-img"></div>'}</div>
+                <div class="card-body"><h3>${aw.title}</h3>${aw.price ? `<p class="price">${Number(aw.price).toLocaleString()} ${aw.currency}</p>` : ''}</div>
+              </a>
+            `).join('')
+          }
+        </div>`
+    } catch (err) {
+      container.innerHTML = `<p class="error">Ошибка: ${(err as Error).message}</p>`
+    }
+  }
+  load()
+</script>
+
+<style>
+  .loading, .error, .empty { text-align: center; color: var(--text-secondary); padding: 3rem 0; }
+  .back-link { display: inline-block; margin-bottom: 1.5rem; color: var(--text-secondary); }
+  .hall-header { margin-bottom: 2rem; }
+  .hall-cover { width: 100%; max-height: 400px; object-fit: cover; border-radius: 12px; margin-bottom: 1.5rem; }
+  .hall-header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.25rem; }
+  .artist-name { font-size: 1.2rem; color: var(--accent); margin-bottom: 0.75rem; }
+  .hall-desc { color: var(--text-secondary); line-height: 1.7; max-width: 720px; }
+  .view-count { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; }
+  .artwork-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+  .card { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; text-decoration: none; color: var(--text); transition: border-color 0.2s; }
+  .card:hover { border-color: var(--accent); }
+  .card-image { aspect-ratio: 4/3; overflow: hidden; background: #1a1a20; }
+  .card-image img { width: 100%; height: 100%; object-fit: cover; }
+  .no-img { width: 100%; height: 100%; }
+  .card-body { padding: 1rem; }
+  .card-body h3 { font-size: 1rem; font-weight: 600; }
+  .price { color: var(--gold); font-weight: 600; margin-top: 0.25rem; }
+</style>

@@ -14,7 +14,7 @@ import {
   type RefreshRequest,
   type RefreshResponse,
   type RegisterRequest,
-} from '@web-app-demo/contracts'
+} from '@duo-mesh/contracts'
 import type { z } from 'zod'
 
 const apiBaseUrl = (import.meta.env?.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '')

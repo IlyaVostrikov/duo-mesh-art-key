@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { registerRequestSchema } from '@web-app-demo/contracts'
+import { registerRequestSchema } from '@duo-mesh/contracts'
 
 describe('contracts', () => {
   test('normalizes auth registration payloads', () => {

@@ -1,0 +1,72 @@
+---
+export interface Props {
+  id: string
+  displayName: string | null
+  avatarUrl: string | null
+  location: string | null
+  hallSlug: string | null
+  verified: boolean
+  followersCount: number
+}
+
+const { id, displayName, avatarUrl, location, hallSlug, verified, followersCount } = Astro.props
+const name = displayName ?? 'Анонимный художник'
+const link = hallSlug ? `/halls/${hallSlug}` : `/artists/${id}`
+---
+
+<a href={link} class="artist-card">
+  <div class="artist-avatar">
+    {avatarUrl ? <img src={avatarUrl} alt={name} /> : <div class="avatar-placeholder">{name[0]}</div>}
+    {verified && <span class="verified-badge" title="Верифицирован">✓</span>}
+  </div>
+  <div class="artist-info">
+    <h3 class="artist-name">{name}</h3>
+    {location && <p class="artist-location">{location}</p>}
+    <p class="artist-followers">{followersCount} подписчиков</p>
+  </div>
+</a>
+
+<style>
+  .artist-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+  .artist-card:hover { border-color: var(--accent); }
+  .artist-avatar {
+    position: relative;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .artist-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--accent-dim);
+    font-size: 1.5rem; font-weight: 700;
+    color: white;
+  }
+  .verified-badge {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 20px; height: 20px;
+    background: var(--accent);
+    border-radius: 50%;
+    font-size: 0.7rem;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+  }
+  .artist-info { min-width: 0; }
+  .artist-name { font-size: 1rem; font-weight: 600; }
+  .artist-location { font-size: 0.85rem; color: var(--text-secondary); }
+  .artist-followers { font-size: 0.8rem; color: var(--text-secondary); }
+</style>

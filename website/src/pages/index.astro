@@ -1,103 +1,79 @@
 ---
-
+import BaseLayout from '../layouts/BaseLayout.astro'
 ---
 
-<html lang="ru">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>website</title>
-	</head>
-	<body>
-		<main>
-			<section class="hero" aria-labelledby="page-title">
-				<p class="eyebrow">Astro workspace</p>
-				<h1 id="page-title">website</h1>
-				<p class="summary">
-					Публичная SSG/SSR-поверхность проекта на Astro: лендинги, контентные
-					сайты и маркетплейс. Страницы статические по умолчанию, динамические
-					роуты переводятся в SSR через prerender = false.
-				</p>
-			</section>
-		</main>
-	</body>
-</html>
+<BaseLayout
+  title="DUO MESH"
+  description="Виртуальные выставочные залы для независимых художников. Verified Art Marketplace с цифровыми сертификатами подлинности."
+>
+  <section class="hero">
+    <div class="hero-content container">
+      <h1 class="hero-title">
+        Искусство обретает<br />
+        <span>цифровой дом</span>
+      </h1>
+      <p class="hero-text">
+        DUO MESH — экосистема для независимых художников. Виртуальные выставочные залы,
+        премьеры работ, цифровые сертификаты подлинности Art Key и прямой контакт с художником.
+      </p>
+      <div class="hero-actions">
+        <a href="/artworks" class="btn btn-primary">Смотреть работы</a>
+        <a href="/artists" class="btn btn-secondary">Открыть художников</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="features container">
+    <h2 class="section-title">Как это работает</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3>Виртуальные залы</h3>
+        <p>Каждый художник получает собственное выставочное пространство — не ленту товаров, а атмосферную галерею.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔑</div>
+        <h3>Art Key</h3>
+        <p>Цифровой сертификат подлинности с уникальным ключом, историей владения и QR-верификацией.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📜</div>
+        <h3>Провенанс</h3>
+        <p>Полная история каждого произведения: создание → продажи → владельцы. Прозрачность и доверие.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta container">
+    <h2>Готовы открыть свою галерею?</h2>
+    <p>Присоединяйтесь к DUO MESH и получите свой выставочный зал.</p>
+    <a href="http://localhost:5173/register" class="btn btn-primary">Стать художником</a>
+  </section>
+</BaseLayout>
 
 <style>
-	:root {
-		color-scheme: light;
-		font-family:
-			Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-			sans-serif;
-		background: #f6f8fb;
-		color: #14221f;
-	}
-
-	body {
-		margin: 0;
-		min-height: 100vh;
-		background: #f6f8fb;
-	}
-
-	main {
-		min-height: 100vh;
-		display: grid;
-		align-items: center;
-		padding: 3rem 1.5rem;
-	}
-
-	.hero {
-		max-width: 720px;
-	}
-
-	.eyebrow {
-		margin: 0 0 1rem;
-		font-size: 0.8rem;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: #4c6f5b;
-	}
-
-	h1 {
-		margin: 0;
-		font-size: 4rem;
-		line-height: 0.92;
-		letter-spacing: 0;
-	}
-
-	.summary {
-		margin: 1.5rem 0 0;
-		max-width: 580px;
-		font-size: 1.125rem;
-		line-height: 1.55;
-		color: #3e4a42;
-	}
-
-	@media (min-width: 720px) {
-		main {
-			padding: 5rem;
-		}
-
-		h1 {
-			font-size: 7rem;
-		}
-
-		.summary {
-			font-size: 1.25rem;
-		}
-	}
-
-	@media (min-width: 1120px) {
-		main {
-			padding: 6rem;
-		}
-
-		h1 {
-			font-size: 9rem;
-		}
-	}
+  .hero {
+    padding: 4rem 0;
+    text-align: center;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+  }
+  .hero-title { font-size: 3.5rem; line-height: 1.1; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 1.5rem; }
+  .hero-title span { color: var(--accent); }
+  .hero-text { max-width: 640px; margin: 0 auto 2rem; font-size: 1.15rem; color: var(--text-secondary); line-height: 1.7; }
+  .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 0.75rem 1.75rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-dim); color: white; }
+  .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .section-title { font-size: 2rem; font-weight: 700; margin-bottom: 2rem; text-align: center; }
+  .features { padding: 4rem 0; }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+  .feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; text-align: center; }
+  .feature-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .feature-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .feature-card p { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6; }
+  .cta { padding: 4rem 0; text-align: center; }
+  .cta h2 { font-size: 2rem; font-weight: 700; margin-bottom: 0.75rem; }
+  .cta p { color: var(--text-secondary); margin-bottom: 1.5rem; }
 </style>

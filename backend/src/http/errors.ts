@@ -1,4 +1,4 @@
-import type { ApiErrorCode, ApiErrorResponse } from '@web-app-demo/contracts'
+import type { ApiErrorCode, ApiErrorResponse } from '@duo-mesh/contracts'
 import type { Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'

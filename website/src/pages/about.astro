@@ -1,0 +1,50 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="О платформе" description="DUO MESH — экосистема для независимых художников с цифровыми сертификатами подлинности Art Key.">
+  <div class="container about-page">
+    <h1>О платформе</h1>
+    <div class="about-grid">
+      <div class="about-section">
+        <h2>Что такое DUO MESH</h2>
+        <p>DUO MESH — это не маркетплейс. Это город искусства, где у каждого художника есть свой дом, а улицы — это выставки.</p>
+        <p>Мы создаём экосистему, в которой независимые художники получают полноценное виртуальное присутствие: персональный выставочный зал, цифровые сертификаты подлинности на каждую работу и прямую связь с покупателями.</p>
+      </div>
+      <div class="about-section">
+        <h2>Art Key — цифровой паспорт произведения</h2>
+        <p>Каждая работа на платформе получает уникальный идентификатор Art Key — криптографически защищённый сертификат, который подтверждает подлинность произведения и отслеживает историю владения (provenance).</p>
+        <p>Это не NFT — это практичная система для реального искусства: физического и цифрового.</p>
+      </div>
+      <div class="about-section">
+        <h2>Для художников</h2>
+        <ul>
+          <li>Бесплатный выставочный зал</li>
+          <li>Прямой контакт с покупателями</li>
+          <li>Сертификаты подлинности на каждую работу</li>
+          <li>Отслеживание провенанса</li>
+          <li>Премьеры и события</li>
+        </ul>
+      </div>
+      <div class="about-section">
+        <h2>Для коллекционеров</h2>
+        <ul>
+          <li>Прямой контакт с художниками</li>
+          <li>Проверка подлинности через Art Key</li>
+          <li>История владения каждой работы</li>
+          <li>Виртуальные прогулки по залам</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .about-page h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 2rem; }
+  .about-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; }
+  .about-section h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--accent); }
+  .about-section p { color: var(--text-secondary); line-height: 1.7; margin-bottom: 0.75rem; }
+  .about-section ul { list-style: none; padding: 0; }
+  .about-section li { color: var(--text-secondary); padding: 0.3rem 0; }
+  .about-section li::before { content: '— '; color: var(--accent); }
+</style>

@@ -1,0 +1,78 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="Художник" description="Профиль художника на платформе DUO MESH.">
+  <div class="container" id="artist-profile">
+    <p class="loading">Загрузка профиля...</p>
+  </div>
+</BaseLayout>
+
+<script>
+  const id = window.location.pathname.split('/').pop()!
+  const container = document.getElementById('artist-profile')!
+
+  async function load() {
+    try {
+      const artist = await window.api.artists.get(id)
+      const works = await window.api.artists.getArtworks(id)
+      const name = artist.displayName ?? 'Анонимный художник'
+
+      container.innerHTML = `
+        <a href="/artists" class="back-link">&larr; К каталогу</a>
+        <div class="artist-header">
+          <div class="avatar">${artist.avatarUrl ? `<img src="${artist.avatarUrl}" alt="${name}" />` : `<div class="placeholder">${name[0]}</div>`}${artist.verified ? '<span class="verified">✓</span>' : ''}</div>
+          <div>
+            <h1>${name}</h1>
+            ${artist.location ? `<p class="location">${artist.location}</p>` : ''}
+            <p class="followers">${artist.followersCount} подписчиков</p>
+            ${artist.hall?.slug ? `<a href="/halls/${artist.hall.slug}" class="hall-link">Посмотреть выставочный зал &rarr;</a>` : ''}
+          </div>
+        </div>
+        ${artist.bio ? `<p class="bio">${artist.bio}</p>` : ''}
+        ${artist.artistStatement ? `<div class="statement"><h3>Artist Statement</h3><p>${artist.artistStatement}</p></div>` : ''}
+        <h2 class="section-title">Работы художника</h2>
+        <div class="artwork-grid">
+          ${works.artworks.length === 0 ? '<p class="empty">Пока нет опубликованных работ</p>' :
+            works.artworks.map((aw) => `
+              <a href="/artworks/${aw.id}" class="card">
+                <div class="card-image">${aw.images[0] ? `<img src="${aw.images[0]}" alt="${aw.title}" loading="lazy" />` : '<div class="no-img"></div>'}</div>
+                <div class="card-body"><h3>${aw.title}</h3>${aw.price ? `<p class="price">${Number(aw.price).toLocaleString()} ${aw.currency}</p>` : ''}</div>
+              </a>
+            `).join('')
+          }
+        </div>`
+    } catch (err) {
+      container.innerHTML = `<p class="error">Ошибка: ${(err as Error).message}</p>`
+    }
+  }
+  load()
+</script>
+
+<style>
+  .loading, .error, .empty { text-align: center; color: var(--text-secondary); padding: 3rem 0; }
+  .back-link { display: inline-block; margin-bottom: 1.5rem; color: var(--text-secondary); }
+  .artist-header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
+  .avatar { position: relative; width: 80px; height: 80px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--accent-dim); font-size: 2rem; font-weight: 700; color: white; }
+  .verified { position: absolute; bottom: 0; right: 0; width: 24px; height: 24px; background: var(--accent); border-radius: 50%; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; color: white; }
+  .artist-header h1 { font-size: 2rem; font-weight: 700; }
+  .location { color: var(--text-secondary); }
+  .followers { font-size: 0.9rem; color: var(--text-secondary); }
+  .hall-link { display: inline-block; margin-top: 0.5rem; color: var(--accent); font-weight: 600; }
+  .bio { color: var(--text-secondary); line-height: 1.7; margin-bottom: 1.5rem; max-width: 720px; }
+  .statement { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
+  .statement h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 0.5rem; }
+  .statement p { color: var(--text-secondary); line-height: 1.7; }
+  .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
+  .artwork-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+  .card { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; text-decoration: none; color: var(--text); transition: border-color 0.2s; }
+  .card:hover { border-color: var(--accent); }
+  .card-image { aspect-ratio: 4/3; overflow: hidden; background: #1a1a20; }
+  .card-image img { width: 100%; height: 100%; object-fit: cover; }
+  .no-img { width: 100%; height: 100%; }
+  .card-body { padding: 1rem; }
+  .card-body h3 { font-size: 1rem; font-weight: 600; }
+  .price { color: var(--gold); font-weight: 600; margin-top: 0.25rem; }
+</style>

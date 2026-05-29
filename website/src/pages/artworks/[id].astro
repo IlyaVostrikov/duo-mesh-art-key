@@ -1,0 +1,122 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="Работа" description="Детальная информация о произведении искусства.">
+  <div class="container" id="artwork-detail">
+    <p class="loading">Загрузка...</p>
+  </div>
+</BaseLayout>
+
+<script>
+  const id = window.location.pathname.split('/').pop()!
+  const container = document.getElementById('artwork-detail')!
+
+  async function load() {
+    try {
+      const aw = await window.api.artworks.get(id)
+
+      const images = aw.images.length > 0
+        ? aw.images.map((img: string, i: number) =>
+            `<img src="${img}" alt="${aw.title} — ${i + 1}" class="${i === 0 ? 'main-image' : 'thumb'}" ${i > 0 ? 'loading="lazy"' : ''} />`
+          ).join('')
+        : '<div class="no-image">Нет изображения</div>'
+
+      const price = aw.price ? `${Number(aw.price).toLocaleString()} ${aw.currency}` : 'Цена не указана'
+
+      container.innerHTML = `
+        <a href="/artworks" class="back-link">&larr; Назад к каталогу</a>
+        <div class="artwork-layout">
+          <div class="artwork-images">${images}</div>
+          <div class="artwork-info">
+            <h1>${aw.title}</h1>
+            ${aw.artist ? `<a href="/artists/${aw.artist.id}" class="artist-link">${aw.artist.displayName ?? 'Художник'}</a>` : ''}
+            ${aw.year ? `<p class="meta">${aw.year}${aw.medium ? ' · ' + aw.medium : ''}${aw.dimensions ? ' · ' + aw.dimensions : ''}</p>` : ''}
+            <div class="tags">${aw.styleTags.map((t: string) => `<span class="tag">${t}</span>`).join(' ')}</div>
+            ${aw.description ? `<p class="description">${aw.description}</p>` : ''}
+            <div class="price-block">
+              <span class="price">${price}</span>
+              <span class="edition">${aw.editionType === 'UNIQUE' ? 'Уникат' : aw.editionType === 'LIMITED' ? `Тираж: ${aw.editionTotal}` : 'Открытый тираж'}</span>
+            </div>
+            ${aw.artKey ? `<div class="artkey-info"><span class="artkey-badge">🔑 Art Key</span><code>${aw.artKey.keyCode}</code><p class="owner-key">Владелец: ${aw.artKey.ownerKey}</p></div>` : ''}
+            ${aw.latestProvenance ? `<div class="provenance"><h3>Последняя передача</h3><p>${aw.latestProvenance.transferType} → ${aw.latestProvenance.toOwnerName ?? 'неизвестно'} (${new Date(aw.latestProvenance.createdAt).toLocaleDateString('ru')})</p></div>` : ''}
+            <div class="contact-form">
+              <h3>Хочу купить</h3>
+              <p class="form-hint">Оставьте контакты — художник свяжется с вами.</p>
+              <form id="inquiry-form">
+                <input type="text" id="inq-name" placeholder="Ваше имя" required />
+                <input type="email" id="inq-email" placeholder="Email" required />
+                <textarea id="inq-message" placeholder="Сообщение художнику (по желанию)" rows="3"></textarea>
+                <button type="submit" class="btn btn-primary" id="inq-submit">Отправить</button>
+              </form>
+              <p id="inq-status" class="status"></p>
+            </div>
+          </div>
+        </div>`
+
+      document.getElementById('inquiry-form')!.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const btn = document.getElementById('inq-submit') as HTMLButtonElement
+        const status = document.getElementById('inq-status')!
+        btn.disabled = true
+        btn.textContent = 'Отправка...'
+        try {
+          await window.api.inquiries.create({
+            artworkId: id,
+            fromName: (document.getElementById('inq-name') as HTMLInputElement).value,
+            fromEmail: (document.getElementById('inq-email') as HTMLInputElement).value,
+            message: (document.getElementById('inq-message') as HTMLTextAreaElement).value || undefined,
+          })
+          status.textContent = '✓ Сообщение отправлено! Художник свяжется с вами.'
+          status.className = 'status success'
+        } catch (err) {
+          status.textContent = `Ошибка: ${(err as Error).message}`
+          status.className = 'status error'
+        } finally {
+          btn.disabled = false
+          btn.textContent = 'Отправить'
+        }
+      })
+    } catch (err) {
+      container.innerHTML = `<p class="error">Ошибка загрузки: ${(err as Error).message}</p>`
+    }
+  }
+  load()
+</script>
+
+<style>
+  .loading, .error { text-align: center; color: var(--text-secondary); padding: 3rem 0; }
+  .back-link { display: inline-block; margin-bottom: 1.5rem; color: var(--text-secondary); }
+  .artwork-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+  .artwork-images .main-image { width: 100%; border-radius: 12px; }
+  .artwork-images .thumb { width: 80px; height: 60px; object-fit: cover; border-radius: 6px; margin: 0.5rem 0.5rem 0 0; cursor: pointer; }
+  .no-image { aspect-ratio: 4/3; background: var(--surface); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+  .artwork-info h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .artist-link { color: var(--accent); font-size: 1.1rem; }
+  .meta { color: var(--text-secondary); margin: 0.5rem 0; }
+  .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0; }
+  .tag { background: var(--surface); border: 1px solid var(--border); padding: 0.2rem 0.6rem; border-radius: 100px; font-size: 0.8rem; color: var(--text-secondary); }
+  .description { margin: 1rem 0; line-height: 1.7; color: var(--text-secondary); }
+  .price-block { margin: 1.5rem 0; padding: 1rem; background: var(--surface); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .price { font-size: 1.5rem; font-weight: 700; color: var(--gold); }
+  .edition { font-size: 0.85rem; color: var(--text-secondary); }
+  .artkey-info { margin: 1rem 0; padding: 1rem; background: var(--surface); border: 1px solid var(--accent-dim); border-radius: 8px; }
+  .artkey-badge { font-weight: 700; color: var(--accent); margin-right: 0.5rem; }
+  .artkey-info code { font-size: 0.9rem; color: var(--text-secondary); }
+  .owner-key { margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); }
+  .provenance { margin: 1rem 0; }
+  .provenance h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+  .provenance p { color: var(--text-secondary); font-size: 0.9rem; }
+  .contact-form { margin-top: 2rem; padding: 1.5rem; background: var(--surface); border-radius: 12px; }
+  .contact-form h3 { font-size: 1.25rem; margin-bottom: 0.25rem; }
+  .form-hint { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem; }
+  .contact-form input, .contact-form textarea { width: 100%; padding: 0.75rem; margin-bottom: 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.95rem; }
+  .status { margin-top: 0.5rem; font-size: 0.9rem; }
+  .status.success { color: #4ade80; }
+  .status.error { color: #f87171; }
+  .btn { display: inline-block; padding: 0.75rem 1.75rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; border: none; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-dim); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  @media (max-width: 768px) { .artwork-layout { grid-template-columns: 1fr; } }
+</style>

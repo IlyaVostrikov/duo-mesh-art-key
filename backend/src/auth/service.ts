@@ -2,7 +2,7 @@ import type {
   LoginRequest,
   RegisterPayload,
   UserDto,
-} from '@web-app-demo/contracts'
+} from '@duo-mesh/contracts'
 
 import type { DbClient } from '../db'
 import type { AppEnv } from '../env'
@@ -21,6 +21,7 @@ type UserRecord = {
   id: string
   email: string
   displayName: string | null
+  role?: string
   createdAt: Date
 }
 
@@ -148,6 +149,16 @@ export class AuthService {
     }
   }
 
+  async verifyAccessToken(token: string) {
+    const payload = await verifyAccessToken(token, this.env)
+    const user = await this.db.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, role: true },
+    })
+    if (!user) return null
+    return { userId: user.id, role: user.role, sessionId: payload.sessionId }
+  }
+
   async getMe(accessToken: string | undefined) {
     if (!accessToken) {
       throw new AppError(401, 'UNAUTHORIZED', 'Access token is required')
@@ -231,11 +242,12 @@ function isUniqueConstraintError(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
 }
 
-export function toUserDto(user: UserRecord): UserDto {
+export function toUserDto(user: UserRecord & { role?: string }): UserDto {
   return {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
+    role: (user as any).role ?? 'GUEST',
     createdAt: user.createdAt.toISOString(),
   }
 }
