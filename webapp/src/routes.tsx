@@ -8,6 +8,8 @@ import { HallPage } from './pages/hall/HallPage'
 import { ArtworkDetailPage } from './pages/artwork/ArtworkDetailPage'
 import { ArtistOnboarding } from './pages/onboarding/ArtistOnboarding'
 import { DashboardArtworks } from './pages/dashboard/DashboardArtworks'
+import { DashboardHallSettings } from './pages/dashboard/DashboardHallSettings'
+import { DashboardProfileSettings } from './pages/dashboard/DashboardProfileSettings'
 import { DashboardLayout } from './pages/dashboard/DashboardLayout'
 
 const rootRoute = createRootRoute({
@@ -69,29 +71,13 @@ const dashboardArtworksRoute = createRoute({
 const dashboardHallRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard/hall',
-  component: () => (
-    <DashboardLayout>
-      <h1 className="text-display-sm mb-4" style={{ fontFamily: 'var(--font-display)' }}>Выставочный зал / Hall</h1>
-      <p style={{ color: 'var(--text-muted)' }}>Настройка виртуальной галереи — описание, обложка, порядок работ.</p>
-      <div className="mt-6 p-6 rounded-xl border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-        <p style={{ color: 'var(--text-muted)' }}>Редактор зала будет подключён к API в следующей итерации.</p>
-      </div>
-    </DashboardLayout>
-  ),
+  component: DashboardHallSettings,
 })
 
 const dashboardSettingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard/settings',
-  component: () => (
-    <DashboardLayout>
-      <h1 className="text-display-sm mb-4" style={{ fontFamily: 'var(--font-display)' }}>Профиль / Settings</h1>
-      <p style={{ color: 'var(--text-muted)' }}>Редактирование Artist Statement, контактов, платёжных реквизитов.</p>
-      <div className="mt-6 p-6 rounded-xl border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-        <p style={{ color: 'var(--text-muted)' }}>Форма настроек будет подключена к PATCH /api/artists/:id в следующей итерации.</p>
-      </div>
-    </DashboardLayout>
-  ),
+  component: DashboardProfileSettings,
 })
 
 const dashboardSalesRoute = createRoute({

@@ -35,6 +35,15 @@ export function createArtistRoutes() {
     return c.json(artist, 201)
   })
 
+  // Get current user's artist profile
+  routes.get('/me', authGuard(), async (c) => {
+    const svc = c.get('artistService')
+    const authUser = getAuthUser(c)
+    const raw = await svc.getByUserId(authUser!.userId)
+    if (!raw) return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
+    return c.json(raw)
+  })
+
   routes.get('/', async (c) => {
     const svc = c.get('artistService')
     const page = Number(c.req.query('page') ?? '1')
