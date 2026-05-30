@@ -25,7 +25,7 @@ export class ArtworkService {
     artistId?: string
   }) {
     const { page = 1, pageSize = 20, category, mediaType, status, style, priceMin, priceMax, editionType, sort = 'newest', q, artistId } = params
-    const where: Prisma.ArtworkWhereInput = { status: status ? (status as any) : { not: 'DRAFT' } }
+    const where: Prisma.ArtworkWhereInput = { status: status ? (status as any) : (artistId ? undefined : { not: 'DRAFT' }) }
 
     if (artistId) where.artistId = artistId
     if (q) {
@@ -85,7 +85,7 @@ export class ArtworkService {
     return toArtworkPublicDtoFull(artwork as any)
   }
 
-  async create(artistId: string, data: {
+  async create(artistId: string, userId: string, data: {
     title: string
     description?: string
     year?: number
@@ -111,8 +111,8 @@ export class ArtworkService {
       data: { ...data, artistId } as any,
     })
 
-    // Generate ArtKey for the artwork
-    await this.artKeyService.generate(artwork.id, artistId)
+    // Generate ArtKey for the artwork — userId is needed for provenance record
+    await this.artKeyService.generate(artwork.id, artistId, userId)
 
     return toArtworkDto(artwork)
   }

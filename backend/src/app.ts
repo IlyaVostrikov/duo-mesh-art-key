@@ -1,5 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
+import { serveStatic } from 'hono/bun'
 import { secureHeaders } from 'hono/secure-headers'
 
 import type { DbClient } from './db'
@@ -19,6 +20,7 @@ import { createArtKeyRoutes } from './routes/art-keys'
 import { createFollowRoutes } from './routes/follows'
 import { createSearchRoutes } from './routes/search'
 import { createInquiryRoutes } from './routes/inquiries'
+import { createUploadRoutes } from './routes/uploads'
 
 type AppBindings = {
   Variables: {
@@ -50,7 +52,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
     defaultHook: validationErrorHook,
   })
 
-  app.use(secureHeaders())
+  app.use(secureHeaders({ crossOriginResourcePolicy: 'cross-origin' }))
   app.use(
     '*',
     cors({
@@ -79,6 +81,13 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.get('/', (c) => c.json({ name: 'DUO MESH API', status: 'ok' }))
   app.get('/health', (c) => c.json({ status: 'ok' }))
 
+  // Allow cross-origin loading of uploaded assets (overrides secureHeaders CORP: same-origin)
+  app.use('/uploads/*', async (c, next) => {
+    c.res.headers.set('Cross-Origin-Resource-Policy', 'cross-origin')
+    await next()
+  })
+  app.use('/uploads/*', serveStatic({ root: './' }))
+
   // Mount routes
   app.route('/api/auth', createAuthRoutes())
   app.route('/api/artists', createArtistRoutes())
@@ -88,6 +97,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/api/follows', createFollowRoutes())
   app.route('/api/search', createSearchRoutes())
   app.route('/api/inquiries', createInquiryRoutes())
+  app.route('/api/uploads', createUploadRoutes())
 
   app.doc('/openapi.json', {
     openapi: '3.0.0',

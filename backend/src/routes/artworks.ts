@@ -67,7 +67,7 @@ export function createArtworkRoutes() {
       return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
     }
 
-    const artwork = await svc.create(artist.id, parsed.data)
+    const artwork = await svc.create(artist.id, authUser!.userId, parsed.data)
     return c.json(artwork, 201)
   })
 

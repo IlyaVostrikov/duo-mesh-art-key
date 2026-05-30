@@ -27,6 +27,7 @@ export const registerRequestSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   displayName: displayNameSchema,
+  role: z.enum(['GUEST', 'ARTIST', 'COLLECTOR']).default('GUEST'),
 })
 
 export const loginRequestSchema = z.object({

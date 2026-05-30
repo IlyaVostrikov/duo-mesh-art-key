@@ -62,6 +62,12 @@ export function DashboardProfileSettings() {
     e.preventDefault()
     setError(null)
     setSuccess(false)
+
+    if (!artistId) {
+      setError('Нет профиля художника / No artist profile')
+      return
+    }
+
     setSaving(true)
 
     const fullStatement = statementEn.trim()

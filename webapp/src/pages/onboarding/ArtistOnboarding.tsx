@@ -118,7 +118,7 @@ export function ArtistOnboarding() {
     hallTitle: lang === 'ru' ? 'Название зала' : 'Hall Title',
     hallTitleHint: lang === 'ru' ? 'Будет отображаться на двух языках' : 'Will be displayed in both languages',
     hallDesc: lang === 'ru' ? 'Описание зала' : 'Hall Description',
-    statement: lang === 'ru' ? 'Artist Statement' : 'Artist Statement',
+    statement: lang === 'ru' ? 'Творческое заявление / Artist Statement' : 'Artist Statement',
     statementHint: lang === 'ru'
       ? 'Расскажите о своей художественной практике, методах и философии.'
       : 'Tell about your artistic practice, methods, and philosophy.',

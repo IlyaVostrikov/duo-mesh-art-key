@@ -1,9 +1,15 @@
 const CDN_BASE = (import.meta as any).env?.VITE_CDN_BASE_URL as string | undefined
+const API_BASE = (import.meta as any).env?.VITE_API_URL as string | undefined
 
 export function assetUrl(path: string): string {
   if (!path) return ''
   if (path.startsWith('http')) return path
   if (CDN_BASE) return `${CDN_BASE.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
+  // For uploaded files hosted on the API server
+  if (path.startsWith('/uploads/') || path.startsWith('uploads/')) {
+    const base = API_BASE ?? 'http://localhost:3000'
+    return `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
+  }
   // Dev fallback: gradient placeholder keyed by path for visual distinctness
   const hue = hashString(path) % 360
   return svgPlaceholder(hue)

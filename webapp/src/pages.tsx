@@ -1,5 +1,6 @@
 import { Link, Outlet } from '@tanstack/react-router'
 
+import { AccountMenu } from '@/components/AccountMenu'
 import { AuthForm } from '@/components/AuthForm'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -48,11 +49,7 @@ export function RootLayout() {
               </Link>
             </Typography>
           </nav>
-          {auth.isAuthenticated && (
-            <Button type="button" variant="outline" size="sm" onClick={() => void auth.logout()}>
-              Logout
-            </Button>
-          )}
+          {auth.isAuthenticated && <AccountMenu />}
         </div>
       </header>
       <Outlet />
@@ -95,14 +92,14 @@ export function HomePage() {
     <section className="mx-auto grid w-full max-w-6xl gap-8 px-5 py-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
       <div className="grid gap-5">
         <Badge variant="outline" className="w-fit">
-          Golden path template
+          Цифровая галерея / Digital Gallery
         </Badge>
         <Typography className="max-w-3xl" variant="h1">
-          Auth, validation, API state, and forms are wired from day one.
+          Виртуальные 3D-галереи, ArtKey-сертификаты и provenance-цепочки для цифрового искусства.
         </Typography>
         <Typography className="max-w-2xl" tone="muted">
-          The web app uses shared Zod contracts, TanStack Query for server state, TanStack Form for
-          input state, and an API client that refreshes sessions through the backend.
+          DUO MESH — платформа для художников и коллекционеров. Выставляйте 3D-работы, создавайте
+          цифровые сертификаты подлинности, собирайте коллекции.
         </Typography>
       </div>
       <AuthForm />

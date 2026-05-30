@@ -24,6 +24,9 @@ bun-debug.log*
 .env.*
 !.env.example
 
+# Local uploads
+backend/uploads/
+
 # Prisma generated client
 backend/src/generated/prisma/
 backend/.prisma-generate.lock

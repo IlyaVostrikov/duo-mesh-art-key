@@ -7,6 +7,8 @@ const DATABASE_URL = process.env.DATABASE_URL ?? 'postgresql://superuser:superpa
 const adapter = new PrismaPg({ connectionString: DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
 
+const SEED_PASSWORD_HASH = await Bun.password.hash('password123', { algorithm: 'argon2id' })
+
 // ─── Shared helpers ───
 
 function canonicalJSON(obj: Record<string, unknown>): string {
@@ -296,7 +298,7 @@ async function main() {
       update: { displayName: c.displayName },
       create: {
         email: c.email,
-        passwordHash: crypto.randomBytes(32).toString('hex'), // non-loginable
+        passwordHash: SEED_PASSWORD_HASH,
         displayName: c.displayName,
         role: 'COLLECTOR',
       },
@@ -317,7 +319,7 @@ async function main() {
       },
       create: {
         email: artistData.email,
-        passwordHash: crypto.randomBytes(32).toString('hex'),
+        passwordHash: SEED_PASSWORD_HASH,
         displayName: artistData.displayName,
         role: 'ARTIST',
         bio: `${artistData.bioRu}\n\n---\n\n${artistData.bioEn}`,

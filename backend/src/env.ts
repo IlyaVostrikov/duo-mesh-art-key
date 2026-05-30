@@ -49,6 +49,8 @@ const envSchema = z.object({
   SPACES_CDN_BASE_URL: optionalUrlSchema,
   SPACES_ACCESS_KEY_ID: optionalStringSchema,
   SPACES_SECRET_ACCESS_KEY: optionalStringSchema,
+  UPLOAD_MAX_3D_BYTES: z.coerce.number().int().positive().default(100 * 1024 * 1024),
+  UPLOAD_MAX_IMAGE_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
   SPACES_UPLOAD_MAX_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
   SPACES_UPLOAD_URL_TTL_SECONDS: z.coerce.number().int().positive().max(7 * 24 * 60 * 60).default(15 * 60),
   SPACES_DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().positive().max(7 * 24 * 60 * 60).default(5 * 60),

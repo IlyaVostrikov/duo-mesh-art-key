@@ -14,7 +14,7 @@ function canonicalJSON(obj: Record<string, unknown>): string {
 export class ArtKeyService {
   constructor(private prisma: DbClient) {}
 
-  async generate(artworkId: string, artistId: string) {
+  async generate(artworkId: string, artistId: string, userId: string) {
     const existing = await this.prisma.artKey.findUnique({ where: { artworkId } })
     if (existing) return existing
 
@@ -63,7 +63,7 @@ export class ArtKeyService {
         artworkId,
         artKeyId: artKey.id,
         sequence: 0,
-        toUserId: artistId,
+        toUserId: userId,
         transferType: 'CREATION',
         recordHash: genesisHash,
         prevRecordHash: integrityHash,

@@ -1,4 +1,5 @@
 import { useForm } from '@tanstack/react-form'
+import { useNavigate } from '@tanstack/react-router'
 import {
   loginRequestSchema,
   registerRequestSchema,
@@ -24,11 +25,12 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiRequestError } from '@/lib/api'
 import { useAuth } from '@/lib/use-auth'
+import { RoleSelector } from '@/components/RoleSelector'
 
-type AuthMode = 'login' | 'register'
+type Step = 'role' | 'register' | 'login'
+type RoleId = 'ARTIST' | 'COLLECTOR' | 'GUEST'
 type FieldName = 'displayName' | 'email' | 'password'
 type FormError = { message?: string }
 type FieldErrors = Partial<Record<FieldName, FormError[]>>
@@ -44,44 +46,102 @@ const emptyDraft: AuthDraft = {
   displayName: '',
 }
 
+const ROLE_LABELS: Record<RoleId, string> = {
+  ARTIST: 'Художник / Artist',
+  COLLECTOR: 'Коллекционер / Collector',
+  GUEST: 'Зритель / Viewer',
+}
+
 export function AuthForm() {
-  const [mode, setMode] = useState<AuthMode>('register')
+  const [step, setStep] = useState<Step>('role')
+  const [selectedRole, setSelectedRole] = useState<RoleId>('GUEST')
   const [draft, setDraft] = useState<AuthDraft>(emptyDraft)
 
   function updateDraft(nextDraft: Partial<AuthDraft>) {
     setDraft((currentDraft) => ({ ...currentDraft, ...nextDraft }))
   }
 
+  function handleRoleSelect(role: RoleId) {
+    setSelectedRole(role)
+    setStep('register')
+  }
+
   return (
     <Card className="w-full" aria-label="Authentication">
       <CardHeader>
-        <CardTitle>Account access</CardTitle>
+        <CardTitle>Доступ / Account access</CardTitle>
         <CardDescription>
-          Create an account or continue with an existing session.
+          {step === 'role'
+            ? 'Выберите роль перед созданием аккаунта / Select your role before creating an account.'
+            : step === 'register'
+              ? 'Создать новый аккаунт / Create a new account.'
+              : 'Продолжить с существующей сессией / Continue with an existing session.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs
-          value={mode}
-          onValueChange={(nextMode) => {
-            if (nextMode === 'login' || nextMode === 'register') {
-              setMode(nextMode)
-            }
-          }}
-          className="mb-6"
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="register">Register</TabsTrigger>
-            <TabsTrigger value="login">Login</TabsTrigger>
-          </TabsList>
+        {step === 'role' && <RoleSelector onSelect={handleRoleSelect} />}
 
-          <TabsContent value="register" forceMount hidden={mode !== 'register'} className="mt-6">
-            {mode === 'register' && <RegisterForm draft={draft} onDraftChange={updateDraft} />}
-          </TabsContent>
-          <TabsContent value="login" forceMount hidden={mode !== 'login'} className="mt-6">
-            {mode === 'login' && <LoginForm draft={draft} onDraftChange={updateDraft} />}
-          </TabsContent>
-        </Tabs>
+        {step === 'register' && (
+          <div className="space-y-4">
+            <div
+              className="flex items-center gap-2 px-3 py-2 text-sm"
+              style={{
+                backgroundColor: 'rgba(198,255,58,0.06)',
+                border: '1px solid var(--accent)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text)',
+              }}
+            >
+              <span>{ROLE_LABELS[selectedRole]}</span>
+            </div>
+            <RegisterForm draft={draft} onDraftChange={updateDraft} role={selectedRole} />
+            <button
+              type="button"
+              onClick={() => setStep('role')}
+              className="w-full text-sm"
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              ← Назад / Back
+            </button>
+          </div>
+        )}
+
+        {step === 'login' && (
+          <div className="space-y-4">
+            <LoginForm draft={draft} onDraftChange={updateDraft} />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setStep('role')}
+                className="text-sm flex-1"
+                style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                ← Назад / Back
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep('register')}
+                className="text-sm"
+                style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Нет аккаунта? / No account?
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step !== 'login' && (
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <button
+              type="button"
+              onClick={() => setStep('login')}
+              className="text-sm"
+              style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              Уже есть аккаунт? Войти / Already have account? Login
+            </button>
+          </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -90,11 +150,14 @@ export function AuthForm() {
 function RegisterForm({
   draft,
   onDraftChange,
+  role,
 }: {
   draft: AuthDraft
   onDraftChange: (draft: Partial<AuthDraft>) => void
+  role: RoleId
 }) {
   const auth = useAuth()
+  const navigate = useNavigate()
   const displayNameId = useId()
   const displayNameErrorId = useId()
   const emailId = useId()
@@ -118,7 +181,14 @@ function RegisterForm({
       setFieldErrors({})
 
       try {
-        await auth.register(result.data as RegisterRequest)
+        await auth.register({ ...result.data, role } as RegisterRequest)
+        if (role === 'ARTIST') {
+          navigate({ to: '/onboarding/artist' })
+        } else if (role === 'COLLECTOR') {
+          navigate({ to: '/dashboard' })
+        } else {
+          navigate({ to: '/gallery' })
+        }
       } catch (caughtError) {
         if (caughtError instanceof ApiRequestError) {
           setFormError(caughtError.message)
@@ -141,7 +211,7 @@ function RegisterForm({
           name="displayName"
           children={(field) => (
             <Field data-invalid={hasErrors(fieldErrors.displayName)}>
-              <FieldLabel htmlFor={displayNameId}>Name</FieldLabel>
+              <FieldLabel htmlFor={displayNameId}>Имя / Name</FieldLabel>
               <Input
                 id={displayNameId}
                 name={field.name}
@@ -195,7 +265,7 @@ function RegisterForm({
           name="password"
           children={(field) => (
             <Field data-invalid={hasErrors(fieldErrors.password)}>
-              <FieldLabel htmlFor={passwordId}>Password</FieldLabel>
+              <FieldLabel htmlFor={passwordId}>Пароль / Password</FieldLabel>
               <Input
                 id={passwordId}
                 name={field.name}
@@ -224,7 +294,7 @@ function RegisterForm({
           selector={(state) => state.isSubmitting}
           children={(isSubmitting) => (
             <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Working...' : 'Create account'}
+              {isSubmitting ? 'Загрузка... / Working...' : 'Создать аккаунт / Create account'}
             </Button>
           )}
         />
@@ -241,6 +311,7 @@ function LoginForm({
   onDraftChange: (draft: Partial<AuthDraft>) => void
 }) {
   const auth = useAuth()
+  const navigate = useNavigate()
   const emailId = useId()
   const emailErrorId = useId()
   const passwordId = useId()
@@ -266,6 +337,7 @@ function LoginForm({
 
       try {
         await auth.login(result.data as LoginRequest)
+        navigate({ to: '/dashboard' })
       } catch (caughtError) {
         if (caughtError instanceof ApiRequestError) {
           setFormError(caughtError.message)
@@ -316,7 +388,7 @@ function LoginForm({
           name="password"
           children={(field) => (
             <Field data-invalid={hasErrors(fieldErrors.password)}>
-              <FieldLabel htmlFor={passwordId}>Password</FieldLabel>
+              <FieldLabel htmlFor={passwordId}>Пароль / Password</FieldLabel>
               <Input
                 id={passwordId}
                 name={field.name}
@@ -345,7 +417,7 @@ function LoginForm({
           selector={(state) => state.isSubmitting}
           children={(isSubmitting) => (
             <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Working...' : 'Login'}
+              {isSubmitting ? 'Загрузка... / Working...' : 'Войти / Login'}
             </Button>
           )}
         />
@@ -359,7 +431,7 @@ function FormAlert({ message }: { message: string | null }) {
 
   return (
     <Alert variant="destructive">
-      <AlertTitle>Authentication failed</AlertTitle>
+      <AlertTitle>Ошибка / Authentication failed</AlertTitle>
       <AlertDescription>{message}</AlertDescription>
     </Alert>
   )

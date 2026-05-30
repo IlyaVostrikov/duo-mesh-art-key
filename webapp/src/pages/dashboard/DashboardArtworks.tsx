@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DashboardLayout } from './DashboardLayout'
+import { FileUpload } from '@/components/ui/file-upload'
 
 interface ArtworkItem {
   id: string
@@ -41,6 +42,9 @@ export function DashboardArtworks() {
   const [price, setPrice] = useState('')
   const [currency, setCurrency] = useState('RUB')
   const [modelUrl, setModelUrl] = useState('')
+  const [posterFile, setPosterFile] = useState<File | null>(null)
+  const [modelFile, setModelFile] = useState<File | null>(null)
+  const [uploadingFiles, setUploadingFiles] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
   const fetchMyWorks = useCallback(async () => {
@@ -78,16 +82,48 @@ export function DashboardArtworks() {
 
     setSubmitting(true)
     try {
+      let posterUrl = 'seed/placeholder-poster.svg'
+      let finalModelUrl = modelUrl || undefined
+
+      // Phase 1: Upload files if any
+      if (posterFile || modelFile) {
+        setUploadingFiles(true)
+        const formData = new FormData()
+        if (posterFile) formData.append('files', posterFile)
+        if (modelFile) formData.append('files', modelFile)
+
+        const uploadRes = await fetch(`${API_BASE}/api/uploads`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${auth.accessToken!}` },
+          body: formData,
+        })
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}))
+          throw new Error(err.message ?? err.error?.message ?? 'Upload failed')
+        }
+        const uploadData = await uploadRes.json()
+        for (const f of uploadData.files) {
+          const ext = f.name.split('.').pop()?.toLowerCase()
+          if (['glb', 'gltf', 'blend', 'obj', 'fbx', 'stl', 'usdz'].includes(ext ?? '')) {
+            finalModelUrl = f.url
+          } else {
+            posterUrl = f.url
+          }
+        }
+        setUploadingFiles(false)
+      }
+
+      // Phase 2: Create artwork
       const body: Record<string, unknown> = {
         title: fullTitle,
         description: fullDesc || undefined,
         category,
         mediaType,
-        posterUrl: 'seed/placeholder-poster.svg',
+        posterUrl,
         price: price ? Number(price) : undefined,
         currency,
       }
-      if (mediaType === 'MODEL_3D' && modelUrl) body.modelUrl = modelUrl
+      if (mediaType === 'MODEL_3D' && finalModelUrl) body.modelUrl = finalModelUrl
 
       const res = await fetch(`${API_BASE}/api/artworks`, {
         method: 'POST',
@@ -100,13 +136,15 @@ export function DashboardArtworks() {
       }
       // Reset form and refresh
       setTitle(''); setTitleEn(''); setDescription(''); setDescriptionEn('')
-      setPrice(''); setModelUrl(''); setFormError(null)
+      setPrice(''); setModelUrl(''); setPosterFile(null); setModelFile(null)
+      setFormError(null)
       setShowForm(false)
       fetchMyWorks()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Create failed')
     } finally {
       setSubmitting(false)
+      setUploadingFiles(false)
     }
   }
 
@@ -167,6 +205,15 @@ export function DashboardArtworks() {
             </div>
           </div>
 
+          {/* Poster image upload */}
+          <FileUpload
+            accept=".jpg,.jpeg,.png,.webp,.svg"
+            maxSize={10 * 1024 * 1024}
+            onFileSelect={setPosterFile}
+            label="Обложка / Poster Image"
+            imagePreview
+          />
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Тип / Media</label>
@@ -204,10 +251,20 @@ export function DashboardArtworks() {
           </div>
 
           {mediaType === 'MODEL_3D' && (
-            <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Model URL (GLB)</label>
-              <Input value={modelUrl} onChange={(e) => setModelUrl(e.target.value)} placeholder="https://..." />
-            </div>
+            <>
+              <FileUpload
+                accept=".glb,.gltf,.blend,.obj,.fbx,.stl,.usdz"
+                maxSize={100 * 1024 * 1024}
+                onFileSelect={setModelFile}
+                label="3D Модель / 3D Model"
+              />
+              {!modelFile && (
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Или укажите URL / Or paste URL</label>
+                  <Input value={modelUrl} onChange={(e) => setModelUrl(e.target.value)} placeholder="https://example.com/model.glb" />
+                </div>
+              )}
+            </>
           )}
 
           {formError && (
@@ -217,7 +274,7 @@ export function DashboardArtworks() {
           )}
 
           <Button type="submit" disabled={submitting}>
-            {submitting ? 'Создание...' : 'Создать / Create'}
+            {uploadingFiles ? 'Загрузка файлов... / Uploading...' : submitting ? 'Создание... / Creating...' : 'Создать / Create'}
           </Button>
         </form>
       )}

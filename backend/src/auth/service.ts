@@ -49,6 +49,7 @@ export class AuthService {
           email: input.email,
           passwordHash,
           displayName: input.displayName,
+          role: input.role,
         },
       })
       .catch((error: unknown) => {
