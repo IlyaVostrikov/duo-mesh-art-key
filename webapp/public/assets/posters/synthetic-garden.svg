@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(195, 55%, 45%)"/>
+      <stop offset="100%" style="stop-color:hsl(76, 60%, 50%)"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <text x="400" y="280" text-anchor="middle" font-family="sans-serif" font-size="24" fill="white" opacity="0.8">Синтетический сад</text>
+  <text x="400" y="320" text-anchor="middle" font-family="monospace" font-size="12" fill="white" opacity="0.4">synthetic-garden</text>
+</svg>

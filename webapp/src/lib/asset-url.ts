@@ -10,9 +10,10 @@ export function assetUrl(path: string): string {
     const base = API_BASE ?? 'http://localhost:3000'
     return `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
   }
-  // Dev fallback: gradient placeholder keyed by path for visual distinctness
-  const hue = hashString(path) % 360
-  return svgPlaceholder(hue)
+  // Absolute paths are served by Vite static (public/) in dev, CDN in prod
+  if (path.startsWith('/')) return path
+  // Bare relative paths get a leading slash
+  return `/${path}`
 }
 
 function hashString(s: string): number {

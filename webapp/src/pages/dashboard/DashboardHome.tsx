@@ -25,6 +25,7 @@ export function DashboardHome() {
 
 function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
   const [hallSlug, setHallSlug] = useState<string | null>(null)
+  const [inquiries, setInquiries] = useState<any[]>([])
 
   useEffect(() => {
     if (!accessToken) return
@@ -36,6 +37,16 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
         if (!r.ok) return
         const artist = await r.json()
         if (!cancelled && artist.hall?.slug) setHallSlug(artist.hall.slug)
+      })
+      .catch(() => {})
+    // Fetch recent inquiries
+    fetch(`${API_BASE}/api/inquiries`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then(async (r) => {
+        if (!r.ok) return
+        const data = await r.json()
+        if (!cancelled) setInquiries(Array.isArray(data) ? data : [])
       })
       .catch(() => {})
     return () => { cancelled = true }
@@ -92,6 +103,43 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
           </Button>
         </CardContent>
       </Card>
+      {inquiries.length > 0 && (
+        <Card style={{ gridColumn: '1 / -1' }}>
+          <CardHeader>
+            <CardTitle>Запросы / Inquiries ({inquiries.length})</CardTitle>
+            <CardDescription>Сообщения от посетителей галереи / Messages from gallery visitors</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {inquiries.slice(0, 10).map((inq: any) => (
+                <div key={inq.id} style={{
+                  padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--surface)', border: '1px solid var(--border)',
+                  fontSize: '0.875rem',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <strong>{inq.fromName}</strong>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                      {new Date(inq.createdAt).toLocaleString('ru-RU')}
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                    {inq.fromEmail}
+                  </div>
+                  {inq.message && (
+                    <div style={{ marginTop: '4px', color: 'var(--text)' }}>{inq.message}</div>
+                  )}
+                  {inq.artwork && (
+                    <div style={{ marginTop: '4px', color: 'var(--accent)', fontSize: '0.75rem' }}>
+                      Re: {inq.artwork.title?.split(' / ')[0] || inq.artwork.title}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

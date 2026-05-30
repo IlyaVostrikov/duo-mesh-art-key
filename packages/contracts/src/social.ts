@@ -23,7 +23,7 @@ export const inquirySchema = z.object({
 })
 
 export const createInquirySchema = z.object({
-  artworkId: z.string().uuid(),
+  artworkId: z.string().min(1),
   fromName: z.string().trim().min(1).max(100),
   fromEmail: z.string().trim().email().max(254),
   message: z.string().trim().max(2000).optional(),

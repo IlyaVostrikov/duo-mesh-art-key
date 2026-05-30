@@ -1,12 +1,15 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
 
-import { AppPage, HomePage, RootLayout } from './pages'
+import { AppPage, RootLayout } from './pages'
+import { LandingPage } from './pages/landing'
+import { LoginPage } from './pages/LoginPage'
 import { DashboardHome } from './pages/dashboard/DashboardHome'
 import { ModelViewer3D } from './components/artwork/ModelViewer3D'
 import { GalleryPage } from './pages/gallery/GalleryPage'
 import { HallPage } from './pages/hall/HallPage'
 import { ArtworkDetailPage } from './pages/artwork/ArtworkDetailPage'
 import { ArtistOnboarding } from './pages/onboarding/ArtistOnboarding'
+import { VerifyIndexPage, VerifyResultPage } from './pages/verify/VerifyPage'
 import { DashboardArtworks } from './pages/dashboard/DashboardArtworks'
 import { DashboardHallSettings } from './pages/dashboard/DashboardHallSettings'
 import { DashboardProfileSettings } from './pages/dashboard/DashboardProfileSettings'
@@ -19,7 +22,13 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: HomePage,
+  component: LandingPage,
+})
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: LoginPage,
 })
 
 // ─── DUO MESH Surface Routes ───
@@ -53,6 +62,19 @@ const onboardingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/onboarding/artist',
   component: ArtistOnboarding,
+})
+
+// Verification routes
+const verifyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/verify',
+  component: VerifyIndexPage,
+})
+
+const verifyKeyCodeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/verify/$keyCode',
+  component: VerifyResultPage,
 })
 
 // Dashboard routes
@@ -150,6 +172,7 @@ const followingRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  loginRoute,
   appRoute,
   galleryRoute,
   hallRoute,
@@ -164,6 +187,8 @@ const routeTree = rootRoute.addChildren([
   collectionRoute,
   savedRoute,
   followingRoute,
+  verifyRoute,
+  verifyKeyCodeRoute,
 ])
 
 export const router = createRouter({ routeTree })

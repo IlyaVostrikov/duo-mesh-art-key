@@ -2,6 +2,54 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '../src/generated/prisma/client'
 import crypto from 'node:crypto'
 
+// ─── Direct public URLs for seed assets (CC0 / CC-BY / Public Domain) ───
+// Sources: Wikimedia Commons, Met Museum Open Access (CC0), Khronos glTF-Sample-Assets (CC-BY 4.0)
+// Poster URLs → local assets (self-sufficient, no internet needed for demo)
+// 2D artworks use generated SVGs; 3D models use GitHub screenshots (jpg/png)
+const POSTER_URLS: Record<string, string> = {
+  // 2D — CC0 Met Museum Open Access (public domain)
+  'cosmic-drift':      '/assets/posters/cosmic-drift.jpg',
+  'silent-shores':     '/assets/posters/silent-shores.jpg',
+  'crimson-pulse':     '/assets/posters/crimson-pulse.jpg',
+  'golden-thread':     '/assets/posters/golden-thread.jpg',
+  'storm-front':       '/assets/posters/storm-front.jpg',
+  'embers-of-form':    '/assets/posters/embers-of-form.jpg',
+  'anatomie-du-reve':  '/assets/posters/anatomie-du-reve.jpg',
+  'synthetic-garden':  '/assets/posters/synthetic-garden.jpg',
+  'threshold':         '/assets/posters/threshold.jpg',
+  'staircase-iii':     '/assets/posters/staircase-iii.jpg',
+  'winter-palace':     '/assets/posters/winter-palace.jpg',
+  'found-silence':     '/assets/posters/found-silence.jpg',
+  'afterimage':        '/assets/posters/afterimage.jpg',
+  'letters-never-sent': '/assets/posters/letters-never-sent.jpg',
+  'map-of-departures': '/assets/posters/map-of-departures.jpg',
+  'archive-of-rain':   '/assets/posters/archive-of-rain.jpg',
+  'fragments-of-light': '/assets/posters/fragments-of-light.jpg',
+  'lucid-dream':       '/assets/posters/lucid-dream.jpg',
+  'hybrid-flora':      '/assets/posters/hybrid-flora.jpg',
+  'glitch-portrait':   '/assets/posters/glitch-portrait.jpg',
+  // 2D — Openverse CC0 (commons + flickr)
+  'neon-nocturne':    '/assets/posters/neon-nocturne.jpg',
+  'data-ghosts':      '/assets/posters/data-ghosts.jpg',
+  'metro-diptych':    '/assets/posters/metro-diptych.jpg',
+  // 3D — screenshots from Khronos glTF-Sample-Assets (CC-BY 4.0)
+  'bronze-echo':      '/assets/posters/bronze-echo.png',
+  'scanned-figure':   '/assets/posters/scanned-figure.jpg',
+  'digital-double':   '/assets/posters/digital-double.png',
+  'frozen-gesture':   '/assets/posters/frozen-gesture.jpg',
+  'portal-v2':        '/assets/posters/portal-v2.jpg',
+  'mesh-poem':        '/assets/posters/mesh-poem.jpg',
+}
+const MODEL_URLS: Record<string, string> = {
+  // CC0 3D models from Polygonal Mind (https://github.com/ToxSam/open-source-3D-assets)
+  'bronze-echo':    '/assets/models/bronze-echo.glb',
+  'scanned-figure': '/assets/models/scanned-figure.glb',
+  'digital-double': '/assets/models/digital-double.glb',
+  'frozen-gesture': '/assets/models/frozen-gesture.glb',
+  'portal-v2':      '/assets/models/portal-v2.glb',
+  'mesh-poem':      '/assets/models/mesh-poem.glb',
+}
+
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgresql://superuser:superpassword@localhost:54329/duo_mesh?schema=public'
 
 const adapter = new PrismaPg({ connectionString: DATABASE_URL })
@@ -353,7 +401,7 @@ async function main() {
       update: {
         title: `${artistData.hall.titleRu} / ${artistData.hall.titleEn}`,
         description: `${artistData.hall.descriptionRu}\n\n${artistData.hall.descriptionEn}`,
-        coverImageUrl: artistData.hall.coverImageUrl || `seed/artworks/${artistData.artworks[0].slug}/poster.jpg`,
+        coverImageUrl: artistData.hall.coverImageUrl || POSTER_URLS[artistData.artworks[0].slug] || `seed/artworks/${artistData.artworks[0].slug}/poster.jpg`,
         isPublished: true,
       },
       create: {
@@ -361,15 +409,17 @@ async function main() {
         slug: artistData.hall.slug,
         title: `${artistData.hall.titleRu} / ${artistData.hall.titleEn}`,
         description: `${artistData.hall.descriptionRu}\n\n${artistData.hall.descriptionEn}`,
-        coverImageUrl: artistData.hall.coverImageUrl || `seed/artworks/${artistData.artworks[0].slug}/poster.jpg`,
+        coverImageUrl: artistData.hall.coverImageUrl || POSTER_URLS[artistData.artworks[0].slug] || `seed/artworks/${artistData.artworks[0].slug}/poster.jpg`,
         isPublished: true,
       },
     })
 
     // Upsert Artworks
     for (const awData of artistData.artworks) {
-      const posterUrl = `seed/artworks/${awData.slug}/poster.jpg`
-      const modelUrl = awData.mediaType === 'MODEL_3D' ? `seed/artworks/${awData.slug}/model.glb` : null
+      const posterUrl = POSTER_URLS[awData.slug] ?? `seed/artworks/${awData.slug}/poster.jpg`
+      const modelUrl = awData.mediaType === 'MODEL_3D'
+        ? (MODEL_URLS[awData.slug] ?? `seed/artworks/${awData.slug}/model.glb`)
+        : null
 
       const artwork = await prisma.artwork.upsert({
         where: { id: makeDeterministicId(artistData.slug, awData.slug) },
@@ -431,6 +481,7 @@ async function main() {
             ownerKey,
             certificateHash: sha256hex(`${artwork.id}:${keyCode}:${ownerKey}:${artwork.createdAt.toISOString()}`),
             integrityHash,
+            issuedAt: artwork.createdAt,
           },
         })
         total.artKeys++
