@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Typography } from '@/components/ui/typography'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { parseBilingualTitle } from '@/lib/utils'
 import { assetUrl } from '@/lib/asset-url'
 
@@ -23,18 +24,20 @@ export function LandingFeaturedHalls({ halls, lang }: FeaturedHallsProps) {
 
   return (
     <section className="mx-auto w-full max-w-6xl space-y-10 px-5 py-16">
-      <h2 className="text-display-sm" style={{ fontFamily: 'var(--font-display)' }}>
-        {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
-      </h2>
+      <RevealOnScroll direction="up">
+        <h2 className="text-display-sm" style={{ fontFamily: 'var(--font-display)' }}>
+          {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
+        </h2>
+      </RevealOnScroll>
 
       <div className="flex gap-5 overflow-x-auto pb-4" style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'thin' }}>
-        {halls.map((h) => {
+        {halls.map((h, i) => {
           const [titleRu, titleEn] = parseBilingualTitle(h.title)
           const title = lang === 'ru' ? titleRu : titleEn
 
           return (
+            <RevealOnScroll key={h.slug} direction="up" delay={i * 80}>
             <Link
-              key={h.slug}
               to="/hall/$hallSlug"
               params={{ hallSlug: h.slug }}
               className="group flex w-[280px] shrink-0 flex-col gap-4 rounded-lg border bg-surface p-5 transition-all hover:border-accent/40 hover:shadow-lg"
@@ -73,6 +76,7 @@ export function LandingFeaturedHalls({ halls, lang }: FeaturedHallsProps) {
                 )}
               </div>
             </Link>
+            </RevealOnScroll>
           )
         })}
       </div>

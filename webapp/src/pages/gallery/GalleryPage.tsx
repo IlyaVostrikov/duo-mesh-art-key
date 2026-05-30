@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ArtworkCard, ArtworkCardSkeleton } from '@/components/artwork/ArtworkCard'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
+import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
 import { assetUrl } from '@/lib/asset-url'
 
 interface ArtworkItem {
@@ -84,8 +86,10 @@ export function GalleryPage() {
           A curated selection of independent artists.
         </p>
         {total > 0 && (
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '8px' }}>
-            {total} {total === 1 ? 'работа / work' : total < 5 ? 'работы / works' : 'работ / works'}
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <AnimatedCounter value={total} />
+            {' '}
+            {total === 1 ? 'работа / work' : total < 5 ? 'работы / works' : 'работ / works'}
           </p>
         )}
       </header>
@@ -105,14 +109,15 @@ export function GalleryPage() {
             <button
               key={m.value}
               onClick={() => setMediaFilter(m.value)}
-              className="px-3 py-1 text-sm font-medium"
+              className="px-3 py-1 text-sm font-medium hover:text-text"
               style={{
                 borderRadius: 'var(--radius)',
                 backgroundColor: mediaFilter === m.value ? 'var(--surface-2)' : 'transparent',
                 color: mediaFilter === m.value ? 'var(--text)' : 'var(--text-muted)',
-                border: `1px solid ${mediaFilter === m.value ? 'var(--border)' : 'transparent'}`,
+                border: `1px solid ${mediaFilter === m.value ? 'var(--accent)' : 'transparent'}`,
                 transition: `all var(--dur-fast) var(--ease)`,
                 cursor: 'pointer',
+                transform: mediaFilter === m.value ? 'scale(1.02)' : 'scale(1)',
               }}
             >
               {m.label}
@@ -137,6 +142,15 @@ export function GalleryPage() {
             padding: '6px 12px',
             fontSize: '0.875rem',
             outline: 'none',
+            transition: 'border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)',
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'var(--accent)'
+            e.target.style.boxShadow = '0 0 0 1px rgba(198,255,58,0.2)'
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'var(--border)'
+            e.target.style.boxShadow = 'none'
           }}
         />
 
@@ -213,18 +227,19 @@ export function GalleryPage() {
             paddingBottom: '96px',
           }}
         >
-          {artworks.map((aw) => (
-            <ArtworkCard
-              key={aw.id}
-              id={aw.id}
-              title={aw.title}
-              artistName={aw.artist.displayName ?? 'Unknown'}
-              posterUrl={assetUrl(aw.posterUrl)}
-              mediaType={aw.mediaType}
-              price={aw.price}
-              currency={aw.currency}
-              status={aw.status}
-            />
+          {artworks.map((aw, i) => (
+            <RevealOnScroll key={aw.id} direction="up" delay={i * 60}>
+              <ArtworkCard
+                id={aw.id}
+                title={aw.title}
+                artistName={aw.artist.displayName ?? 'Unknown'}
+                posterUrl={assetUrl(aw.posterUrl)}
+                mediaType={aw.mediaType}
+                price={aw.price}
+                currency={aw.currency}
+                status={aw.status}
+              />
+            </RevealOnScroll>
           ))}
         </div>
       )}

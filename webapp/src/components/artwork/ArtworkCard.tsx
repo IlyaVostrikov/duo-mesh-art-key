@@ -58,12 +58,22 @@ export function ArtworkCard({
         <img
           src={posterUrl}
           alt={title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover group-hover:scale-[1.03]"
           loading="lazy"
           style={{
             transition: `opacity var(--dur-slow) var(--ease), transform var(--dur-slow) var(--ease)`,
           }}
           onLoad={(e) => (e.currentTarget.style.opacity = '1')}
+        />
+
+        {/* Glow border on hover */}
+        <div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none"
+          style={{
+            boxShadow: 'inset 0 0 0 1px var(--accent), 0 0 30px rgba(198,255,58,0.06)',
+            transition: `opacity var(--dur) var(--ease)`,
+            borderRadius: 'var(--radius)',
+          }}
         />
 
         {/* Hover overlay — surface lift on group hover */}
@@ -110,12 +120,13 @@ export function ArtworkCard({
       {/* Meta */}
       <div className="mt-3 space-y-1">
         <h3
-          className="text-display-sm truncate"
+          className="text-display-sm truncate group-hover:text-accent"
           style={{
             fontFamily: 'var(--font-display)',
             fontSize: '1rem',
             lineHeight: 1.3,
             color: 'var(--text)',
+            transition: `color var(--dur) var(--ease)`,
           }}
         >
           {title.split(' / ')[0]}

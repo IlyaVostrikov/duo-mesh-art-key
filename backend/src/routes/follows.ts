@@ -2,14 +2,25 @@ import { Hono } from 'hono'
 import { authGuard, getAuthUser, optionalAuth } from '../guards/auth'
 import type { DbClient } from '../db'
 
+import type { ArtistService } from '../services/artist.service'
+
 type FollowRouteEnv = {
   Variables: {
     prisma: DbClient
+    artistService: ArtistService
   }
 }
 
 export function createFollowRoutes() {
   const routes = new Hono<FollowRouteEnv>()
+
+  // List followed artists for current user
+  routes.get('/', authGuard(), async (c) => {
+    const svc = c.get('artistService')
+    const authUser = getAuthUser(c)
+    const artists = await svc.getFollowing(authUser!.userId)
+    return c.json({ artists, total: artists.length })
+  })
 
   // Follow an artist
   routes.post('/:artistId', authGuard(), async (c) => {

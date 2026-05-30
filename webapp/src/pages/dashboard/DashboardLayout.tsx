@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/use-auth'
 import { Spinner } from '@/components/ui/spinner'
 import { Typography } from '@/components/ui/typography'
 import { Card, CardContent } from '@/components/ui/card'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 
 const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
 
@@ -11,6 +12,7 @@ const ARTIST_NAV = [
   { to: '/dashboard', label: 'Обзор / Overview', exact: true },
   { to: '/dashboard/artworks', label: 'Работы / Artworks' },
   { to: '/dashboard/hall', label: 'Зал / Hall' },
+  { to: '/dashboard/hall/layout', label: 'Раскладка 3D / Layout' },
   { to: '/dashboard/settings', label: 'Профиль / Settings' },
   { to: '/dashboard/sales', label: 'Продажи / Sales' },
 ]
@@ -139,7 +141,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
       {/* Content */}
       <main className="flex-1" style={{ paddingTop: '48px', paddingLeft: '48px', paddingBottom: '96px' }}>
-        {children}
+        <RevealOnScroll direction="up">
+          {children}
+        </RevealOnScroll>
       </main>
     </div>
   )

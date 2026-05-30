@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 
 const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
 
@@ -41,24 +42,26 @@ export function ArtistOnboarding() {
   if (!auth.user) {
     return (
       <section className="mx-auto w-full max-w-2xl px-5 py-12">
-        <Card>
-          <CardHeader>
-            <CardTitle>Стать художником / Become an Artist</CardTitle>
-            <CardDescription>
-              Войдите или создайте аккаунт, чтобы продолжить.
-              <br />
-              Log in or create an account to continue.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <a
-              href="/app"
-              className="inline-flex items-center justify-center h-10 px-6 text-sm font-medium rounded-4xl bg-[var(--accent)] text-[var(--accent-ink)] no-underline"
-            >
-              Войти / Log in
-            </a>
-          </CardContent>
-        </Card>
+        <RevealOnScroll direction="up">
+          <Card>
+            <CardHeader>
+              <CardTitle>Стать художником / Become an Artist</CardTitle>
+              <CardDescription>
+                Войдите или создайте аккаунт, чтобы продолжить.
+                <br />
+                Log in or create an account to continue.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <a
+                href="/app"
+                className="inline-flex items-center justify-center h-10 px-6 text-sm font-medium rounded-4xl bg-[var(--accent)] text-[var(--accent-ink)] no-underline"
+              >
+                Войти / Log in
+              </a>
+            </CardContent>
+          </Card>
+        </RevealOnScroll>
       </section>
     )
   }
@@ -134,6 +137,7 @@ export function ArtistOnboarding() {
 
   return (
     <section className="mx-auto w-full max-w-3xl px-5 py-12">
+      <RevealOnScroll direction="up">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -313,6 +317,7 @@ export function ArtistOnboarding() {
           </form>
         </CardContent>
       </Card>
+      </RevealOnScroll>
     </section>
   )
 }

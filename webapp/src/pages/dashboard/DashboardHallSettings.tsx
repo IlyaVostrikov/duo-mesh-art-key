@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 
 const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
 
@@ -147,9 +148,11 @@ export function DashboardHallSettings() {
 
   return (
     <DashboardLayout>
-      <h1 className="text-display-sm mb-8" style={{ fontFamily: 'var(--font-display)' }}>
-        Выставочный зал / Hall
-      </h1>
+      <RevealOnScroll direction="up">
+        <h1 className="text-display-sm mb-8" style={{ fontFamily: 'var(--font-display)' }}>
+          Выставочный зал / Hall
+        </h1>
+      </RevealOnScroll>
 
       <form onSubmit={handleSave} className="space-y-6" style={{ maxWidth: '640px' }}>
         {/* Title */}

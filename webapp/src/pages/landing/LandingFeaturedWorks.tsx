@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { ArtworkCard } from '@/components/artwork/ArtworkCard'
 import { Typography } from '@/components/ui/typography'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 
 interface FeaturedWorksProps {
   works: Array<{
@@ -56,8 +57,9 @@ export function LandingFeaturedWorks({ works, lang }: FeaturedWorksProps) {
             'col-span-12 md:col-span-6 md:col-start-4',
           ]
           return (
-            <div key={w.id} className={spans[i] ?? 'col-span-12 md:col-span-4'}>
-              <ArtworkCard
+            <RevealOnScroll key={w.id} direction="up" delay={i * 80}>
+              <div className={spans[i] ?? 'col-span-12 md:col-span-4'}>
+                <ArtworkCard
                 id={w.id}
                 title={w.title}
                 artistName={w.artist.displayName}
@@ -68,7 +70,8 @@ export function LandingFeaturedWorks({ works, lang }: FeaturedWorksProps) {
                 status={w.status}
                 aspectRatio={i === 0 ? 'auto' : '4:5'}
               />
-            </div>
+              </div>
+            </RevealOnScroll>
           )
         })}
       </div>

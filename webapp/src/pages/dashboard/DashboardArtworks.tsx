@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DashboardLayout } from './DashboardLayout'
 import { FileUpload } from '@/components/ui/file-upload'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 
 interface ArtworkItem {
   id: string
@@ -168,9 +169,11 @@ export function DashboardArtworks() {
   return (
     <DashboardLayout>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
-        <h1 className="text-display-sm" style={{ fontFamily: 'var(--font-display)' }}>
-          Мои работы / My Artworks
-        </h1>
+        <RevealOnScroll direction="up">
+          <h1 className="text-display-sm" style={{ fontFamily: 'var(--font-display)' }}>
+            Мои работы / My Artworks
+          </h1>
+        </RevealOnScroll>
         <Button onClick={() => setShowForm(!showForm)} size="sm">
           {showForm ? 'Отмена / Cancel' : '+ Новая работа / New Artwork'}
         </Button>
@@ -309,9 +312,9 @@ export function DashboardArtworks() {
 
       {!loading && !error && artworks.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {artworks.map((aw) => (
+          {artworks.map((aw, i) => (
+            <RevealOnScroll key={aw.id} direction="up" delay={i * 50}>
             <div
-              key={aw.id}
               className="group relative"
               style={{ borderRadius: 'var(--radius)', overflow: 'hidden', backgroundColor: 'var(--surface)' }}
             >
@@ -350,6 +353,7 @@ export function DashboardArtworks() {
                 {deleting === aw.id ? '...' : '×'}
               </button>
             </div>
+            </RevealOnScroll>
           ))}
         </div>
       )}

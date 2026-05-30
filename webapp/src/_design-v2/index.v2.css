@@ -1,0 +1,116 @@
+/*
+  DESIGN V2 — Современная арт-галерея
+  Применить: заменить соответствующие блоки в src/index.css
+
+  Что меняется:
+  - Radii: убраны все "xl/2xl" выравнивания; токены теперь последовательны
+  - Keyframes: убраны float, shimmer, breathe — оставлены только fadeIn и aurora
+  - Grain texture: убрана (слишком незаметна, добавляет шум к css)
+  - Type scale: добавлен text-display-editorial (Cormorant, для hero)
+*/
+
+/* ─── Замена @theme inline ─── */
+@theme inline {
+  --font-sans: 'Inter Variable', sans-serif;
+  --font-display: 'Unbounded Variable', sans-serif;
+  --font-editorial: 'Cormorant Variable', serif;
+
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface-2);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-ink);
+  --color-secondary: var(--surface);
+  --color-secondary-foreground: var(--text-secondary);
+  --color-muted: var(--surface);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-ink);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--accent);
+
+  /* Radius унифицирован — тема арт-галереи = острые углы */
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-3xl: 2px;
+  --radius-4xl: 2px;
+}
+
+/* ─── Остаются те же токены цветов :root ─── */
+/* (копировать из оригинального index.css без изменений) */
+
+/* ─── Убрать body::after (grain) ─── */
+/* Просто удалить блок body::after { content: ''; ... } */
+
+/* ─── Заменить keyframes ─── */
+
+/* УБРАТЬ breathe, float, shimmer */
+
+/* ОСТАВИТЬ и усилить fadeIn */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ОСТАВИТЬ aurora */
+@keyframes aurora {
+  from { background-position: 50% 50%, 50% 50%; }
+  to   { background-position: 350% 50%, 350% 50%; }
+}
+
+/* ─── Type scale v2 ─── */
+
+/* Главный дисплей Unbounded — только для коротких заголовков */
+.text-display-hero {
+  font-family: 'Unbounded Variable', sans-serif;
+  font-size: 3.5rem;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+.text-display {
+  font-family: 'Unbounded Variable', sans-serif;
+  font-size: 2.25rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.text-display-sm {
+  font-family: 'Unbounded Variable', sans-serif;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+/* НОВОЕ: editorial hero — Cormorant для длинных атмосферных заголовков */
+.text-editorial-hero {
+  font-family: 'Cormorant Variable', serif;
+  font-size: 6rem;
+  line-height: 1.0;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.text-editorial {
+  font-family: 'Cormorant Variable', serif;
+  font-size: 3.5rem;
+  line-height: 1.05;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .text-display-hero    { font-size: 2.25rem; }
+  .text-display         { font-size: 1.75rem; }
+  .text-editorial-hero  { font-size: 3.5rem; }
+  .text-editorial       { font-size: 2.25rem; }
+}

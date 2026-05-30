@@ -3,6 +3,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { LenisProvider } from '@/components/motion/LenisProvider'
+import { CustomCursor } from '@/components/motion/CustomCursor'
+import { Preloader } from '@/components/motion/Preloader'
+import { ScrollToTop } from '@/components/motion/ScrollToTop'
 import App from './App'
 import { AuthProvider } from './lib/auth'
 import './index.css'
@@ -21,7 +25,12 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <App />
+          <LenisProvider>
+            <Preloader />
+            <CustomCursor />
+            <ScrollToTop />
+            <App />
+          </LenisProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

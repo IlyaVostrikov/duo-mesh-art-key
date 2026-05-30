@@ -19,13 +19,28 @@ export function ArtKeyQR({ keyCode, size = 120 }: { keyCode: string; size?: numb
   if (!dataUrl) return null
 
   return (
-    <div style={{ textAlign: 'center' }}>
-      <img
-        src={dataUrl}
-        alt={`QR: verify ${keyCode}`}
-        style={{ width: size, height: size, borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}
-      />
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.625rem', marginTop: '4px' }}>
+    <div
+      style={{ textAlign: 'center' }}
+      className="group"
+    >
+      <div style={{
+        display: 'inline-block',
+        padding: '8px',
+        backgroundColor: '#fff',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--border)',
+        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+      }}
+      className="group-hover:border-accent group-hover:shadow-[0_0_16px_rgba(198,255,58,0.2)]"
+      >
+        <img
+          src={dataUrl}
+          alt={`QR: verify ${keyCode}`}
+          style={{ width: size, height: size, display: 'block', borderRadius: '2px' }}
+        />
+      </div>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.625rem', marginTop: '6px' }}>
         Scan to verify / Отсканируйте для проверки
       </p>
     </div>

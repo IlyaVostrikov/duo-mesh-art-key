@@ -12,8 +12,15 @@ import { ArtistOnboarding } from './pages/onboarding/ArtistOnboarding'
 import { VerifyIndexPage, VerifyResultPage } from './pages/verify/VerifyPage'
 import { DashboardArtworks } from './pages/dashboard/DashboardArtworks'
 import { DashboardHallSettings } from './pages/dashboard/DashboardHallSettings'
+import { DashboardHallLayout } from './pages/dashboard/DashboardHallLayout'
 import { DashboardProfileSettings } from './pages/dashboard/DashboardProfileSettings'
-import { DashboardLayout } from './pages/dashboard/DashboardLayout'
+import { DashboardSales } from './pages/dashboard/DashboardSales'
+import { CollectionPage } from './pages/collection/CollectionPage'
+import { SavedPage } from './pages/collection/SavedPage'
+import { FollowingPage } from './pages/collection/FollowingPage'
+import { AdminDashboard } from './pages/admin/AdminDashboard'
+import { AdminUsers } from './pages/admin/AdminUsers'
+import { AdminArtworks } from './pages/admin/AdminArtworks'
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -96,6 +103,12 @@ const dashboardHallRoute = createRoute({
   component: DashboardHallSettings,
 })
 
+const dashboardHallLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard/hall/layout',
+  component: DashboardHallLayout,
+})
+
 const dashboardSettingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard/settings',
@@ -105,35 +118,20 @@ const dashboardSettingsRoute = createRoute({
 const dashboardSalesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard/sales',
-  component: () => (
-    <DashboardLayout>
-      <h1 className="text-display-sm mb-4" style={{ fontFamily: 'var(--font-display)' }}>Продажи / Sales</h1>
-      <p style={{ color: 'var(--text-muted)' }}>История продаж и выплат — будет доступна после подключения платёжной системы.</p>
-    </DashboardLayout>
-  ),
+  component: DashboardSales,
 })
 
 // Collection routes
 const collectionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/collection',
-  component: () => (
-    <section className="mx-auto w-full max-w-6xl px-5 py-8">
-      <h1 className="text-2xl font-bold mb-4">Моя коллекция</h1>
-      <p className="text-muted-foreground">Приобретённые работы и сертификаты.</p>
-    </section>
-  ),
+  component: CollectionPage,
 })
 
 const savedRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/collection/saved',
-  component: () => (
-    <section className="mx-auto w-full max-w-6xl px-5 py-8">
-      <h1 className="text-2xl font-bold mb-4">Сохранённое</h1>
-      <p className="text-muted-foreground">Избранные работы.</p>
-    </section>
-  ),
+  component: SavedPage,
 })
 
 // 3D viewer spike — test route for model-viewer integration
@@ -147,8 +145,8 @@ const viewer3dRoute = createRoute({
       <section className="mx-auto w-full max-w-4xl px-5 py-8">
         <h1 className="text-2xl font-bold mb-2">3D Viewer Spike</h1>
         <p className="text-muted-foreground mb-6">Проверка интеграции @google/model-viewer с seed-моделью.</p>
-        <div className="rounded-xl overflow-hidden border bg-black" style={{ height: '70vh' }}>
-          <ModelViewer3D modelUrl={demoModel} posterUrl={demoPoster} />
+        <div className="rounded-xl overflow-hidden border bg-black" style={{ height: '70vh' }} data-lenis-prevent>
+          <ModelViewer3D modelUrl={demoModel} posterUrl={demoPoster} iosSrc={demoModel.replace('.glb', '.usdz')} />
         </div>
         <p className="mt-4 text-sm text-muted-foreground">
           Модель: DamagedHelmet (glTF-Sample-Assets, CC-BY 4.0).<br />
@@ -162,12 +160,26 @@ const viewer3dRoute = createRoute({
 const followingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/following',
-  component: () => (
-    <section className="mx-auto w-full max-w-6xl px-5 py-8">
-      <h1 className="text-2xl font-bold mb-4">Подписки</h1>
-      <p className="text-muted-foreground">Отслеживаемые художники.</p>
-    </section>
-  ),
+  component: FollowingPage,
+})
+
+// Admin routes
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin',
+  component: AdminDashboard,
+})
+
+const adminUsersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/users',
+  component: AdminUsers,
+})
+
+const adminArtworksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/artworks',
+  component: AdminArtworks,
 })
 
 const routeTree = rootRoute.addChildren([
@@ -182,11 +194,15 @@ const routeTree = rootRoute.addChildren([
   dashboardRoute,
   dashboardArtworksRoute,
   dashboardHallRoute,
+  dashboardHallLayoutRoute,
   dashboardSettingsRoute,
   dashboardSalesRoute,
   collectionRoute,
   savedRoute,
   followingRoute,
+  adminRoute,
+  adminUsersRoute,
+  adminArtworksRoute,
   verifyRoute,
   verifyKeyCodeRoute,
 ])

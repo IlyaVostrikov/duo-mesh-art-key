@@ -2,6 +2,8 @@ import { Link } from '@tanstack/react-router'
 import { ArtKeyQR } from '@/components/artwork/ArtKeyQR'
 import { Button } from '@/components/ui/button'
 import { Typography } from '@/components/ui/typography'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
+import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
 
 interface ValuePropProps { lang: 'ru' | 'en' }
 
@@ -58,16 +60,55 @@ export function LandingValueProp({ lang }: ValuePropProps) {
 
         {/* Three pillars */}
         <div className="grid gap-8 md:grid-cols-3">
-          {PILLARS.map((p) => (
-            <div key={p.titleEn} className="space-y-3 rounded-lg border bg-surface p-6">
-              <Typography variant="h6" style={{ fontFamily: 'var(--font-display)' }}>
-                {lang === 'ru' ? p.titleRu : p.titleEn}
-              </Typography>
-              <Typography variant="bodySm" tone="muted">
-                {lang === 'ru' ? p.descRu : p.descEn}
-              </Typography>
-            </div>
+          {PILLARS.map((p, i) => (
+            <RevealOnScroll key={p.titleEn} direction="up" delay={i * 120}>
+              <div className="space-y-3 rounded-lg border bg-surface p-6 transition-all duration-500 hover:border-accent/20 hover:shadow-[0_0_30px_rgba(198,255,58,0.04)] hover:bg-surface-2">
+                <Typography variant="h6" style={{ fontFamily: 'var(--font-display)' }}>
+                  {lang === 'ru' ? p.titleRu : p.titleEn}
+                </Typography>
+                <Typography variant="bodySm" tone="muted">
+                  {lang === 'ru' ? p.descRu : p.descEn}
+                </Typography>
+              </div>
+            </RevealOnScroll>
           ))}
+        </div>
+
+        {/* Stats bar */}
+        <div className="flex flex-wrap justify-center gap-12 py-8 border-t border-b border-border/50">
+          <div className="text-center">
+            <div
+              className="text-display-sm"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              <AnimatedCounter value={29} />
+            </div>
+            <Typography variant="caption" tone="muted">
+              {lang === 'ru' ? 'Работ' : 'Artworks'}
+            </Typography>
+          </div>
+          <div className="text-center">
+            <div
+              className="text-display-sm"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              <AnimatedCounter value={12} suffix="+" />
+            </div>
+            <Typography variant="caption" tone="muted">
+              {lang === 'ru' ? 'Художников' : 'Artists'}
+            </Typography>
+          </div>
+          <div className="text-center">
+            <div
+              className="text-display-sm"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              <AnimatedCounter value={3402} />
+            </div>
+            <Typography variant="caption" tone="muted">
+              {lang === 'ru' ? 'Верификаций' : 'Verifications'}
+            </Typography>
+          </div>
         </div>
 
         {/* CTA */}

@@ -14,6 +14,7 @@ import { ArtworkService } from './services/artwork.service'
 import { HallService } from './services/hall.service'
 import { ArtKeyService } from './services/art-key.service'
 import { FeaturedService } from './services/featured.service'
+import { AdminService } from './services/admin.service'
 import { createArtistRoutes } from './routes/artists'
 import { createArtworkRoutes } from './routes/artworks'
 import { createHallRoutes } from './routes/halls'
@@ -23,6 +24,8 @@ import { createSearchRoutes } from './routes/search'
 import { createInquiryRoutes } from './routes/inquiries'
 import { createUploadRoutes } from './routes/uploads'
 import { createFeaturedRoutes } from './routes/featured'
+import { createSalesRoutes } from './routes/sales'
+import { createAdminRoutes } from './routes/admin'
 
 type AppBindings = {
   Variables: {
@@ -32,6 +35,7 @@ type AppBindings = {
     hallService: HallService
     artKeyService: ArtKeyService
     featuredService: FeaturedService
+    adminService: AdminService
     env: AppEnv
     prisma: DbClient
     storageService: StorageService | null
@@ -50,6 +54,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   const hallService = new HallService(prisma)
   const artKeyService = new ArtKeyService(prisma)
   const featuredService = new FeaturedService(prisma)
+  const adminService = new AdminService(prisma)
   const storageService = createStorageServiceFromEnv(env)
 
   const app = new OpenAPIHono<AppBindings>({
@@ -77,6 +82,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
     c.set('hallService', hallService)
     c.set('artKeyService', artKeyService)
     c.set('featuredService', featuredService)
+    c.set('adminService', adminService)
     c.set('env', env)
     c.set('prisma', prisma)
     c.set('storageService', storageService)
@@ -104,6 +110,8 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/api/inquiries', createInquiryRoutes())
   app.route('/api/uploads', createUploadRoutes())
   app.route('/api/featured', createFeaturedRoutes())
+  app.route('/api/sales', createSalesRoutes())
+  app.route('/api/admin', createAdminRoutes())
 
   app.doc('/openapi.json', {
     openapi: '3.0.0',

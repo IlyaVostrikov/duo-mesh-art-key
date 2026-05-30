@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Typography } from '@/components/ui/typography'
 import { parseBilingual } from '@/lib/utils'
 import { assetUrl } from '@/lib/asset-url'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 
 interface FeaturedArtistsProps {
   artists: Array<{
@@ -39,7 +40,8 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
           const hallTitle = lang === 'ru' ? hallTitleRu : hallTitleEn
 
           return (
-            <Link
+            <RevealOnScroll key={a.id} direction="up" delay={0}>
+              <Link
               key={a.id}
               to="/hall/$hallSlug"
               params={{ hallSlug: a.hall?.slug ?? '' }}
@@ -57,9 +59,9 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
                 </div>
               ) : (
                 <div className="flex aspect-[3/1] items-center justify-center rounded-md bg-surface-2">
-                  <Typography variant="display-sm" tone="muted" style={{ fontFamily: 'var(--font-display)', opacity: 0.15 }}>
+                  <span style={{ fontFamily: 'var(--font-display)', opacity: 0.15, fontSize: '3rem' }}>
                     {a.displayName[0]}
-                  </Typography>
+                  </span>
                 </div>
               )}
 
@@ -94,6 +96,7 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
                 </Typography>
               )}
             </Link>
+            </RevealOnScroll>
           )
         })}
       </div>

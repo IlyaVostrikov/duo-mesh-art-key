@@ -31,6 +31,8 @@ export function toHallPublicDto(hall: HallWithArtworks) {
       id: hall.artist.id,
       displayName: hall.artist.user.displayName,
       avatarUrl: hall.artist.user.avatarUrl,
+      verified: hall.artist.verified,
+      location: hall.artist.location,
     },
     artworks: (hall.artworks ?? []).map((aw: Artwork) => ({
       id: aw.id,

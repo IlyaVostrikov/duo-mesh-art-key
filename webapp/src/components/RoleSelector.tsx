@@ -51,20 +51,27 @@ export function RoleSelector({ onSelect }: RoleSelectorProps) {
             key={role.id}
             type="button"
             onClick={() => onSelect(role.id)}
-            className="flex items-start gap-4 p-4 text-left cursor-pointer transition-all"
+            className="flex items-start gap-4 p-4 text-left cursor-pointer"
             style={{
               backgroundColor: 'var(--surface)',
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius)',
               width: '100%',
+              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+              transform: 'translateX(0)',
+              boxShadow: '0 0 0 0 rgba(198,255,58,0)',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = 'var(--accent)'
               e.currentTarget.style.backgroundColor = 'rgba(198, 255, 58, 0.04)'
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(198,255,58,0.08)'
+              e.currentTarget.style.transform = 'translateX(4px)'
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = 'var(--border)'
               e.currentTarget.style.backgroundColor = 'var(--surface)'
+              e.currentTarget.style.boxShadow = '0 0 0 0 rgba(198,255,58,0)'
+              e.currentTarget.style.transform = 'translateX(0)'
             }}
           >
             <span style={{ fontSize: '1.5rem', flexShrink: 0, marginTop: '2px' }}>{role.icon}</span>

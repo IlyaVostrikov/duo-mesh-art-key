@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { DashboardLayout } from './DashboardLayout'
 
 const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
@@ -14,9 +15,11 @@ export function DashboardHome() {
 
   return (
     <DashboardLayout>
-      <Badge variant="outline" style={{ marginBottom: '8px' }}>
-        {user?.role === 'ARTIST' ? 'Художник / Artist' : user?.role === 'COLLECTOR' ? 'Коллекционер / Collector' : 'Гость / Guest'}
-      </Badge>
+      <RevealOnScroll direction="up">
+        <Badge variant="outline" style={{ marginBottom: '8px' }}>
+          {user?.role === 'ARTIST' ? 'Художник / Artist' : user?.role === 'COLLECTOR' ? 'Коллекционер / Collector' : 'Гость / Guest'}
+        </Badge>
+      </RevealOnScroll>
 
       {user?.role === 'ARTIST' ? <ArtistDashboardCards accessToken={auth.accessToken} /> : <CollectorDashboardCards />}
     </DashboardLayout>
@@ -54,6 +57,7 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
+      <RevealOnScroll direction="up" delay={0}>
       <Card>
         <CardHeader>
           <CardTitle>Мои работы / My Works</CardTitle>
@@ -65,6 +69,8 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
           </Button>
         </CardContent>
       </Card>
+      </RevealOnScroll>
+      <RevealOnScroll direction="up" delay={60}>
       <Card>
         <CardHeader>
           <CardTitle>Выставочный зал / Exhibition Hall</CardTitle>
@@ -81,6 +87,8 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
           )}
         </CardContent>
       </Card>
+      </RevealOnScroll>
+      <RevealOnScroll direction="up" delay={120}>
       <Card>
         <CardHeader>
           <CardTitle>Продажи / Sales</CardTitle>
@@ -92,6 +100,8 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
           </Button>
         </CardContent>
       </Card>
+      </RevealOnScroll>
+      <RevealOnScroll direction="up" delay={180}>
       <Card>
         <CardHeader>
           <CardTitle>Профиль / Profile</CardTitle>
@@ -103,7 +113,9 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
           </Button>
         </CardContent>
       </Card>
+      </RevealOnScroll>
       {inquiries.length > 0 && (
+        <RevealOnScroll direction="up" delay={240}>
         <Card style={{ gridColumn: '1 / -1' }}>
           <CardHeader>
             <CardTitle>Запросы / Inquiries ({inquiries.length})</CardTitle>
@@ -139,6 +151,7 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
             </div>
           </CardContent>
         </Card>
+        </RevealOnScroll>
       )}
     </div>
   )
@@ -147,6 +160,7 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
 function CollectorDashboardCards() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
+      <RevealOnScroll direction="up" delay={0}>
       <Card>
         <CardHeader>
           <CardTitle>Моя коллекция / My Collection</CardTitle>
@@ -158,6 +172,8 @@ function CollectorDashboardCards() {
           </Button>
         </CardContent>
       </Card>
+      </RevealOnScroll>
+      <RevealOnScroll direction="up" delay={60}>
       <Card>
         <CardHeader>
           <CardTitle>Сохранённое / Saved</CardTitle>
@@ -169,6 +185,8 @@ function CollectorDashboardCards() {
           </Button>
         </CardContent>
       </Card>
+      </RevealOnScroll>
+      <RevealOnScroll direction="up" delay={120}>
       <Card>
         <CardHeader>
           <CardTitle>Подписки / Subscriptions</CardTitle>
@@ -180,6 +198,7 @@ function CollectorDashboardCards() {
           </Button>
         </CardContent>
       </Card>
+      </RevealOnScroll>
     </div>
   )
 }

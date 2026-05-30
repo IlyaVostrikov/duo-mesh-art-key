@@ -79,6 +79,7 @@ export function AuthForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div key={step} style={{ animation: 'fadeIn 0.35s var(--ease) both' }}>
         {step === 'role' && <RoleSelector onSelect={handleRoleSelect} />}
 
         {step === 'register' && (
@@ -142,6 +143,7 @@ export function AuthForm() {
             </button>
           </div>
         )}
+        </div>
       </CardContent>
     </Card>
   )

@@ -120,6 +120,27 @@ export class ArtistService {
     return toArtistPublicDto(artist as any)
   }
 
+  async getFollowing(userId: string) {
+    const follows = await this.prisma.follow.findMany({
+      where: { followerId: userId },
+      include: {
+        artist: {
+          include: {
+            user: true,
+            hall: true,
+            _count: { select: { followers: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    return follows.map((f) => ({
+      ...toArtistPublicDto(f.artist as any),
+      isFollowing: true,
+      followedAt: f.createdAt.toISOString(),
+    }))
+  }
+
   async getArtworks(artistId: string, page = 1, pageSize = 20) {
     const where: Prisma.ArtworkWhereInput = { artistId, status: { not: 'DRAFT' } }
     const [artworks, total] = await Promise.all([

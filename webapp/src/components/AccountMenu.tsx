@@ -84,6 +84,7 @@ export function AccountMenu() {
             boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
             zIndex: 100,
             overflow: 'hidden',
+            animation: 'fadeIn 0.2s var(--ease) both',
           }}
         >
           {/* User info */}
@@ -154,6 +155,15 @@ export function AccountMenu() {
                   <polyline points="9 22 9 12 15 12 15 22" />
                 </svg>
                 Создать зал / Create Hall
+              </MenuItem>
+            )}
+
+            {user.role === 'ADMIN' && (
+              <MenuItem onClick={() => { setOpen(false); navigate({ to: '/admin' }) }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+                </svg>
+                Админ-панель / Admin
               </MenuItem>
             )}
 
