@@ -19,12 +19,14 @@ export function createArtworkRoutes() {
       page: Number(c.req.query('page') ?? '1'),
       pageSize: Number(c.req.query('pageSize') ?? '20'),
       category: c.req.query('category') ?? undefined,
+      mediaType: c.req.query('mediaType') ?? undefined,
       status: c.req.query('status') ?? undefined,
       style: c.req.query('style') ?? undefined,
       priceMin: c.req.query('priceMin') ? Number(c.req.query('priceMin')) : undefined,
       priceMax: c.req.query('priceMax') ? Number(c.req.query('priceMax')) : undefined,
       editionType: c.req.query('editionType') ?? undefined,
       sort: c.req.query('sort') ?? 'newest',
+      q: c.req.query('q') ?? undefined,
     })
     return c.json(result)
   })

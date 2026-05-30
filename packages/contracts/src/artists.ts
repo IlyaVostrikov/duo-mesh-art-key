@@ -40,6 +40,14 @@ export const artistListSchema = z.object({
   pageSize: z.number().int(),
 })
 
+export const createArtistSchema = z.object({
+  artistStatement: z.string().trim().max(5000).optional(),
+  websiteUrl: z.union([z.string().trim().url(), z.literal('')]).optional(),
+  location: z.string().trim().max(200).optional(),
+  hallTitle: z.string().trim().min(2).max(100),
+  hallDescription: z.string().trim().max(2000).optional(),
+})
+
 export const updateArtistSchema = z.object({
   displayName: z.string().trim().min(2).max(80).optional(),
   artistStatement: z.string().trim().max(5000).optional(),
@@ -52,4 +60,5 @@ export const updateArtistSchema = z.object({
 export type ArtistDto = z.infer<typeof artistSchema>
 export type ArtistPublicDto = z.infer<typeof artistPublicSchema>
 export type ArtistListDto = z.infer<typeof artistListSchema>
+export type CreateArtistRequest = z.input<typeof createArtistSchema>
 export type UpdateArtistRequest = z.input<typeof updateArtistSchema>

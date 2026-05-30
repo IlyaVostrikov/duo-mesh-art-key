@@ -97,13 +97,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user: meQuery.data?.user ?? null,
+      accessToken,
       isBootstrapping,
       isAuthenticated: Boolean(meQuery.data?.user),
       register,
       login,
       logout,
     }),
-    [isBootstrapping, login, logout, meQuery.data?.user, register],
+    [accessToken, isBootstrapping, login, logout, meQuery.data?.user, register],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

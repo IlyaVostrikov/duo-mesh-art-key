@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "prisma": {
+    "seed": "bun prisma/seed.ts"
+  },
   "scripts": {
     "dev": "bun run prisma:generate && bun --watch src/index.ts",
     "start": "bun run start:api",
@@ -21,7 +24,8 @@
     "prisma:generate:raw": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:validate": "prisma validate"
+    "prisma:validate": "prisma validate",
+    "prisma:seed": "bun run prisma:generate && bun prisma/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1048.0",

@@ -1,6 +1,6 @@
 import type { DbClient } from '../db'
 import type { Prisma } from '../generated/prisma/client'
-import { toArtworkDto, toArtworkPublicDtoFull } from '../dto/artwork.dto'
+import { toArtworkDto, toArtworkPublicDto, toArtworkPublicDtoFull } from '../dto/artwork.dto'
 import { ArtKeyService } from './art-key.service'
 
 export class ArtworkService {
@@ -14,17 +14,26 @@ export class ArtworkService {
     page?: number
     pageSize?: number
     category?: string
+    mediaType?: string
     status?: string
     style?: string
     priceMin?: number
     priceMax?: number
     editionType?: string
     sort?: string
+    q?: string
   }) {
-    const { page = 1, pageSize = 20, category, status, style, priceMin, priceMax, editionType, sort = 'newest' } = params
+    const { page = 1, pageSize = 20, category, mediaType, status, style, priceMin, priceMax, editionType, sort = 'newest', q } = params
     const where: Prisma.ArtworkWhereInput = { status: status ? (status as any) : { not: 'DRAFT' } }
 
+    if (q) {
+      where.OR = [
+        { title: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+      ]
+    }
     if (category) where.category = category as any
+    if (mediaType) where.mediaType = mediaType as any
     if (style) where.styleTags = { has: style }
     if (editionType) where.editionType = editionType as any
     if (priceMin !== undefined || priceMax !== undefined) {
@@ -45,7 +54,7 @@ export class ArtworkService {
     const [artworks, total] = await Promise.all([
       this.prisma.artwork.findMany({
         where,
-        include: { artist: { include: { user: true, hall: true } }, artKeys: true, provenanceRecords: { include: { toOwner: true }, orderBy: { createdAt: 'desc' }, take: 1 } },
+        include: { artist: { include: { user: true, hall: true } }, artKeys: true, provenanceRecords: { include: { toOwner: true }, orderBy: { sequence: 'desc' }, take: 1 } },
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy,
@@ -54,7 +63,7 @@ export class ArtworkService {
     ])
 
     return {
-      artworks: artworks.map(toArtworkPublicDtoFull),
+      artworks: artworks.map((a) => toArtworkPublicDto(a as any)),
       total,
       page,
       pageSize,
@@ -64,7 +73,7 @@ export class ArtworkService {
   async getById(artworkId: string) {
     const artwork = await this.prisma.artwork.findUnique({
       where: { id: artworkId },
-      include: { artist: { include: { user: true, hall: true } }, artKeys: true, provenanceRecords: { include: { toOwner: true, fromOwner: true }, orderBy: { createdAt: 'asc' } } },
+      include: { artist: { include: { user: true, hall: true } }, artKeys: true, provenanceRecords: { include: { toOwner: true, fromOwner: true }, orderBy: { sequence: 'asc' } } },
     })
     if (!artwork) return null
 
@@ -82,6 +91,12 @@ export class ArtworkService {
     dimensions?: string
     category?: string
     styleTags?: string[]
+    mediaType?: string
+    posterUrl: string
+    modelUrl?: string
+    software?: string
+    isScanned?: boolean
+    polyCount?: number
     isDigitalOriginal?: boolean
     isPhysicalDigitized?: boolean
     price?: number
@@ -104,7 +119,7 @@ export class ArtworkService {
     const artwork = await this.prisma.artwork.update({
       where: { id: artworkId },
       data,
-      include: { artist: { include: { user: true, hall: true } }, artKeys: true, provenanceRecords: { include: { toOwner: true }, orderBy: { createdAt: 'desc' }, take: 1 } },
+      include: { artist: { include: { user: true, hall: true } }, artKeys: true, provenanceRecords: { include: { toOwner: true, fromOwner: true }, orderBy: { sequence: 'desc' }, take: 1 } },
     })
     return toArtworkPublicDtoFull(artwork as any)
   }

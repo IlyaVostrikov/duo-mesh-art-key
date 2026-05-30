@@ -63,6 +63,47 @@ export class ArtistService {
     return toArtistPublicDto(artist as any, isFollowed)
   }
 
+  async create(userId: string, data: { artistStatement?: string; websiteUrl?: string; location?: string; hallTitle: string; hallDescription?: string }) {
+    const artist = await this.prisma.artist.create({
+      data: {
+        userId,
+        artistStatement: data.artistStatement ?? null,
+        websiteUrl: data.websiteUrl || null,
+        location: data.location || null,
+        tier: 'FREE',
+      },
+    })
+
+    // Generate hall slug from title
+    const baseSlug = data.hallTitle.toLowerCase().replace(/[^a-z0-9а-яё]+/g, '-').replace(/^-|-$/g, '') || `hall-${artist.id.substring(0, 8)}`
+    let slug = baseSlug
+    let counter = 1
+    while (await this.prisma.exhibitionHall.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${counter++}`
+    }
+
+    await this.prisma.exhibitionHall.create({
+      data: {
+        artistId: artist.id,
+        slug,
+        title: data.hallTitle,
+        description: data.hallDescription ?? null,
+        isPublished: false,
+      },
+    })
+
+    // Upgrade user role
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { role: 'ARTIST' },
+    })
+
+    return this.prisma.artist.findUnique({
+      where: { id: artist.id },
+      include: { user: true, hall: true, _count: { select: { followers: true } } },
+    })
+  }
+
   async getByUserId(userId: string) {
     return this.prisma.artist.findUnique({
       where: { userId },

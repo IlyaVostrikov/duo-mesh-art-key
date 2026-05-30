@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+export const mediaTypeSchema = z.enum(['IMAGE_2D', 'MODEL_3D'])
+
+export const creationSoftwareSchema = z.enum(['BLENDER', 'ZBRUSH', 'SCAN', 'OTHER'])
+
 export const artworkCategorySchema = z.enum([
   'PAINTING',
   'DIGITAL',
@@ -34,6 +38,12 @@ export const artworkSchema = z.object({
   category: artworkCategorySchema,
   styleTags: z.array(z.string()),
   images: z.array(z.string()),
+  mediaType: mediaTypeSchema,
+  posterUrl: z.string(),
+  modelUrl: z.string().nullable(),
+  software: creationSoftwareSchema.nullable(),
+  isScanned: z.boolean(),
+  polyCount: z.number().int().nullable(),
   isDigitalOriginal: z.boolean(),
   isPhysicalDigitized: z.boolean(),
   status: artworkStatusSchema,
@@ -82,7 +92,7 @@ export const artworkListSchema = z.object({
   pageSize: z.number().int(),
 })
 
-export const createArtworkSchema = z.object({
+const artworkFieldsSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(10000).optional(),
   year: z.number().int().min(1000).max(2100).optional(),
@@ -90,6 +100,12 @@ export const createArtworkSchema = z.object({
   dimensions: z.string().trim().max(100).optional(),
   category: artworkCategorySchema.default('OTHER'),
   styleTags: z.array(z.string().trim().max(50)).max(20).default([]),
+  mediaType: mediaTypeSchema.default('IMAGE_2D'),
+  posterUrl: z.string().trim().min(1),
+  modelUrl: z.string().trim().optional(),
+  software: creationSoftwareSchema.optional(),
+  isScanned: z.boolean().default(false),
+  polyCount: z.number().int().positive().optional(),
   isDigitalOriginal: z.boolean().default(false),
   isPhysicalDigitized: z.boolean().default(false),
   price: z.number().positive().optional(),
@@ -99,13 +115,24 @@ export const createArtworkSchema = z.object({
   allowOffers: z.boolean().default(true),
 })
 
-export const updateArtworkSchema = createArtworkSchema.partial().extend({
+export const createArtworkSchema = artworkFieldsSchema
+  .refine(
+    (data) => data.mediaType !== 'MODEL_3D' || !!data.modelUrl,
+    { message: 'modelUrl is required when mediaType is MODEL_3D', path: ['modelUrl'] },
+  )
+  .refine(
+    (data) => data.mediaType !== 'IMAGE_2D' || !data.modelUrl,
+    { message: 'modelUrl must be null when mediaType is IMAGE_2D', path: ['modelUrl'] },
+  )
+
+export const updateArtworkSchema = artworkFieldsSchema.partial().extend({
   status: artworkStatusSchema.optional(),
 })
 
 export const artworkSearchSchema = z.object({
   q: z.string().optional(),
   category: artworkCategorySchema.optional(),
+  mediaType: mediaTypeSchema.optional(),
   status: artworkStatusSchema.optional(),
   style: z.string().optional(),
   priceMin: z.coerce.number().positive().optional(),

@@ -2,6 +2,11 @@ import { createRootRoute, createRoute, createRouter } from '@tanstack/react-rout
 
 import { AppPage, HomePage, RootLayout } from './pages'
 import { DashboardHome } from './pages/dashboard/DashboardHome'
+import { ModelViewer3D } from './components/artwork/ModelViewer3D'
+import { GalleryPage } from './pages/gallery/GalleryPage'
+import { HallPage } from './pages/hall/HallPage'
+import { ArtworkDetailPage } from './pages/artwork/ArtworkDetailPage'
+import { ArtistOnboarding } from './pages/onboarding/ArtistOnboarding'
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -11,6 +16,26 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: HomePage,
+})
+
+// ─── DUO MESH Surface Routes ───
+
+const galleryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/gallery',
+  component: GalleryPage,
+})
+
+const hallRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/hall/$hallSlug',
+  component: HallPage,
+})
+
+const artworkRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/artwork/$artworkId',
+  component: ArtworkDetailPage,
 })
 
 const appRoute = createRoute({
@@ -23,18 +48,7 @@ const appRoute = createRoute({
 const onboardingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/onboarding/artist',
-  component: () => (
-    <section className="mx-auto w-full max-w-2xl px-5 py-12">
-      <h1 className="text-2xl font-bold mb-6">Стать художником</h1>
-      <p className="text-muted-foreground mb-4">
-        Заполните профиль художника, чтобы получить выставочный зал и начать публиковать работы.
-      </p>
-      {/* Full onboarding wizard goes here — multi-step form with artist info + first artwork */}
-      <div className="grid gap-4 p-6 bg-card border rounded-xl">
-        <p className="text-muted-foreground">Мастер онбординга будет доступен после запуска БД.</p>
-      </div>
-    </section>
-  ),
+  component: ArtistOnboarding,
 })
 
 // Dashboard routes
@@ -117,6 +131,29 @@ const savedRoute = createRoute({
   ),
 })
 
+// 3D viewer spike — test route for model-viewer integration
+const viewer3dRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/viewer/3d',
+  component: () => {
+    const demoModel = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb'
+    const demoPoster = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.jpg'
+    return (
+      <section className="mx-auto w-full max-w-4xl px-5 py-8">
+        <h1 className="text-2xl font-bold mb-2">3D Viewer Spike</h1>
+        <p className="text-muted-foreground mb-6">Проверка интеграции @google/model-viewer с seed-моделью.</p>
+        <div className="rounded-xl overflow-hidden border bg-black" style={{ height: '70vh' }}>
+          <ModelViewer3D modelUrl={demoModel} posterUrl={demoPoster} />
+        </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Модель: DamagedHelmet (glTF-Sample-Assets, CC-BY 4.0).<br />
+          Проверить: орбита (drag), зум (scroll), авто-rotate, poster до загрузки.
+        </p>
+      </section>
+    )
+  },
+})
+
 const followingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/following',
@@ -131,6 +168,10 @@ const followingRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   appRoute,
+  galleryRoute,
+  hallRoute,
+  artworkRoute,
+  viewer3dRoute,
   onboardingRoute,
   dashboardRoute,
   dashboardArtworksRoute,

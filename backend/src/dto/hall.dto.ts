@@ -35,7 +35,9 @@ export function toHallPublicDto(hall: HallWithArtworks) {
     artworks: (hall.artworks ?? []).map((aw: Artwork) => ({
       id: aw.id,
       title: aw.title,
-      images: aw.images,
+      posterUrl: aw.posterUrl,
+      modelUrl: aw.modelUrl,
+      mediaType: aw.mediaType,
       category: aw.category,
       price: aw.price?.toString() ?? null,
       currency: aw.currency,

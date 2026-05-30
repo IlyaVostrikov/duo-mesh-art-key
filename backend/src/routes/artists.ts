@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { updateArtistSchema } from '@duo-mesh/contracts'
+import { createArtistSchema, updateArtistSchema } from '@duo-mesh/contracts'
 import { authGuard, requireRole, optionalAuth, getAuthUser } from '../guards/auth'
 import { ArtistService } from '../services/artist.service'
 import { HallService } from '../services/hall.service'
@@ -13,6 +13,27 @@ type ArtistRouteEnv = {
 
 export function createArtistRoutes() {
   const routes = new Hono<ArtistRouteEnv>()
+
+  // Register as artist (onboarding)
+  routes.post('/', authGuard(), async (c) => {
+    const svc = c.get('artistService')
+    const authUser = getAuthUser(c)
+
+    // Check user doesn't already have an artist profile
+    const existing = await svc.getByUserId(authUser!.userId)
+    if (existing) {
+      return c.json({ error: 'CONFLICT', message: 'Artist profile already exists' }, 409)
+    }
+
+    const body = await c.req.json()
+    const parsed = createArtistSchema.safeParse(body)
+    if (!parsed.success) {
+      return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+    }
+
+    const artist = await svc.create(authUser!.userId, parsed.data)
+    return c.json(artist, 201)
+  })
 
   routes.get('/', async (c) => {
     const svc = c.get('artistService')

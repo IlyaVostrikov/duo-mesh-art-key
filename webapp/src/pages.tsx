@@ -33,13 +33,18 @@ export function RootLayout() {
           </Typography>
           <nav className="ml-auto flex items-center gap-2" aria-label="Primary">
             <Typography asChild variant="control" tone="muted">
-              <Link to="/" className={navLinkClass}>
-                Auth
+              <Link to="/gallery" className={navLinkClass}>
+                Галерея / Gallery
               </Link>
             </Typography>
             <Typography asChild variant="control" tone="muted">
-              <Link to="/app" className={navLinkClass}>
-                App
+              <Link to="/hall/$hallSlug" params={{ hallSlug: 'iron-forge' }} className={navLinkClass}>
+                Зал / Hall
+              </Link>
+            </Typography>
+            <Typography asChild variant="control" tone="muted">
+              <Link to="/viewer/3d" className={navLinkClass}>
+                3D
               </Link>
             </Typography>
           </nav>

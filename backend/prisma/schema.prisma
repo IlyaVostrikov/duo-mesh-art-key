@@ -108,6 +108,18 @@ model Collector {
 
 // ─── Artworks ───
 
+enum MediaType {
+  IMAGE_2D
+  MODEL_3D
+}
+
+enum CreationSoftware {
+  BLENDER
+  ZBRUSH
+  SCAN
+  OTHER
+}
+
 enum ArtworkCategory {
   PAINTING
   DIGITAL
@@ -146,6 +158,12 @@ model Artwork {
   category            ArtworkCategory @default(OTHER)
   styleTags           String[]       @map("style_tags")
   images              String[]
+  mediaType           MediaType      @default(IMAGE_2D) @map("media_type")
+  posterUrl           String         @map("poster_url")
+  modelUrl            String?        @map("model_url")
+  software            CreationSoftware? @map("software")
+  isScanned           Boolean        @default(false) @map("is_scanned")
+  polyCount           Int?           @map("poly_count")
   isDigitalOriginal   Boolean        @default(false) @map("is_digital_original")
   isPhysicalDigitized Boolean        @default(false) @map("is_physical_digitized")
   status              ArtworkStatus  @default(DRAFT)
@@ -201,12 +219,13 @@ model ExhibitionHall {
 // ─── Art Key (digital certificate of authenticity) ───
 
 model ArtKey {
-  id               String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  artworkId        String   @unique @db.Uuid @map("artwork_id")
-  keyCode          String   @unique @map("key_code")
-  ownerKey         String   @unique @map("owner_key")
-  certificateHash  String   @map("certificate_hash")
-  certificatePdfUrl String? @map("certificate_pdf_url")
+  id                String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  artworkId         String   @unique @db.Uuid @map("artwork_id")
+  keyCode           String   @unique @map("key_code")
+  ownerKey          String   @unique @map("owner_key")
+  certificateHash   String   @map("certificate_hash")
+  integrityHash     String   @map("integrity_hash")
+  certificatePdfUrl String?  @map("certificate_pdf_url")
   qrCodeUrl        String?  @map("qr_code_url")
   nfcId            String?  @map("nfc_id")
   issuedAt         DateTime @default(now()) @map("issued_at")
@@ -234,6 +253,7 @@ model ProvenanceRecord {
   id              String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
   artworkId       String       @db.Uuid @map("artwork_id")
   artKeyId        String       @db.Uuid @map("art_key_id")
+  sequence        Int          @default(0)
   fromUserId      String?      @db.Uuid @map("from_user_id")
   toUserId        String       @db.Uuid @map("to_user_id")
   transferType    TransferType @default(CREATION) @map("transfer_type")
@@ -241,6 +261,7 @@ model ProvenanceRecord {
   royaltyPercent  Decimal?     @default(10) @map("royalty_percent") @db.Decimal(5, 2)
   royaltyPaid     Decimal?     @map("royalty_paid") @db.Decimal(15, 2)
   transactionHash String?      @map("transaction_hash")
+  recordHash      String       @map("record_hash")
   prevRecordHash  String?      @map("prev_record_hash")
   notes           String?      @db.Text
   createdAt       DateTime     @default(now()) @map("created_at")
@@ -251,6 +272,7 @@ model ProvenanceRecord {
   toOwner    User    @relation("ToOwner", fields: [toUserId], references: [id], onDelete: Cascade, map: "provenance_to_user_id_fkey")
 
   @@index([artworkId, createdAt], map: "provenance_artwork_id_created_at_idx")
+  @@index([artworkId, sequence], map: "provenance_artwork_id_sequence_idx")
   @@map("provenance_records")
 }
 

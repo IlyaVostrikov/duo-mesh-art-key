@@ -1,17 +1,37 @@
 import crypto from 'node:crypto'
 import type { DbClient } from '../db'
 
+function canonicalJSON(obj: Record<string, unknown>): string {
+  const sorted = Object.keys(obj)
+    .sort()
+    .reduce<Record<string, unknown>>((acc, key) => {
+      acc[key] = obj[key]
+      return acc
+    }, {})
+  return JSON.stringify(sorted)
+}
+
 export class ArtKeyService {
   constructor(private prisma: DbClient) {}
 
   async generate(artworkId: string, artistId: string) {
-    // Check if ArtKey already exists
     const existing = await this.prisma.artKey.findUnique({ where: { artworkId } })
     if (existing) return existing
 
-    const keyCode = `DUO-${new Date().getFullYear()}-${artworkId.substring(0, 8).toUpperCase()}`
+    const year = new Date().getFullYear()
+    const keyCode = `DUO-${year}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
     const ownerKey = `X${crypto.randomBytes(4).toString('hex').toUpperCase()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
-    const certificateHash = crypto.createHash('sha256').update(`${artworkId}:${keyCode}:${ownerKey}:${Date.now()}`).digest('hex')
+    const issuedAt = new Date()
+
+    const integrityHash = crypto
+      .createHash('sha256')
+      .update(canonicalJSON({ artworkId, keyCode, artistId, issuedAt: issuedAt.toISOString() }))
+      .digest('hex')
+
+    const certificateHash = crypto
+      .createHash('sha256')
+      .update(`${artworkId}:${keyCode}:${ownerKey}:${Date.now()}`)
+      .digest('hex')
 
     const artKey = await this.prisma.artKey.create({
       data: {
@@ -19,18 +39,34 @@ export class ArtKeyService {
         keyCode,
         ownerKey,
         certificateHash,
+        integrityHash,
       },
     })
 
-    // Create initial provenance record (CREATION)
-    const prevHash = crypto.createHash('sha256').update(`${artworkId}:creation:${Date.now()}`).digest('hex')
+    // Genesis provenance record — anchored to Art Key integrityHash
+    const genesisHash = crypto
+      .createHash('sha256')
+      .update(
+        canonicalJSON({
+          artworkId,
+          sequence: 0,
+          eventType: 'CREATION',
+          actor: artistId,
+          occurredAt: issuedAt.toISOString(),
+          prevRecordHash: integrityHash,
+        }),
+      )
+      .digest('hex')
+
     await this.prisma.provenanceRecord.create({
       data: {
         artworkId,
         artKeyId: artKey.id,
+        sequence: 0,
         toUserId: artistId,
         transferType: 'CREATION',
-        prevRecordHash: prevHash,
+        recordHash: genesisHash,
+        prevRecordHash: integrityHash,
       },
     })
 
@@ -51,7 +87,7 @@ export class ArtKeyService {
     const provenance = await this.prisma.provenanceRecord.findMany({
       where: { artworkId: artKey.artworkId },
       include: { toOwner: true, fromOwner: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { sequence: 'asc' },
     })
 
     const isValid = !artKey.revokedAt
