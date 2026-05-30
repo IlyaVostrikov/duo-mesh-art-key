@@ -2,35 +2,27 @@ import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/lib/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Typography } from '@/components/ui/typography'
 import { Badge } from '@/components/ui/badge'
+import { DashboardLayout } from './DashboardLayout'
 
 export function DashboardHome() {
   const auth = useAuth()
   const user = auth.user
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-5 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <Typography variant="h2">Дашборд</Typography>
-          <Typography tone="muted">
-            {user?.displayName ?? user?.email}
-          </Typography>
-        </div>
-        <Badge variant="outline">
-          {user?.role === 'ARTIST' ? 'Художник' : user?.role === 'COLLECTOR' ? 'Коллекционер' : 'Гость'}
-        </Badge>
-      </div>
+    <DashboardLayout>
+      <Badge variant="outline" style={{ marginBottom: '8px' }}>
+        {user?.role === 'ARTIST' ? 'Художник / Artist' : user?.role === 'COLLECTOR' ? 'Коллекционер / Collector' : 'Гость / Guest'}
+      </Badge>
 
       {user?.role === 'ARTIST' ? <ArtistDashboardCards /> : <CollectorDashboardCards />}
-    </section>
+    </DashboardLayout>
   )
 }
 
 function ArtistDashboardCards() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
       <Card>
         <CardHeader>
           <CardTitle>Мои работы</CardTitle>
@@ -66,26 +58,8 @@ function ArtistDashboardCards() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Премьеры</CardTitle>
-          <CardDescription>Управление событиями</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Typography tone="muted" variant="bodySm">Скоро</Typography>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Аналитика</CardTitle>
-          <CardDescription>Просмотры и статистика</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Typography tone="muted" variant="bodySm">Скоро</Typography>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Настройки</CardTitle>
-          <CardDescription>Профиль и платёжные данные</CardDescription>
+          <CardTitle>Профиль</CardTitle>
+          <CardDescription>Statement, контакты, ссылки</CardDescription>
         </CardHeader>
         <CardContent>
           <Button asChild size="sm" variant="outline">
@@ -99,7 +73,7 @@ function ArtistDashboardCards() {
 
 function CollectorDashboardCards() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
       <Card>
         <CardHeader>
           <CardTitle>Моя коллекция</CardTitle>

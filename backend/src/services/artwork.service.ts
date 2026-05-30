@@ -22,10 +22,12 @@ export class ArtworkService {
     editionType?: string
     sort?: string
     q?: string
+    artistId?: string
   }) {
-    const { page = 1, pageSize = 20, category, mediaType, status, style, priceMin, priceMax, editionType, sort = 'newest', q } = params
+    const { page = 1, pageSize = 20, category, mediaType, status, style, priceMin, priceMax, editionType, sort = 'newest', q, artistId } = params
     const where: Prisma.ArtworkWhereInput = { status: status ? (status as any) : { not: 'DRAFT' } }
 
+    if (artistId) where.artistId = artistId
     if (q) {
       where.OR = [
         { title: { contains: q, mode: 'insensitive' } },

@@ -7,6 +7,8 @@ import { GalleryPage } from './pages/gallery/GalleryPage'
 import { HallPage } from './pages/hall/HallPage'
 import { ArtworkDetailPage } from './pages/artwork/ArtworkDetailPage'
 import { ArtistOnboarding } from './pages/onboarding/ArtistOnboarding'
+import { DashboardArtworks } from './pages/dashboard/DashboardArtworks'
+import { DashboardLayout } from './pages/dashboard/DashboardLayout'
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -61,28 +63,20 @@ const dashboardRoute = createRoute({
 const dashboardArtworksRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard/artworks',
-  component: () => (
-    <section className="mx-auto w-full max-w-6xl px-5 py-8">
-      <h1 className="text-2xl font-bold mb-4">Мои работы</h1>
-      <p className="text-muted-foreground">Управление произведениями — загрузка, редактирование, статусы.</p>
-      <div className="mt-6 p-6 bg-card border rounded-xl">
-        <p className="text-muted-foreground">Панель управления работами будет доступна после запуска БД.</p>
-      </div>
-    </section>
-  ),
+  component: DashboardArtworks,
 })
 
 const dashboardHallRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard/hall',
   component: () => (
-    <section className="mx-auto w-full max-w-6xl px-5 py-8">
-      <h1 className="text-2xl font-bold mb-4">Выставочный зал</h1>
-      <p className="text-muted-foreground">Настройка виртуальной галереи — описание, обложка, порядок работ.</p>
-      <div className="mt-6 p-6 bg-card border rounded-xl">
-        <p className="text-muted-foreground">Редактор зала будет доступен после запуска БД.</p>
+    <DashboardLayout>
+      <h1 className="text-display-sm mb-4" style={{ fontFamily: 'var(--font-display)' }}>Выставочный зал / Hall</h1>
+      <p style={{ color: 'var(--text-muted)' }}>Настройка виртуальной галереи — описание, обложка, порядок работ.</p>
+      <div className="mt-6 p-6 rounded-xl border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+        <p style={{ color: 'var(--text-muted)' }}>Редактор зала будет подключён к API в следующей итерации.</p>
       </div>
-    </section>
+    </DashboardLayout>
   ),
 })
 
@@ -90,10 +84,13 @@ const dashboardSettingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard/settings',
   component: () => (
-    <section className="mx-auto w-full max-w-2xl px-5 py-8">
-      <h1 className="text-2xl font-bold mb-4">Настройки профиля</h1>
-      <p className="text-muted-foreground">Редактирование Artist Statement, контактов, платёжных реквизитов.</p>
-    </section>
+    <DashboardLayout>
+      <h1 className="text-display-sm mb-4" style={{ fontFamily: 'var(--font-display)' }}>Профиль / Settings</h1>
+      <p style={{ color: 'var(--text-muted)' }}>Редактирование Artist Statement, контактов, платёжных реквизитов.</p>
+      <div className="mt-6 p-6 rounded-xl border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+        <p style={{ color: 'var(--text-muted)' }}>Форма настроек будет подключена к PATCH /api/artists/:id в следующей итерации.</p>
+      </div>
+    </DashboardLayout>
   ),
 })
 
@@ -101,10 +98,10 @@ const dashboardSalesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard/sales',
   component: () => (
-    <section className="mx-auto w-full max-w-6xl px-5 py-8">
-      <h1 className="text-2xl font-bold mb-4">Продажи</h1>
-      <p className="text-muted-foreground">История продаж и выплат.</p>
-    </section>
+    <DashboardLayout>
+      <h1 className="text-display-sm mb-4" style={{ fontFamily: 'var(--font-display)' }}>Продажи / Sales</h1>
+      <p style={{ color: 'var(--text-muted)' }}>История продаж и выплат — будет доступна после подключения платёжной системы.</p>
+    </DashboardLayout>
   ),
 })
 
