@@ -8,8 +8,7 @@ import { LandingFooterCTA } from './LandingFooterCTA'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Typography } from '@/components/ui/typography'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { apiBaseUrl } from '@/lib/api'
 
 interface FeaturedResponse {
   hero: any
@@ -26,7 +25,7 @@ export function LandingPage() {
 
   useEffect(() => {
     let cancelled = false
-    fetch(`${API_BASE}/api/featured`)
+    fetch(`${apiBaseUrl}/api/featured`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()

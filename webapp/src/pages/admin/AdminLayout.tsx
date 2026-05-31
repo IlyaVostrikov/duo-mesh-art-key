@@ -34,11 +34,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     exact ? loc.pathname === path : loc.pathname.startsWith(path)
 
   return (
-    <div style={{ display: 'flex', maxWidth: '1280px', margin: '0 auto', padding: '0 20px', minHeight: '100vh' }}>
-      <nav style={{
-        width: '220px', flexShrink: 0, paddingTop: '48px', paddingRight: '32px',
-        borderRight: '1px solid var(--border)',
-      }}>
+    <div className="flex max-w-[1280px] mx-auto px-5 min-h-screen">
+      <nav className="shrink-0 w-[220px] pt-12 pr-8 border-r border-border">
         <Link to="/" style={{ display: 'block', marginBottom: '24px', fontSize: '0.875rem', color: 'var(--text-muted)', textDecoration: 'none' }}>
           ← DUO MESH
         </Link>
@@ -68,7 +65,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           ))}
         </ul>
       </nav>
-      <main style={{ flex: 1, paddingTop: '48px', paddingLeft: '48px', paddingBottom: '96px' }}>
+      <main className="flex-1 pt-12 pl-12 pb-24">
         <RevealOnScroll direction="up">
           {children}
         </RevealOnScroll>

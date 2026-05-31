@@ -2,15 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAuth } from '@/lib/use-auth'
 import { UserAvatar } from '@/components/ui/user-avatar'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
-
-const ROLE_LABELS: Record<string, string> = {
-  ARTIST: 'Художник / Artist',
-  COLLECTOR: 'Коллекционер / Collector',
-  GUEST: 'Зритель / Viewer',
-  ADMIN: 'Админ / Admin',
-}
+import { apiBaseUrl } from '@/lib/api'
+import { ROLE_LABELS } from '@/lib/labels'
 
 export function AccountMenu() {
   const auth = useAuth()
@@ -20,12 +13,11 @@ export function AccountMenu() {
   const menuRef = useRef<HTMLDivElement>(null)
 
   const user = auth.user
-  if (!user) return null
 
   useEffect(() => {
-    if (user.role !== 'ARTIST' || !auth.accessToken) return
+    if (!user || user.role !== 'ARTIST' || !auth.accessToken) return
     let cancelled = false
-    fetch(`${API_BASE}/api/artists/me`, {
+    fetch(`${apiBaseUrl}/api/artists/me`, {
       headers: { Authorization: `Bearer ${auth.accessToken}` },
     })
       .then(async (r) => {
@@ -35,7 +27,7 @@ export function AccountMenu() {
       })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [user.role, auth.accessToken])
+  }, [user, auth.accessToken])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -46,6 +38,8 @@ export function AccountMenu() {
     if (open) document.addEventListener('click', handler)
     return () => document.removeEventListener('click', handler)
   }, [open])
+
+  if (!user) return null
 
   const handleLogout = async () => {
     setOpen(false)

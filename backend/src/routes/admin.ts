@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { authGuard, requireRole, getAuthUser } from '../guards/auth'
 import type { AdminService } from '../services/admin.service'
-import { ValidationError, NotFoundError, ForbiddenError } from '../services/admin.service'
 
 type AdminRouteEnv = {
   Variables: {
@@ -38,17 +37,7 @@ export function createAdminRoutes() {
     if (!['GUEST', 'ARTIST', 'COLLECTOR', 'ADMIN'].includes(role)) {
       return c.json({ error: 'VALIDATION', message: 'Invalid role' }, 400)
     }
-    try {
-      return c.json(await svc.setUserRole(c.req.param('userId'), role, authUser!.userId))
-    } catch (err) {
-      if (err instanceof ForbiddenError) {
-        return c.json({ error: 'FORBIDDEN', message: err.message }, 403)
-      }
-      if (err instanceof NotFoundError) {
-        return c.json({ error: 'NOT_FOUND', message: err.message }, 404)
-      }
-      throw err
-    }
+    return c.json(await svc.setUserRole(c.req.param('userId'), role, authUser!.userId))
   })
 
   // ─── Artists ───
@@ -70,32 +59,15 @@ export function createAdminRoutes() {
   routes.patch('/artworks/:artworkId/status', async (c) => {
     const svc = c.get('adminService')
     const { status } = await c.req.json()
-    try {
-      return c.json(await svc.setArtworkStatus(c.req.param('artworkId'), status))
-    } catch (err) {
-      if (err instanceof ValidationError) {
-        return c.json({ error: 'VALIDATION', message: err.message }, 400)
-      }
-      throw err
-    }
+    return c.json(await svc.setArtworkStatus(c.req.param('artworkId'), status))
   })
 
   // Soft-delete (archive). Hard deletion is forbidden via admin API.
   routes.delete('/artworks/:artworkId', async (c) => {
     const svc = c.get('adminService')
     const force = c.req.query('force') === 'true'
-    try {
-      await svc.archiveArtwork(c.req.param('artworkId'), force)
-      return c.json({ ok: true })
-    } catch (err) {
-      if (err instanceof ForbiddenError) {
-        return c.json({ error: 'FORBIDDEN', message: err.message }, 403)
-      }
-      if (err instanceof NotFoundError) {
-        return c.json({ error: 'NOT_FOUND', message: err.message }, 404)
-      }
-      throw err
-    }
+    await svc.archiveArtwork(c.req.param('artworkId'), force)
+    return c.json({ ok: true })
   })
 
   return routes

@@ -1,13 +1,13 @@
 /*
-  DESIGN V2 — RootLayout (pages.tsx → RootLayout)
-  Заменяет: src/pages.tsx — только компонент RootLayout
+  DESIGN V2 — RootLayout + AppPage + CollectorHub + ArtistHub
+  Заменяет: src/pages.tsx
 
   Изменения:
-  - Убраны двуязычные метки ("Галерея / Gallery" → "Галерея")
-  - Nav-ссылки: только текст, без button-variant обёртки — чище
-  - Логотип: Unbounded + тонкая линия-разделитель
-  - Header: фиксированная высота 56px, строгий border-bottom всегда
-  - Убран backdrop-blur на scrolled — он мерцал на некоторых GPU
+  - Логотип: Unbounded (font-brand) — остаётся уникальной маркой
+  - Навигация: Figtree, только русский язык, accent underline для active
+  - Header: чёткий border-bottom всегда, blur убран
+  - Dashboard hub: grid-таблица (стиль galerie-menu) вместо card-компонентов
+  - Текст: только русский язык
 */
 import { Link, Outlet, useLocation } from '@tanstack/react-router'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -19,22 +19,29 @@ import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
 import { useAuth } from '@/lib/use-auth'
 import { useCallback, useEffect, useState } from 'react'
+import { apiBaseUrl } from '@/lib/api'
 
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
-
-const navLinkStyle: React.CSSProperties = {
-  fontFamily: 'var(--font-sans)',
-  fontSize: '0.8rem',
-  letterSpacing: '0.06em',
-  color: 'var(--text-muted)',
-  textDecoration: 'none',
-  transition: 'color 150ms',
-  padding: '4px 0',
-}
-
-function useIsActive(path: string) {
+function NavLink({ to, label }: { to: string; label: string }) {
   const loc = useLocation()
-  return loc.pathname.startsWith(path)
+  const isActive = loc.pathname.startsWith(to)
+  return (
+    <Link
+      to={to}
+      style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: '0.82rem',
+        fontWeight: isActive ? 600 : 400,
+        letterSpacing: '-0.01em',
+        color: isActive ? 'var(--text)' : 'var(--text-muted)',
+        textDecoration: 'none',
+        paddingBottom: '3px',
+        borderBottom: isActive ? '1px solid var(--accent)' : '1px solid transparent',
+        transition: 'color 150ms, border-color 150ms',
+      }}
+    >
+      {label}
+    </Link>
+  )
 }
 
 export function RootLayout() {
@@ -59,51 +66,47 @@ export function RootLayout() {
             height: '56px',
             display: 'flex',
             alignItems: 'center',
-            gap: '0',
+            gap: '32px',
           }}
         >
-          {/* Логотип */}
+          {/* Бренд-марка: Unbounded */}
           <Link
             to="/"
             style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '0.85rem',
+              fontFamily: 'var(--font-brand)',
+              fontSize: '0.82rem',
               letterSpacing: '0.08em',
               color: 'var(--text)',
               textDecoration: 'none',
-              marginRight: '40px',
+              flexShrink: 0,
             }}
           >
             DUO MESH
           </Link>
 
           {/* Разделитель */}
-          <div
-            style={{
-              width: '1px',
-              height: '16px',
-              background: 'var(--border)',
-              marginRight: '32px',
-            }}
-          />
+          <div style={{ width: '1px', height: '14px', background: 'var(--border)' }} />
 
-          {/* Навигация */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+          {/* Nav */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <NavLink to="/gallery" label="Галерея" />
             <NavLink to="/verify" label="ArtKey" />
           </nav>
 
           {/* Правая часть */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
             {auth.isAuthenticated ? (
               <AccountMenu />
             ) : (
               <Link
                 to="/login"
                 style={{
-                  ...navLinkStyle,
-                  color: 'var(--text)',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.82rem',
                   fontWeight: 500,
+                  color: 'var(--text)',
+                  textDecoration: 'none',
+                  transition: 'color 150ms',
                 }}
               >
                 Войти
@@ -117,25 +120,6 @@ export function RootLayout() {
         <Outlet />
       </PageTransition>
     </main>
-  )
-}
-
-function NavLink({ to, label }: { to: string; label: string }) {
-  const loc = useLocation()
-  const isActive = loc.pathname.startsWith(to)
-
-  return (
-    <Link
-      to={to}
-      style={{
-        ...navLinkStyle,
-        color: isActive ? 'var(--text)' : 'var(--text-muted)',
-        borderBottom: isActive ? '1px solid var(--accent)' : '1px solid transparent',
-        paddingBottom: '2px',
-      }}
-    >
-      {label}
-    </Link>
   )
 }
 
@@ -167,15 +151,22 @@ export function AppPage() {
   }
 
   return (
-    <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 20px' }}>
+    <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '48px 20px 96px' }}>
+      {/* Заголовок профиля */}
       <RevealOnScroll direction="up">
-        <Typography variant="h1" className="mb-1">
-          {auth.user.displayName ?? auth.user.email}
-        </Typography>
+        <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '24px', marginBottom: '48px' }}>
+          <h1
+            className="text-display-sm"
+            style={{ fontFamily: 'var(--font-display)', margin: '0 0 4px' }}
+          >
+            {auth.user.displayName ?? auth.user.email}
+          </h1>
+          <Typography tone="muted" style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem' }}>
+            {auth.user.email}
+          </Typography>
+        </div>
       </RevealOnScroll>
-      <RevealOnScroll direction="up" delay={60}>
-        <Typography tone="muted" className="mb-8">{auth.user.email}</Typography>
-      </RevealOnScroll>
+
       {auth.user.role === 'ARTIST'
         ? <ArtistHub accessToken={auth.accessToken} />
         : <CollectorHub />}
@@ -184,82 +175,57 @@ export function AppPage() {
 }
 
 function ArtistHub({ accessToken }: { accessToken: string | null }) {
-  const [stats, setStats] = useState<{ artworks: number; halls: number; sales: number } | null>(null)
+  const [stats, setStats] = useState<{ artworks: number; sales: number } | null>(null)
 
   const fetchStats = useCallback(async () => {
     if (!accessToken) return
     try {
       const [artistRes, salesRes] = await Promise.all([
-        fetch(`${API_BASE}/api/artists/me`, { headers: { Authorization: `Bearer ${accessToken}` } }),
-        fetch(`${API_BASE}/api/sales/artist`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch(`${apiBaseUrl}/api/artists/me`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch(`${apiBaseUrl}/api/sales/artist`, { headers: { Authorization: `Bearer ${accessToken}` } }),
       ])
       const artist = artistRes.ok ? await artistRes.json() : null
       const sales = salesRes.ok ? await salesRes.json() : null
-      setStats({
-        artworks: artist?.totalSalesCount ?? 0,
-        halls: artist?.hall ? 1 : 0,
-        sales: sales?.total ?? 0,
-      })
-    } catch { /* stats are non-critical */ }
+      setStats({ artworks: artist?.totalSalesCount ?? 0, sales: sales?.total ?? 0 })
+    } catch { /* non-critical */ }
   }, [accessToken])
 
   useEffect(() => { fetchStats() }, [fetchStats])
 
   const links = [
-    { to: '/dashboard/artworks', title: 'Мои работы', desc: 'Управление произведениями', stat: stats?.artworks, statLabel: 'работ' },
-    { to: '/dashboard/hall', title: 'Выставочный зал', desc: 'Настройка виртуальной галереи' },
-    { to: '/dashboard/sales', title: 'Продажи', desc: 'История и статистика', stat: stats?.sales, statLabel: 'продаж' },
-    { to: '/dashboard/settings', title: 'Профиль', desc: 'Statement, контакты, ссылки' },
+    { to: '/dashboard/artworks', title: 'Мои работы',       desc: 'Управление произведениями',           stat: stats?.artworks, statLabel: 'работ' },
+    { to: '/dashboard/hall',     title: 'Выставочный зал',  desc: 'Настройка виртуальной галереи' },
+    { to: '/dashboard/sales',    title: 'Продажи',          desc: 'История и статистика',                stat: stats?.sales,    statLabel: 'продаж' },
+    { to: '/dashboard/settings', title: 'Профиль',          desc: 'Statement, контакты, ссылки' },
   ]
 
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1px', background: 'var(--border)', marginTop: '48px' }}>
-      {links.map((link) => (
-        <Link
-          key={link.to}
-          to={link.to}
-          style={{ textDecoration: 'none', background: 'var(--bg)', display: 'block' }}
-        >
-          <div
-            className="group"
-            style={{ padding: '32px', transition: 'background 200ms' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg)' }}
-          >
-            <Typography variant="h6" style={{ marginBottom: '6px' }}>{link.title}</Typography>
-            <Typography variant="bodySm" tone="muted">{link.desc}</Typography>
-            {link.stat !== undefined && (
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '16px' }}>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '2rem',
-                    letterSpacing: '-0.02em',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                >
-                  <AnimatedCounter value={link.stat} />
-                </span>
-                <Typography variant="bodySm" tone="muted">{link.statLabel}</Typography>
-              </div>
-            )}
-          </div>
-        </Link>
-      ))}
-    </div>
-  )
+  return <HubGrid links={links} />
 }
 
 function CollectorHub() {
   const links = [
-    { to: '/collection', title: 'Моя коллекция', desc: 'Приобретённые работы и сертификаты ArtKey' },
-    { to: '/collection/saved', title: 'Сохранённое', desc: 'Избранные работы для просмотра' },
-    { to: '/following', title: 'Подписки', desc: 'Отслеживаемые художники' },
-    { to: '/dashboard/settings', title: 'Профиль', desc: 'Персональные настройки' },
+    { to: '/collection',          title: 'Моя коллекция', desc: 'Приобретённые работы и сертификаты ArtKey' },
+    { to: '/collection/saved',    title: 'Сохранённое',   desc: 'Избранные работы для просмотра' },
+    { to: '/following',           title: 'Подписки',      desc: 'Отслеживаемые художники' },
+    { to: '/dashboard/settings',  title: 'Профиль',       desc: 'Персональные настройки' },
   ]
+  return <HubGrid links={links} />
+}
 
+function HubGrid({
+  links,
+}: {
+  links: { to: string; title: string; desc: string; stat?: number; statLabel?: string }[]
+}) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1px', background: 'var(--border)', marginTop: '48px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: '1px',
+        background: 'var(--border)',
+      }}
+    >
       {links.map((link) => (
         <Link
           key={link.to}
@@ -271,8 +237,42 @@ function CollectorHub() {
             onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface)' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg)' }}
           >
-            <Typography variant="h6" style={{ marginBottom: '6px' }}>{link.title}</Typography>
-            <Typography variant="bodySm" tone="muted">{link.desc}</Typography>
+            <h3
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '1.05rem',
+                fontWeight: 600,
+                letterSpacing: '-0.01em',
+                color: 'var(--text)',
+                margin: '0 0 6px',
+              }}
+            >
+              {link.title}
+            </h3>
+            <p
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '0.82rem',
+                color: 'var(--text-muted)',
+                margin: 0,
+                lineHeight: 1.5,
+              }}
+            >
+              {link.desc}
+            </p>
+            {link.stat !== undefined && (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '20px' }}>
+                <span
+                  className="text-display-sm"
+                  style={{ fontFamily: 'var(--font-display)', fontVariantNumeric: 'tabular-nums' }}
+                >
+                  <AnimatedCounter value={link.stat} />
+                </span>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  {link.statLabel}
+                </span>
+              </div>
+            )}
           </div>
         </Link>
       ))}

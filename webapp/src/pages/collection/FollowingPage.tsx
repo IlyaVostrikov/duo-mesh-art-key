@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/lib/use-auth'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
+import { apiBaseUrl } from '@/lib/api'
 
 interface FollowedArtist {
   id: string
@@ -15,8 +16,6 @@ interface FollowedArtist {
   followedAt: string
 }
 
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
-
 export function FollowingPage() {
   const auth = useAuth()
   const [artists, setArtists] = useState<FollowedArtist[]>([])
@@ -28,7 +27,7 @@ export function FollowingPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API_BASE}/api/follows`, {
+      const res = await fetch(`${apiBaseUrl}/api/follows`, {
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -50,7 +49,7 @@ export function FollowingPage() {
     // Optimistic remove
     setArtists((prev) => prev.filter((a) => a.id !== artistId))
     try {
-      await fetch(`${API_BASE}/api/follows/${artistId}`, {
+      await fetch(`${apiBaseUrl}/api/follows/${artistId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       })
@@ -65,7 +64,7 @@ export function FollowingPage() {
     return (
       <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 20px' }}>
         <RevealOnScroll direction="up">
-          <h1 className="text-display-hero" style={{ fontFamily: 'var(--font-display)', marginBottom: '16px' }}>
+          <h1 className="text-display-hero" style={{ marginBottom: '16px' }}>
             Подписки / Following
           </h1>
         </RevealOnScroll>
@@ -81,7 +80,7 @@ export function FollowingPage() {
   return (
     <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 20px' }}>
       <RevealOnScroll direction="up">
-        <h1 className="text-display-hero" style={{ fontFamily: 'var(--font-display)', marginBottom: '8px' }}>
+        <h1 className="text-display-hero" style={{ marginBottom: '8px' }}>
           Подписки / Following
         </h1>
       </RevealOnScroll>

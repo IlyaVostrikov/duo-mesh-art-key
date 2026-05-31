@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { DashboardLayout } from './DashboardLayout'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { apiBaseUrl } from '@/lib/api'
 
 export function DashboardHome() {
   const auth = useAuth()
@@ -33,7 +32,7 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
   useEffect(() => {
     if (!accessToken) return
     let cancelled = false
-    fetch(`${API_BASE}/api/artists/me`, {
+    fetch(`${apiBaseUrl}/api/artists/me`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
       .then(async (r) => {
@@ -43,7 +42,7 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
       })
       .catch(() => {})
     // Fetch recent inquiries
-    fetch(`${API_BASE}/api/inquiries`, {
+    fetch(`${apiBaseUrl}/api/inquiries`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
       .then(async (r) => {

@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Typography } from '@/components/ui/typography'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
+import Container from '@/components/layout/Container'
+import Section from '@/components/layout/Section'
+import Stack from '@/components/layout/Stack'
 
 interface ValuePropProps { lang: 'ru' | 'en' }
 
@@ -33,17 +36,17 @@ const PILLARS = [
 
 export function LandingValueProp({ lang }: ValuePropProps) {
   return (
-    <section className="border-y bg-surface/50">
-      <div className="mx-auto w-full max-w-4xl space-y-14 px-5 py-20">
+    <Section border="both" background="surface" paddingY="lg">
+      <Container size="narrow">
+        <Stack gap="lg">
         {/* Headline */}
         <div className="text-center">
           <h2
             className="text-display-sm mb-4"
-            style={{ fontFamily: 'var(--font-display)' }}
           >
             {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
           </h2>
-          <Typography variant="body" tone="muted" className="mx-auto max-w-2xl" style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.1rem' }}>
+          <Typography variant="body" tone="muted" className="mx-auto max-w-2xl font-editorial" style={{ fontSize: '1.1rem' }}>
             {lang === 'ru'
               ? 'ArtKey — это не блокчейн. Это криптографическая цепочка владения, которая не требует газа, кошельков или комиссий. Просто SHA-256 и математика.'
               : 'ArtKey is not a blockchain. Itʼs a cryptographic ownership chain that requires no gas, no wallets, no fees. Just SHA-256 and math.'}
@@ -63,7 +66,7 @@ export function LandingValueProp({ lang }: ValuePropProps) {
           {PILLARS.map((p, i) => (
             <RevealOnScroll key={p.titleEn} direction="up" delay={i * 120}>
               <div className="space-y-3 rounded-lg border bg-surface p-6 transition-all duration-500 hover:border-accent/20 hover:shadow-[0_0_30px_rgba(198,255,58,0.04)] hover:bg-surface-2">
-                <Typography variant="h6" style={{ fontFamily: 'var(--font-display)' }}>
+                <Typography variant="h6" className="font-display">
                   {lang === 'ru' ? p.titleRu : p.titleEn}
                 </Typography>
                 <Typography variant="bodySm" tone="muted">
@@ -79,7 +82,6 @@ export function LandingValueProp({ lang }: ValuePropProps) {
           <div className="text-center">
             <div
               className="text-display-sm"
-              style={{ fontFamily: 'var(--font-display)' }}
             >
               <AnimatedCounter value={29} />
             </div>
@@ -90,7 +92,6 @@ export function LandingValueProp({ lang }: ValuePropProps) {
           <div className="text-center">
             <div
               className="text-display-sm"
-              style={{ fontFamily: 'var(--font-display)' }}
             >
               <AnimatedCounter value={12} suffix="+" />
             </div>
@@ -101,7 +102,6 @@ export function LandingValueProp({ lang }: ValuePropProps) {
           <div className="text-center">
             <div
               className="text-display-sm"
-              style={{ fontFamily: 'var(--font-display)' }}
             >
               <AnimatedCounter value={3402} />
             </div>
@@ -119,7 +119,8 @@ export function LandingValueProp({ lang }: ValuePropProps) {
             </Link>
           </Button>
         </div>
-      </div>
-    </section>
+        </Stack>
+      </Container>
+    </Section>
   )
 }

@@ -1,6 +1,7 @@
 import type { DbClient } from '../db'
 import { Prisma } from '../generated/prisma/client'
 import { toHallDto, toHallPublicDto } from '../dto/hall.dto'
+import { generateUniqueSlug } from '../lib/slug'
 
 export class HallService {
   constructor(private prisma: DbClient) {}
@@ -33,11 +34,7 @@ export class HallService {
     let hall = await this.prisma.exhibitionHall.findUnique({ where: { artistId } })
     if (!hall) {
       const baseSlug = artistName.toLowerCase().replace(/[^a-z0-9а-яё]+/g, '-').replace(/^-|-$/g, '') || `artist-${artistId.substring(0, 8)}`
-      let slug = baseSlug
-      let counter = 1
-      while (await this.prisma.exhibitionHall.findUnique({ where: { slug } })) {
-        slug = `${baseSlug}-${counter++}`
-      }
+      const slug = await generateUniqueSlug(this.prisma, baseSlug)
 
       hall = await this.prisma.exhibitionHall.create({
         data: {

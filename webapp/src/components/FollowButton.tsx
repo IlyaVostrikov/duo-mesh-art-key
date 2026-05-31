@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/lib/use-auth'
 import { Spinner } from '@/components/ui/spinner'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { apiBaseUrl } from '@/lib/api'
 
 interface FollowButtonProps {
   artistId: string
@@ -39,7 +38,7 @@ export function FollowButton({
     setCount((c) => (prevFollowing ? c - 1 : c + 1))
 
     try {
-      const res = await fetch(`${API_BASE}/api/follows/${artistId}`, {
+      const res = await fetch(`${apiBaseUrl}/api/follows/${artistId}`, {
         method: prevFollowing ? 'DELETE' : 'POST',
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       })

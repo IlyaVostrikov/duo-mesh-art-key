@@ -3,8 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/lib/use-auth'
 import { assetUrl } from '@/lib/asset-url'
 import { AdminLayout } from './AdminLayout'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { apiBaseUrl } from '@/lib/api'
 
 // Admin-modifiable statuses. SOLD is excluded — only the sales flow may set it.
 const STATUSES = ['DRAFT', 'LISTED', 'IN_EXHIBITION', 'RESERVED', 'ARCHIVED'] as const
@@ -37,7 +36,7 @@ export function AdminArtworks() {
     try {
       const params = new URLSearchParams({ pageSize: '50' })
       if (statusFilter) params.set('status', statusFilter)
-      const res = await fetch(`${API_BASE}/api/admin/artworks?${params}`, {
+      const res = await fetch(`${apiBaseUrl}/api/admin/artworks?${params}`, {
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -56,7 +55,7 @@ export function AdminArtworks() {
   const changeStatus = async (artworkId: string, status: string) => {
     if (!auth.accessToken) return
     try {
-      const res = await fetch(`${API_BASE}/api/admin/artworks/${artworkId}/status`, {
+      const res = await fetch(`${apiBaseUrl}/api/admin/artworks/${artworkId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -88,7 +87,7 @@ export function AdminArtworks() {
     if (!confirm(`Архивировать «${shortTitle}»?\n\nРабота будет скрыта из галереи. Сертификаты (Art Keys), цепочка provenance и история продаж сохранятся. Это обратимо — статус можно вернуть на LISTED.`)) return
 
     try {
-      const res = await fetch(`${API_BASE}/api/admin/artworks/${artworkId}`, {
+      const res = await fetch(`${apiBaseUrl}/api/admin/artworks/${artworkId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       })
@@ -97,7 +96,7 @@ export function AdminArtworks() {
         if (res.status === 403) {
           // Has sales or art keys — offer force archive
           if (confirm(`${data.message}\n\nВсё равно архивировать с force=true? Связанные записи (продажи, ключи) останутся нетронутыми.`)) {
-            const forceRes = await fetch(`${API_BASE}/api/admin/artworks/${artworkId}?force=true`, {
+            const forceRes = await fetch(`${apiBaseUrl}/api/admin/artworks/${artworkId}?force=true`, {
               method: 'DELETE',
               headers: { Authorization: `Bearer ${auth.accessToken}` },
             })
@@ -121,7 +120,7 @@ export function AdminArtworks() {
 
   return (
     <AdminLayout>
-      <h1 className="text-display-sm mb-2" style={{ fontFamily: 'var(--font-display)' }}>
+      <h1 className="text-display-sm mb-2">
         Работы / Artworks
       </h1>
       <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>

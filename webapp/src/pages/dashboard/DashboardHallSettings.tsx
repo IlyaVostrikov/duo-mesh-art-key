@@ -6,8 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { apiBaseUrl } from '@/lib/api'
 
 interface HallData {
   id: string
@@ -40,7 +39,7 @@ export function DashboardHallSettings() {
     let cancelled = false
     setLoading(true)
 
-    fetch(`${API_BASE}/api/artists/me`, {
+    fetch(`${apiBaseUrl}/api/artists/me`, {
       headers: { Authorization: `Bearer ${auth.accessToken}` },
     })
       .then(async (r) => {
@@ -92,7 +91,7 @@ export function DashboardHallSettings() {
     const fullDesc = descEn.trim() ? `${desc.trim()}\n\n---\n\n${descEn.trim()}` : desc.trim()
 
     try {
-      const res = await fetch(`${API_BASE}/api/halls/${hall.slug}`, {
+      const res = await fetch(`${apiBaseUrl}/api/halls/${hall.slug}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.accessToken!}` },
         body: JSON.stringify({
@@ -149,7 +148,7 @@ export function DashboardHallSettings() {
   return (
     <DashboardLayout>
       <RevealOnScroll direction="up">
-        <h1 className="text-display-sm mb-8" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1 className="text-display-sm mb-8">
           Выставочный зал / Hall
         </h1>
       </RevealOnScroll>

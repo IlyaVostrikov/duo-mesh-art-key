@@ -57,3 +57,23 @@ export function handleError(error: Error, c: Context) {
   console.error(error)
   return c.json(errorResponse('INTERNAL_ERROR', 'Unexpected server error'), 500)
 }
+
+// ─── Common error subclasses (status + code baked in) ───
+
+export class ValidationError extends AppError {
+  constructor(message: string) {
+    super(400, 'VALIDATION_ERROR', message)
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(message: string) {
+    super(404, 'NOT_FOUND', message)
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message: string) {
+    super(403, 'FORBIDDEN', message)
+  }
+}

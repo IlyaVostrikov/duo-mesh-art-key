@@ -9,6 +9,7 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { Hall3DCanvas } from '@/components/hall3d/Hall3DCanvas'
 import { singleRow, salonHang } from '@/components/hall3d/layoutTemplates'
 import type { Hall3DArtwork } from '@/components/hall3d/Hall3DScene'
+import { apiBaseUrl } from '@/lib/api'
 
 interface HallArtwork {
   id: string
@@ -42,23 +43,7 @@ interface HallDetail {
   artworks: HallArtwork[]
 }
 
-function parseBilingual(text: string): [string, string] {
-  // Matches the seed format (\n\n) and the onboarding-join format (\n\n---\n\n)
-  const sep = text.includes('\n\n---\n\n') ? '\n\n---\n\n' : '\n\n'
-  const idx = text.indexOf(sep)
-  if (idx === -1) return [text, text]
-  const ru = text.slice(0, idx)
-  const en = text.slice(idx + sep.length).replace(/^\n+/, '')
-  return [ru, en || ru]
-}
-
-function parseBilingualTitle(title: string): [string, string] {
-  const idx = title.lastIndexOf(' / ')
-  if (idx === -1) return [title, title]
-  return [title.slice(0, idx), title.slice(idx + 3)]
-}
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { parseBilingual, parseBilingualTitle } from '@/lib/utils'
 
 export function HallPage() {
   const { hallSlug } = useParams({ from: '/hall/$hallSlug' })
@@ -74,7 +59,7 @@ export function HallPage() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    fetch(`${API_BASE}/api/halls/${hallSlug}`)
+    fetch(`${apiBaseUrl}/api/halls/${hallSlug}`)
       .then(async (res) => {
         if (!res.ok) throw new Error(res.status === 404 ? 'NOT_FOUND' : `HTTP ${res.status}`)
         return res.json()
@@ -85,12 +70,60 @@ export function HallPage() {
     return () => { cancelled = true }
   }, [hallSlug])
 
-  // Mobile detection
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  // ─── All hooks before early returns (Rules of Hooks) ───
+
+  const hall3dArtworks = useMemo<Hall3DArtwork[]>(() =>
+    (hall?.artworks ?? []).map((aw) => ({
+      id: aw.id,
+      title: aw.title,
+      posterUrl: aw.posterUrl ? assetUrl(aw.posterUrl) : null,
+      modelUrl: aw.modelUrl ?? null,
+      mediaType: aw.mediaType,
+      displayTitle: parseBilingualTitle(aw.title)[0],
+    })), [hall?.artworks])
+
+  const layout3d = useMemo(() => {
+    if (hall?.layoutConfig?.slots?.length) {
+      return {
+        name: hall.layoutConfig.template,
+        capacity: hall.layoutConfig.slots.length,
+        slots: hall.layoutConfig.slots.map((s) => ({
+          x: s.x, y: s.y, z: s.z,
+          width: s.width, height: s.height,
+        })),
+      }
+    }
+    return (hall?.artworks?.length ?? 0) <= 4 ? singleRow : salonHang
+  }, [hall?.layoutConfig, hall?.artworks?.length])
+
+  const sorted3dArtworks = useMemo(() => {
+    if (!hall?.layoutConfig?.slots) return hall3dArtworks
+    const map = new Map(hall3dArtworks.map((a) => [a.id, a]))
+    const result: Hall3DArtwork[] = []
+    const used = new Set<string>()
+    for (const slot of hall.layoutConfig.slots) {
+      if (slot.artworkId && map.has(slot.artworkId)) {
+        result.push(map.get(slot.artworkId)!)
+        used.add(slot.artworkId)
+      }
+    }
+    for (const a of hall3dArtworks) {
+      if (!used.has(a.id)) result.push(a)
+    }
+    return result
+  }, [hall3dArtworks, hall?.layoutConfig])
+
+  const handleArtworkClick = useCallback((id: string) => {
+    navigate({ to: '/artwork/$artworkId', params: { artworkId: id } })
+  }, [navigate])
+
+  const show3D = !reduced && !isMobile
 
   // ─── Loading ───
   if (loading) {
@@ -113,7 +146,7 @@ export function HallPage() {
     return (
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '96px 20px', textAlign: 'center' }}>
         <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
-          {error === 'NOT_FOUND' ? 'Зал не найден / Hall not found' : 'Ошибка загрузки / Load error'}
+          {error === 'NOT_FOUND' ? 'Зал не найден / Hall not found' : 'Ошибка загрузки / Load error'}
         </h2>
         <p style={{ color: 'var(--text-muted)' }}>{error !== 'NOT_FOUND' ? error : ''}</p>
       </div>
@@ -125,59 +158,6 @@ export function HallPage() {
   const descParts = hall.description ? parseBilingual(hall.description) : ['', '']
   const featuredWork = hall.artworks.find((aw) => aw.mediaType === 'MODEL_3D' && aw.modelUrl)
   const is3DFeatured = Boolean(featuredWork)
-
-  // 3D gallery: convert hall artworks to 3D scene format
-  const hall3dArtworks = useMemo<Hall3DArtwork[]>(() =>
-    hall.artworks.map((aw) => ({
-      id: aw.id,
-      title: aw.title,
-      posterUrl: aw.posterUrl ? assetUrl(aw.posterUrl) : null,
-      modelUrl: aw.modelUrl ?? null,
-      mediaType: aw.mediaType,
-      displayTitle: parseBilingualTitle(aw.title)[0],
-    })), [hall.artworks])
-
-  // Build layout from saved config or auto-pick
-  const layout3d = useMemo(() => {
-    if (hall.layoutConfig?.slots?.length) {
-      // Use artist-saved layout, strip artworkId since canvas handles mapping
-      return {
-        name: hall.layoutConfig.template,
-        capacity: hall.layoutConfig.slots.length,
-        slots: hall.layoutConfig.slots.map((s) => ({
-          x: s.x, y: s.y, z: s.z,
-          width: s.width, height: s.height,
-        })),
-      }
-    }
-    return hall.artworks.length <= 4 ? singleRow : salonHang
-  }, [hall.layoutConfig, hall.artworks.length])
-
-  // Sort artworks to match layout slot assignments
-  const sorted3dArtworks = useMemo(() => {
-    if (!hall.layoutConfig?.slots) return hall3dArtworks
-    // Build artwork lookup
-    const map = new Map(hall3dArtworks.map((a) => [a.id, a]))
-    const result: Hall3DArtwork[] = []
-    const used = new Set<string>()
-    for (const slot of hall.layoutConfig.slots) {
-      if (slot.artworkId && map.has(slot.artworkId)) {
-        result.push(map.get(slot.artworkId)!)
-        used.add(slot.artworkId)
-      }
-    }
-    // Append any unassigned artworks after slot-assigned ones
-    for (const a of hall3dArtworks) {
-      if (!used.has(a.id)) result.push(a)
-    }
-    return result
-  }, [hall3dArtworks, hall.layoutConfig])
-
-  const show3D = !reduced && !isMobile
-
-  const handleArtworkClick = useCallback((id: string) => {
-    navigate({ to: '/artwork/$artworkId', params: { artworkId: id } })
-  }, [navigate])
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 20px' }}>
@@ -196,7 +176,7 @@ export function HallPage() {
           </RevealOnScroll>
           <RevealOnScroll direction="up" delay={80}>
             <p className="text-display-sm" style={{
-              color: 'var(--text-secondary)', marginBottom: '16px', fontFamily: 'var(--font-display)',
+              color: 'var(--text-secondary)', marginBottom: '16px',
               display: 'flex', alignItems: 'center', gap: '10px',
             }}>
               {hall.artist.displayName}
@@ -223,8 +203,8 @@ export function HallPage() {
           </RevealOnScroll>
 
           <RevealOnScroll direction="up" delay={160}>
-            <blockquote style={{
-              fontFamily: 'var(--font-editorial)', fontSize: '1.5rem', lineHeight: 1.5,
+            <blockquote className="font-editorial" style={{
+              fontSize: '1.5rem', lineHeight: 1.5,
               color: 'var(--text-secondary)', fontStyle: 'italic', maxWidth: '540px',
               paddingLeft: '16px', borderLeft: '2px solid var(--accent)', marginBottom: '24px',
               whiteSpace: 'pre-wrap',
@@ -275,7 +255,7 @@ export function HallPage() {
         </section>
       ) : (
         <section style={{ paddingBottom: '96px' }}>
-          <h2 className="text-display-sm" style={{ marginBottom: '48px', fontFamily: 'var(--font-display)' }}>
+          <h2 className="text-display-sm" style={{ marginBottom: '48px' }}>
             Работы / Works
           </h2>
 

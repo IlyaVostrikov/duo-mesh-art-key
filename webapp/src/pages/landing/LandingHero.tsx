@@ -88,15 +88,14 @@ export function LandingHero({ heroWork, lang }: HeroProps) {
         </Badge>
         <h1
           className="text-display-hero leading-[1.08] tracking-tight"
-          style={{ fontFamily: 'var(--font-display)' }}
         >
           {lang === 'ru' ? MISSION_RU : MISSION_EN}
         </h1>
         <Typography
           variant="body"
           tone="muted"
-          className="max-w-xl"
-          style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.15rem', lineHeight: 1.6 }}
+          className="max-w-xl font-editorial"
+          style={{ fontSize: '1.15rem', lineHeight: 1.6 }}
         >
           {lang === 'ru' ? SUB_RU : SUB_EN}
         </Typography>

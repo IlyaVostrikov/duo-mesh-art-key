@@ -23,3 +23,17 @@ export function parseBilingualTitle(title: string | null): [string, string] {
   if (idx === -1) return [title, title]
   return [title.slice(0, idx), title.slice(idx + 3)]
 }
+
+/** Inverse of parseBilingual: join RU + EN into seed format */
+export function joinBilingual(ru: string, en: string): string {
+  if (!en.trim()) return ru.trim()
+  if (!ru.trim()) return en.trim()
+  return `${ru.trim()}\n\n---\n\n${en.trim()}`
+}
+
+/** Inverse of parseBilingualTitle: join RU + EN with separator */
+export function joinBilingualTitle(ru: string, en: string): string {
+  if (!en.trim()) return ru.trim()
+  if (!ru.trim()) return en.trim()
+  return `${ru.trim()} / ${en.trim()}`
+}

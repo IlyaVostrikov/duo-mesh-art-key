@@ -4,7 +4,7 @@ export function SavedPage() {
   return (
     <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 20px' }}>
       <RevealOnScroll direction="up">
-        <h1 className="text-display-hero" style={{ fontFamily: 'var(--font-display)', marginBottom: '16px' }}>
+        <h1 className="text-display-hero" style={{ marginBottom: '16px' }}>
           Сохранённое / Saved
         </h1>
       </RevealOnScroll>

@@ -1,33 +1,17 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { useAuth } from '@/lib/use-auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
-
-function joinBilingual(ru: string, en: string): string {
-  if (!en.trim()) return ru.trim()
-  if (!ru.trim()) return en.trim()
-  return `${ru.trim()}\n\n---\n\n${en.trim()}`
-}
-
-function joinBilingualTitle(ru: string, en: string): string {
-  if (!en.trim()) return ru.trim()
-  if (!ru.trim()) return en.trim()
-  return `${ru.trim()} / ${en.trim()}`
-}
+import { joinBilingualTitle } from '@/lib/utils'
+import { BilingualField } from '@/components/BilingualField'
+import { useArtistOnboarding } from '@/hooks/use-artist-onboarding'
 
 export function ArtistOnboarding() {
   const auth = useAuth()
-  const navigate = useNavigate()
+  const { submitting, error, submit } = useArtistOnboarding()
   const [lang, setLang] = useState<'ru' | 'en'>('ru')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   // Bilingual form state
   const [titleRu, setTitleRu] = useState('')
@@ -66,51 +50,9 @@ export function ArtistOnboarding() {
     )
   }
 
-  const handleSubmit = async (e: FormEvent) => {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setError(null)
-
-    const hallTitle = joinBilingualTitle(titleRu, titleEn)
-    if (hallTitle.length < 2) {
-      setError(lang === 'ru'
-        ? 'Название зала обязательно (минимум 2 символа)'
-        : 'Hall title is required (min 2 characters)')
-      return
-    }
-
-    setSubmitting(true)
-    try {
-      const res = await fetch(`${API_BASE}/api/artists`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.accessToken}` },
-        body: JSON.stringify({
-          hallTitle,
-          hallDescription: joinBilingual(hallDescRu, hallDescEn) || undefined,
-          artistStatement: joinBilingual(statementRu, statementEn) || undefined,
-          location: location.trim() || undefined,
-          websiteUrl: websiteUrl.trim() || undefined,
-        }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        if (res.status === 409) {
-          setError(lang === 'ru'
-            ? 'У вас уже есть профиль художника.'
-            : 'You already have an artist profile.')
-          return
-        }
-        setError(data.message ?? `HTTP ${res.status}`)
-        return
-      }
-
-      const artist = await res.json()
-      navigate({ to: '/hall/$hallSlug', params: { hallSlug: artist.hall.slug } })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error')
-    } finally {
-      setSubmitting(false)
-    }
+    submit({ titleRu, titleEn, statementRu, statementEn, hallDescRu, hallDescEn, location, websiteUrl, lang })
   }
 
   const t = {
@@ -162,94 +104,52 @@ export function ArtistOnboarding() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Hall Title — bilingual */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                {t.hallTitle} <span style={{ color: 'var(--accent)' }}>*</span>
-              </label>
-              <Tabs value={lang} onValueChange={(v) => setLang(v as 'ru' | 'en')} className="mb-3">
-                <TabsList className="h-8">
-                  <TabsTrigger value="ru" className="text-xs px-3">RU</TabsTrigger>
-                  <TabsTrigger value="en" className="text-xs px-3">EN</TabsTrigger>
-                </TabsList>
-                <TabsContent value="ru" forceMount hidden={lang !== 'ru'}>
-                  <Input
-                    value={titleRu}
-                    onChange={(e) => setTitleRu(e.target.value)}
-                    placeholder="Мастерская Иванова"
-                  />
-                </TabsContent>
-                <TabsContent value="en" forceMount hidden={lang !== 'en'}>
-                  <Input
-                    value={titleEn}
-                    onChange={(e) => setTitleEn(e.target.value)}
-                    placeholder="Ivanov's Workshop"
-                  />
-                </TabsContent>
-              </Tabs>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                {t.hallTitleHint}: {joinBilingualTitle(titleRu, titleEn) || '(пусто / empty)'}
-              </p>
-            </div>
+            <BilingualField
+              lang={lang}
+              onLangChange={setLang}
+              label={t.hallTitle}
+              required
+              ruValue={titleRu}
+              enValue={titleEn}
+              onRuChange={setTitleRu}
+              onEnChange={setTitleEn}
+              placeholderRu="Мастерская Иванова"
+              placeholderEn="Ivanov's Workshop"
+              hintAfter={
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  {t.hallTitleHint}: {joinBilingualTitle(titleRu, titleEn) || '(пусто / empty)'}
+                </p>
+              }
+            />
 
-            {/* Artist Statement — bilingual textarea */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                {t.statement}
-              </label>
-              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>{t.statementHint}</p>
-              <Tabs value={lang} onValueChange={(v) => setLang(v as 'ru' | 'en')} className="mb-3">
-                <TabsList className="h-8">
-                  <TabsTrigger value="ru" className="text-xs px-3">RU</TabsTrigger>
-                  <TabsTrigger value="en" className="text-xs px-3">EN</TabsTrigger>
-                </TabsList>
-                <TabsContent value="ru" forceMount hidden={lang !== 'ru'}>
-                  <Textarea
-                    value={statementRu}
-                    onChange={(e) => setStatementRu(e.target.value)}
-                    placeholder="Я работаю с цифровой скульптурой..."
-                    rows={4}
-                  />
-                </TabsContent>
-                <TabsContent value="en" forceMount hidden={lang !== 'en'}>
-                  <Textarea
-                    value={statementEn}
-                    onChange={(e) => setStatementEn(e.target.value)}
-                    placeholder="I work with digital sculpture..."
-                    rows={4}
-                  />
-                </TabsContent>
-              </Tabs>
-            </div>
+            <BilingualField
+              lang={lang}
+              onLangChange={setLang}
+              label={t.statement}
+              hintBefore={t.statementHint}
+              ruValue={statementRu}
+              enValue={statementEn}
+              onRuChange={setStatementRu}
+              onEnChange={setStatementEn}
+              placeholderRu="Я работаю с цифровой скульптурой..."
+              placeholderEn="I work with digital sculpture..."
+              multiline
+              rows={4}
+            />
 
-            {/* Hall Description — bilingual textarea */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                {t.hallDesc}
-              </label>
-              <Tabs value={lang} onValueChange={(v) => setLang(v as 'ru' | 'en')} className="mb-3">
-                <TabsList className="h-8">
-                  <TabsTrigger value="ru" className="text-xs px-3">RU</TabsTrigger>
-                  <TabsTrigger value="en" className="text-xs px-3">EN</TabsTrigger>
-                </TabsList>
-                <TabsContent value="ru" forceMount hidden={lang !== 'ru'}>
-                  <Textarea
-                    value={hallDescRu}
-                    onChange={(e) => setHallDescRu(e.target.value)}
-                    placeholder="Добро пожаловать в мою виртуальную галерею..."
-                    rows={3}
-                  />
-                </TabsContent>
-                <TabsContent value="en" forceMount hidden={lang !== 'en'}>
-                  <Textarea
-                    value={hallDescEn}
-                    onChange={(e) => setHallDescEn(e.target.value)}
-                    placeholder="Welcome to my virtual gallery..."
-                    rows={3}
-                  />
-                </TabsContent>
-              </Tabs>
-            </div>
+            <BilingualField
+              lang={lang}
+              onLangChange={setLang}
+              label={t.hallDesc}
+              ruValue={hallDescRu}
+              enValue={hallDescEn}
+              onRuChange={setHallDescRu}
+              onEnChange={setHallDescEn}
+              placeholderRu="Добро пожаловать в мою виртуальную галерею..."
+              placeholderEn="Welcome to my virtual gallery..."
+              multiline
+              rows={3}
+            />
 
             {/* Location + Website — single-language */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -284,7 +184,7 @@ export function ArtistOnboarding() {
               <p className="text-xs font-medium mb-3" style={{ color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {t.preview}
               </p>
-              <p className="text-lg font-semibold mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+              <p className="text-lg font-semibold mb-1 font-display">
                 {joinBilingualTitle(titleRu, titleEn) || (lang === 'ru' ? 'Без названия' : 'Untitled')}
               </p>
               <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>

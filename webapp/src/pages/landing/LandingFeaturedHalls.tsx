@@ -3,6 +3,9 @@ import { Typography } from '@/components/ui/typography'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { parseBilingualTitle } from '@/lib/utils'
 import { assetUrl } from '@/lib/asset-url'
+import Container from '@/components/layout/Container'
+import Section from '@/components/layout/Section'
+import Stack from '@/components/layout/Stack'
 
 interface FeaturedHallsProps {
   halls: Array<{
@@ -23,14 +26,16 @@ export function LandingFeaturedHalls({ halls, lang }: FeaturedHallsProps) {
   if (halls.length === 0) return null
 
   return (
-    <section className="mx-auto w-full max-w-6xl space-y-10 px-5 py-16">
-      <RevealOnScroll direction="up">
-        <h2 className="text-display-sm" style={{ fontFamily: 'var(--font-display)' }}>
-          {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
-        </h2>
-      </RevealOnScroll>
+    <Section>
+      <Container>
+        <Stack gap="md">
+          <RevealOnScroll direction="up">
+            <h2 className="text-display-sm">
+              {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
+            </h2>
+          </RevealOnScroll>
 
-      <div className="flex gap-5 overflow-x-auto pb-4" style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'thin' }}>
+          <div className="flex gap-5 overflow-x-auto pb-4" style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'thin' }}>
         {halls.map((h, i) => {
           const [titleRu, titleEn] = parseBilingualTitle(h.title)
           const title = lang === 'ru' ? titleRu : titleEn
@@ -54,7 +59,7 @@ export function LandingFeaturedHalls({ halls, lang }: FeaturedHallsProps) {
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center">
-                    <Typography variant="h4" tone="muted" style={{ fontFamily: 'var(--font-display)', opacity: 0.12 }}>
+                    <Typography variant="h4" tone="muted" className="font-display" style={{ opacity: 0.12 }}>
                       {title[0]}
                     </Typography>
                   </div>
@@ -63,7 +68,7 @@ export function LandingFeaturedHalls({ halls, lang }: FeaturedHallsProps) {
 
               {/* Info */}
               <div>
-                <Typography variant="h6" className="truncate" style={{ fontFamily: 'var(--font-display)' }}>
+                <Typography variant="h6" className="truncate font-display">
                   {title}
                 </Typography>
                 <Typography variant="caption" tone="muted">
@@ -80,6 +85,8 @@ export function LandingFeaturedHalls({ halls, lang }: FeaturedHallsProps) {
           )
         })}
       </div>
-    </section>
+        </Stack>
+      </Container>
+    </Section>
   )
 }

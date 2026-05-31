@@ -3,8 +3,7 @@ import { useAuth } from '@/lib/use-auth'
 import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { AdminLayout } from './AdminLayout'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { apiBaseUrl } from '@/lib/api'
 
 interface AdminStats {
   users: number
@@ -23,7 +22,7 @@ export function AdminDashboard() {
   const fetchStats = useCallback(async () => {
     if (!auth.accessToken) return
     try {
-      const res = await fetch(`${API_BASE}/api/admin/stats`, {
+      const res = await fetch(`${apiBaseUrl}/api/admin/stats`, {
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -46,7 +45,7 @@ export function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <h1 className="text-display-sm mb-2" style={{ fontFamily: 'var(--font-display)' }}>
+      <h1 className="text-display-sm mb-2">
         Админ-панель / Admin
       </h1>
       <p style={{ color: 'var(--text-muted)', marginBottom: '32px' }}>

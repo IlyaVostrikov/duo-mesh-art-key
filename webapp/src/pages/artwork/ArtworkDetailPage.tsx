@@ -3,8 +3,10 @@ import { Link, useParams } from '@tanstack/react-router'
 import { ModelViewer3D } from '@/components/artwork/ModelViewer3D'
 import { ArtKeyQR } from '@/components/artwork/ArtKeyQR'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
+import { InquiryForm } from '@/components/inquiry/InquiryForm'
 import { FollowButton } from '@/components/FollowButton'
 import { assetUrl } from '@/lib/asset-url'
+import { apiBaseUrl } from '@/lib/api'
 
 interface ProvenanceRecord {
   sequence: number
@@ -56,29 +58,8 @@ interface ArtworkDetail {
   provenance: ProvenanceRecord[] | null
 }
 
-function parseBilingual(text: string): [string, string] {
-  // Matches seed format (---) and bare \n\n (hall descriptions)
-  const sep = text.includes('\n\n---\n\n') ? '\n\n---\n\n' : '\n\n'
-  const idx = text.indexOf(sep)
-  if (idx === -1) return [text, text]
-  return [text.slice(0, idx), text.slice(idx + sep.length)]
-}
-
-function parseBilingualTitle(title: string): [string, string] {
-  const idx = title.lastIndexOf(' / ')
-  if (idx === -1) return [title, title]
-  return [title.slice(0, idx), title.slice(idx + 3)]
-}
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
-const TRANSFER_LABELS: Record<string, string> = {
-  CREATION: 'Создание / Creation',
-  PRIMARY_SALE: 'Первая продажа / Primary Sale',
-  SECONDARY_SALE: 'Перепродажа / Secondary Sale',
-  TRANSFER: 'Передача / Transfer',
-  EXHIBITION: 'Выставка / Exhibition',
-  CERTIFICATION: 'Сертификация / Certification',
-}
+import { parseBilingual, parseBilingualTitle } from '@/lib/utils'
+import { TRANSFER_LABELS } from '@/lib/labels'
 
 export function ArtworkDetailPage() {
   const { artworkId } = useParams({ from: '/artwork/$artworkId' })
@@ -91,7 +72,7 @@ export function ArtworkDetailPage() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    fetch(`${API_BASE}/api/artworks/${artworkId}`)
+    fetch(`${apiBaseUrl}/api/artworks/${artworkId}`)
       .then(async (res) => {
         if (!res.ok) throw new Error(res.status === 404 ? 'NOT_FOUND' : `HTTP ${res.status}`)
         return res.json()
@@ -202,7 +183,7 @@ export function ArtworkDetailPage() {
           )}
 
           <RevealOnScroll direction="up" delay={60}>
-            <h1 className="text-display-sm" style={{ marginBottom: '8px', fontFamily: 'var(--font-display)' }}>
+            <h1 className="text-display-sm" style={{ marginBottom: '8px' }}>
               {titleMain}
             </h1>
           </RevealOnScroll>
@@ -245,7 +226,7 @@ export function ArtworkDetailPage() {
                 </span>
               )}
               {aw.price && (
-                <span style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)' }}>
+                <span className="font-display" style={{ fontSize: '1.5rem' }}>
                   {aw.currency === 'RUB'
                     ? `${Number(aw.price).toLocaleString('ru-RU')} ₽`
                     : `$${Number(aw.price).toLocaleString('en-US')}`}
@@ -306,7 +287,7 @@ export function ArtworkDetailPage() {
 
           {/* CTA */}
           <RevealOnScroll direction="up" delay={280}>
-            <ContactArtistCTA
+            <InquiryForm
               artworkTitle={titleMain}
               artworkId={aw.id}
               artistName={aw.artist.displayName}
@@ -317,7 +298,7 @@ export function ArtworkDetailPage() {
           {aw.artKey && (
             <RevealOnScroll direction="up" delay={320}>
               <section>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', marginBottom: '16px', color: 'var(--text)' }}>
+                <h3 className="font-display" style={{ fontSize: '1.125rem', marginBottom: '16px', color: 'var(--text)' }}>
                   Art Key · Сертификат
                 </h3>
 
@@ -328,13 +309,13 @@ export function ArtworkDetailPage() {
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
                     Ключ / Key Code
                   </span>
-                  <code style={{ fontFamily: 'monospace', fontSize: '1.125rem', color: 'var(--accent)' }}>
+                  <code className="font-mono" style={{ fontSize: '1.125rem', color: 'var(--accent)' }}>
                     {aw.artKey.keyCode}
                   </code>
                   <div style={{ marginTop: '12px', display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                     <ArtKeyQR keyCode={aw.artKey.keyCode} size={100} />
                     <a
-                      href={`${API_BASE}/api/art-keys/${encodeURIComponent(aw.artKey.keyCode)}/certificate.pdf`}
+                      href={`${apiBaseUrl}/api/art-keys/${encodeURIComponent(aw.artKey.keyCode)}/certificate.pdf`}
                       download
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -356,7 +337,7 @@ export function ArtworkDetailPage() {
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
                     SHA-256 / Integrity Hash
                   </span>
-                  <code style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
+                  <code className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
                     {aw.artKey.integrityHash}
                   </code>
                 </div>
@@ -391,8 +372,8 @@ export function ArtworkDetailPage() {
                             {TRANSFER_LABELS[rec.transferType] || rec.transferType} · {new Date(rec.createdAt).toLocaleDateString('ru-RU')}
                             {rec.price && ` · $${Number(rec.price).toLocaleString('en-US')}`}
                           </p>
-                          <code style={{
-                            fontFamily: 'monospace', fontSize: '0.625rem', color: 'var(--text-muted)',
+                          <code className="font-mono" style={{
+                            fontSize: '0.625rem', color: 'var(--text-muted)',
                             wordBreak: 'break-all', display: 'block', marginTop: '4px',
                           }}>
                             hash: {rec.recordHash.slice(0, 32)}...
@@ -411,207 +392,5 @@ export function ArtworkDetailPage() {
   )
 }
 
-// ─── Contact Artist CTA ───
 
-function ContactArtistCTA({
-  artworkTitle,
-  artworkId,
-  artistName,
-}: {
-  artworkTitle: string
-  artworkId: string
-  artistName: string
-}) {
-  const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [toast, setToast] = useState<'success' | 'error' | null>(null)
-  const [errorText, setErrorText] = useState('')
 
-  const defaultMessage = `Здравствуйте, меня интересует работа «${artworkTitle}» художника ${artistName}.`
-
-  function handleOpen() {
-    setName('')
-    setEmail('')
-    setMessage(defaultMessage)
-    setToast(null)
-    setErrorText('')
-    setOpen(true)
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (submitting) return
-
-    // Basic email validation
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setToast('error')
-      setErrorText('Введите корректный email / Enter a valid email')
-      return
-    }
-
-    setSubmitting(true)
-    setToast(null)
-    setErrorText('')
-
-    try {
-      const res = await fetch(`${API_BASE}/api/inquiries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          artworkId,
-          fromName: name.trim() || 'Гость / Guest',
-          fromEmail: email.trim(),
-          message: message.trim(),
-        }),
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setToast('success')
-      setTimeout(() => setOpen(false), 1200)
-    } catch (err: any) {
-      setToast('error')
-      setErrorText(err.message)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <>
-      <button
-        onClick={handleOpen}
-        className="w-full py-3 text-sm font-semibold mb-12"
-        style={{
-          backgroundColor: 'var(--accent)', color: 'var(--accent-ink)',
-          border: 'none', borderRadius: 'var(--radius)', cursor: 'pointer',
-          transition: `opacity var(--dur-fast) var(--ease)`,
-        }}
-      >
-        Связаться с художником / Contact Artist
-      </button>
-
-      {open && (
-        <div
-          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', padding: '20px',
-          }}
-        >
-          <form
-            onSubmit={handleSubmit}
-            style={{
-              backgroundColor: 'var(--bg)', borderRadius: 'var(--radius)',
-              padding: '32px', maxWidth: '480px', width: '100%',
-              boxShadow: 'var(--elev-2)',
-            }}
-          >
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', marginBottom: '24px' }}>
-              Связаться с художником / Contact Artist
-            </h2>
-
-            <label style={{ display: 'block', marginBottom: '16px' }}>
-              <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                Имя / Name
-              </span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ваше имя / Your name"
-                style={{
-                  width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border)', backgroundColor: 'var(--surface)',
-                  color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box',
-                }}
-              />
-            </label>
-
-            <label style={{ display: 'block', marginBottom: '16px' }}>
-              <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                Email *
-              </span>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                style={{
-                  width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)',
-                  border: `1px solid ${toast === 'error' ? 'var(--error, #e74c3c)' : 'var(--border)'}`,
-                  backgroundColor: 'var(--surface)', color: 'var(--text)',
-                  fontSize: '0.875rem', boxSizing: 'border-box',
-                }}
-              />
-            </label>
-
-            <label style={{ display: 'block', marginBottom: '24px' }}>
-              <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                Сообщение / Message
-              </span>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={4}
-                style={{
-                  width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border)', backgroundColor: 'var(--surface)',
-                  color: 'var(--text)', fontSize: '0.875rem', resize: 'vertical',
-                  minHeight: '100px', boxSizing: 'border-box',
-                }}
-              />
-            </label>
-
-            {/* Toast */}
-            {toast === 'success' && (
-              <div style={{
-                padding: '10px 14px', marginBottom: '16px', borderRadius: 'var(--radius-sm)',
-                backgroundColor: '#d4edda', color: '#155724', fontSize: '0.875rem',
-              }}>
-                Запрос отправлен! / Inquiry sent!
-              </div>
-            )}
-            {toast === 'error' && errorText && (
-              <div style={{
-                padding: '10px 14px', marginBottom: '16px', borderRadius: 'var(--radius-sm)',
-                backgroundColor: '#f8d7da', color: '#721c24', fontSize: '0.875rem',
-              }}>
-                {errorText}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                style={{
-                  padding: '10px 20px', borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border)', backgroundColor: 'transparent',
-                  color: 'var(--text-secondary)', fontSize: '0.875rem', cursor: 'pointer',
-                }}
-              >
-                Отмена / Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                style={{
-                  padding: '10px 20px', borderRadius: 'var(--radius-sm)',
-                  border: 'none', backgroundColor: 'var(--accent)',
-                  color: 'var(--accent-ink)', fontSize: '0.875rem', fontWeight: 600,
-                  cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1,
-                }}
-              >
-                {submitting ? 'Отправка... / Sending...' : 'Отправить / Send'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-    </>
-  )
-}

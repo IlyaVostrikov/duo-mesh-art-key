@@ -1,30 +1,55 @@
-# Design V2 — Современная арт-галерея
+# Design V2 — Современная арт-галерея + Большой Гротеск
 
 Клон дизайна для согласования. Оригинальные файлы не тронуты.
 
 ## Что изменено
 
-- Убраны анимации `float` / `breathe` / `shimmer` / `ParticleField` — статика создаёт больше достоинства
-- Убран двуязычный inline-текст ("RU / EN") из всего UI — язык по умолчанию русский
-- Типографика: Cormorant в героях (сейчас почти не используется), Inter в UI
-- ArtworkCard: убран `mixBlendMode: lighten` hover — чистая рамка вместо засвета
-- Gallery: нативный `<select>` заменён на таб-кнопки, чистый grid
-- Nav: ничего лишнего — только логотип, разделы, аватар
-- Акцент `#C6FF3A` — только в интерактивных состояниях (focus, active, CTA), не декоративный
+### Шрифт
+- **Figtree Variable** — главный дисплейный гротеск (уже установлен, не использовался)
+  - Заголовки, карточки, навигация, dashboard → Figtree
+  - Большой, тугой кернинг (-0.03-0.04em), weight 700-800
+- **Unbounded Variable** — только бренд-марка "DUO MESH" (логотип, badge)
+- **Cormorant Variable** — editorial-подписи под работами, цитаты
+- **Inter Variable** — body-текст, описания, UI-мелочь
+
+### Эффекты (возвращены, но дисциплинированы)
+| Эффект | Было | Стало |
+|--------|------|-------|
+| `float` | на текстовом блоке hero | только на **изображении** — текст неподвижен |
+| `shimmer` | на badge hero | сохранён на badge hero |
+| `glow-pulse` | `breathe` везде | только на **рамке изображения** в hero |
+| `ParticleField` | 35 частиц, dist 90 | **22 частицы, dist 120** — реже, воздушнее |
+| cursor spotlight | был | сохранён, чуть слабее (0.035 opacity) |
+| `mixBlendMode: lighten` на картинках | был | **убран** — давал белесый засвет |
+| hover glow на ArtworkCard | box-shadow + blend | только **accent border** (1px) + лёгкий glow |
+
+### Остальное
+- Только русский язык в основном UI (без "/ English" дублирования)
+- Навигация: clean accent-underline для active-состояния
+- Dashboard hub: grid-таблица вместо карточек
+- Галерея: tab-кнопки вместо `<select>` для сортировки
+- Fade-in на изображениях: исправлен (начальный opacity: 0 был пропущен)
 
 ## Как применить после согласования
 
-Для каждого файла `X.v2.tsx` скопировать содержимое в оригинальный `X.tsx`.
-Для `index.v2.css` — заменить блоки keyframes и radius-токены в `index.css`.
+### 1. Добавить импорт шрифта в `src/index.css` (строка 4-6):
+```css
+@import "@fontsource-variable/figtree";  /* ← добавить */
+```
 
-## Файлы
+### 2. Заменить CSS-блоки в `src/index.css`:
+Скопировать из `index.v2.css` блоки `@theme inline`, keyframes и type scale утилиты.
+
+### 3. Компоненты — скопировать содержимое:
 
 | V2 файл | Заменяет |
 |---------|----------|
-| `index.v2.css` | `src/index.css` (только изменённые блоки) |
-| `pages.v2.tsx` | `src/pages.tsx` |
 | `LandingHero.v2.tsx` | `src/pages/landing/LandingHero.tsx` |
 | `LandingValueProp.v2.tsx` | `src/pages/landing/LandingValueProp.tsx` |
 | `LandingFooterCTA.v2.tsx` | `src/pages/landing/LandingFooterCTA.tsx` |
 | `GalleryPage.v2.tsx` | `src/pages/gallery/GalleryPage.tsx` |
 | `ArtworkCard.v2.tsx` | `src/components/artwork/ArtworkCard.tsx` |
+| `pages.v2.tsx` | `src/pages.tsx` |
+
+### 4. Одновременно исправить критичный баг в оригинале:
+В `src/components/AccountMenu.tsx` — перенести оба `useEffect` **выше** строки `if (!user) return null`.

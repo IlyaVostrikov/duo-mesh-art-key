@@ -72,9 +72,9 @@ export function PedestalSculpture({
           style={{ pointerEvents: 'none' }}
         >
           <span
+            className="font-display"
             style={{
               fontSize: '0.75rem',
-              fontFamily: 'var(--font-display), serif',
               color: '#c6ff3a',
               backgroundColor: 'rgba(0,0,0,0.7)',
               padding: '4px 12px',

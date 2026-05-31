@@ -4,6 +4,9 @@ import { Typography } from '@/components/ui/typography'
 import { parseBilingual } from '@/lib/utils'
 import { assetUrl } from '@/lib/asset-url'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
+import Container from '@/components/layout/Container'
+import Section from '@/components/layout/Section'
+import Stack from '@/components/layout/Stack'
 
 interface FeaturedArtistsProps {
   artists: Array<{
@@ -25,12 +28,14 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
   if (artists.length === 0) return null
 
   return (
-    <section className="mx-auto w-full max-w-6xl space-y-10 px-5 py-16">
-      <h2 className="text-display-sm" style={{ fontFamily: 'var(--font-display)' }}>
-        {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
-      </h2>
+    <Section>
+      <Container>
+        <Stack gap="md">
+          <h2 className="text-display-sm">
+            {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
+          </h2>
 
-      <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
         {artists.map((a) => {
           const [statementRu, statementEn] = parseBilingual(a.artistStatement)
           const [hallTitleRu, hallTitleEn] = a.hall
@@ -59,7 +64,7 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
                 </div>
               ) : (
                 <div className="flex aspect-[3/1] items-center justify-center rounded-md bg-surface-2">
-                  <span style={{ fontFamily: 'var(--font-display)', opacity: 0.15, fontSize: '3rem' }}>
+                  <span className="font-display" style={{ opacity: 0.15, fontSize: '3rem' }}>
                     {a.displayName[0]}
                   </span>
                 </div>
@@ -68,7 +73,7 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
               {/* Info */}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <Typography variant="h5" className="truncate" style={{ fontFamily: 'var(--font-display)' }}>
+                  <Typography variant="h5" className="truncate font-display">
                     {a.displayName}
                   </Typography>
                   {a.location && (
@@ -89,8 +94,7 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
                 <Typography
                   variant="bodySm"
                   tone="muted"
-                  className="line-clamp-3 italic"
-                  style={{ fontFamily: 'var(--font-editorial)' }}
+                  className="line-clamp-3 italic font-editorial"
                 >
                   "{statement.slice(0, 200)}{statement.length > 200 ? '...' : ''}"
                 </Typography>
@@ -100,6 +104,8 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
           )
         })}
       </div>
-    </section>
+        </Stack>
+      </Container>
+    </Section>
   )
 }

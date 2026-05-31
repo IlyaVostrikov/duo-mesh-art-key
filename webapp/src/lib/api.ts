@@ -17,7 +17,7 @@ import {
 } from '@duo-mesh/contracts'
 import type { z } from 'zod'
 
-const apiBaseUrl = (import.meta.env?.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+export const apiBaseUrl = (import.meta.env?.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '')
 
 type ApiClientOptions = {
   getAccessToken: () => string | null

@@ -3,6 +3,7 @@ import { ArtworkCard, ArtworkCardSkeleton } from '@/components/artwork/ArtworkCa
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
 import { assetUrl } from '@/lib/asset-url'
+import { apiBaseUrl } from '@/lib/api'
 
 interface ArtworkItem {
   id: string
@@ -31,8 +32,6 @@ const MEDIA_FILTERS = [
   { value: 'MODEL_3D', label: '3D' },
 ]
 
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
-
 export function GalleryPage() {
   const [artworks, setArtworks] = useState<ArtworkItem[]>([])
   const [total, setTotal] = useState(0)
@@ -57,7 +56,7 @@ export function GalleryPage() {
       const params = new URLSearchParams({ sort: sortBy, pageSize: '50' })
       if (media) params.set('mediaType', media)
       if (q) params.set('q', q)
-      const res = await fetch(`${API_BASE}/api/artworks?${params}`)
+      const res = await fetch(`${apiBaseUrl}/api/artworks?${params}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setArtworks(data.artworks)

@@ -88,12 +88,12 @@ export function UserAvatar({ userId, displayName, email, size = 40 }: UserAvatar
         ),
       )}
       <text
+        className="font-display"
         x={size / 2}
         y={size / 2}
         dominantBaseline="central"
         textAnchor="middle"
         fill={textColor}
-        fontFamily="var(--font-display)"
         fontSize={size * 0.35}
         fontWeight={700}
         letterSpacing="0.02em"

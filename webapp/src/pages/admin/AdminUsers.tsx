@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/lib/use-auth'
 import { AdminLayout } from './AdminLayout'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { apiBaseUrl } from '@/lib/api'
 
 const ROLES = ['GUEST', 'ARTIST', 'COLLECTOR', 'ADMIN'] as const
 
@@ -35,7 +34,7 @@ export function AdminUsers() {
       const params = new URLSearchParams({ pageSize: '50' })
       if (search) params.set('search', search)
       if (roleFilter) params.set('role', roleFilter)
-      const res = await fetch(`${API_BASE}/api/admin/users?${params}`, {
+      const res = await fetch(`${apiBaseUrl}/api/admin/users?${params}`, {
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -54,7 +53,7 @@ export function AdminUsers() {
   const changeRole = async (userId: string, role: string) => {
     if (!auth.accessToken) return
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users/${userId}/role`, {
+      const res = await fetch(`${apiBaseUrl}/api/admin/users/${userId}/role`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +75,7 @@ export function AdminUsers() {
 
   return (
     <AdminLayout>
-      <h1 className="text-display-sm mb-2" style={{ fontFamily: 'var(--font-display)' }}>
+      <h1 className="text-display-sm mb-2">
         Пользователи / Users
       </h1>
       <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>

@@ -3,12 +3,12 @@
   Заменяет: src/pages/landing/LandingValueProp.tsx
 
   Изменения:
+  - Заголовок: Figtree (большой гротеск)
+  - Три колонки → таблица-манифест с нумерацией 01/02/03
+  - Hover на карточках: убран glow-overlay, только accent border
+  - Статистика: крупные цифры Figtree, column-layout
+  - QR-код убран с лендинга (он для страницы /verify)
   - Только русский язык
-  - Уровень "три колонки" заменён на горизонтальную таблицу-манифест
-  - Убраны hover-glow на карточках — чистая рамка
-  - Статистика подана как типографическое произведение, не как виджет
-  - Убран QR-код с лендинга (он про верификацию, не про ценность)
-  - RevealOnScroll оставлен, но без delay-каскада (единовременно)
 */
 import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
@@ -39,19 +39,22 @@ export function LandingValueProp({ lang: _ }: { lang: 'ru' | 'en' }) {
     <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 20px' }}>
 
-        {/* Заголовок секции */}
+        {/* Заголовок + подпись */}
         <RevealOnScroll direction="up">
           <div
             style={{
-              padding: '80px 0 64px',
+              padding: '80px 0 60px',
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
-              gap: '48px',
+              gap: '64px',
               alignItems: 'end',
               borderBottom: '1px solid var(--border)',
             }}
           >
-            <h2 className="text-editorial" style={{ margin: 0, color: 'var(--text)' }}>
+            <h2
+              className="text-display"
+              style={{ fontFamily: 'var(--font-display)', margin: 0 }}
+            >
               Каждая работа —<br />
               <span style={{ color: 'var(--text-secondary)' }}>с доказуемой</span><br />
               подлинностью
@@ -60,18 +63,11 @@ export function LandingValueProp({ lang: _ }: { lang: 'ru' | 'en' }) {
               <Typography
                 variant="body"
                 tone="muted"
-                style={{
-                  fontFamily: 'var(--font-editorial)',
-                  fontSize: '1.15rem',
-                  lineHeight: 1.65,
-                  maxWidth: '420px',
-                }}
+                style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.15rem', lineHeight: 1.65 }}
               >
-                ArtKey — это не блокчейн. Это криптографическая
-                цепочка владения, которая не требует газа, кошельков
-                или комиссий. Только SHA-256 и математика.
+                ArtKey — это не блокчейн. Криптографическая цепочка владения без газа, кошельков и комиссий. Только SHA-256 и математика.
               </Typography>
-              <div style={{ marginTop: '32px' }}>
+              <div style={{ marginTop: '28px' }}>
                 <Button asChild size="lg">
                   <Link to="/verify">Попробовать верификацию</Link>
                 </Button>
@@ -80,7 +76,7 @@ export function LandingValueProp({ lang: _ }: { lang: 'ru' | 'en' }) {
           </div>
         </RevealOnScroll>
 
-        {/* Три принципа — таблица */}
+        {/* Таблица принципов */}
         <RevealOnScroll direction="up">
           <div>
             {PILLARS.map((p, i) => (
@@ -88,20 +84,20 @@ export function LandingValueProp({ lang: _ }: { lang: 'ru' | 'en' }) {
                 key={p.index}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '60px 1fr 2fr',
+                  gridTemplateColumns: '56px 1fr 2fr',
                   gap: '0 48px',
-                  padding: '32px 0',
+                  padding: '28px 0',
                   borderBottom: i < PILLARS.length - 1 ? '1px solid var(--border)' : 'none',
                   alignItems: 'start',
                 }}
               >
                 <span
                   style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '0.7rem',
-                    letterSpacing: '0.12em',
-                    color: 'var(--text-muted)',
-                    paddingTop: '4px',
+                    fontFamily: 'var(--font-brand)',
+                    fontSize: '0.65rem',
+                    letterSpacing: '0.1em',
+                    color: 'var(--accent)',
+                    paddingTop: '3px',
                   }}
                 >
                   {p.index}
@@ -109,7 +105,8 @@ export function LandingValueProp({ lang: _ }: { lang: 'ru' | 'en' }) {
                 <h3
                   style={{
                     fontFamily: 'var(--font-display)',
-                    fontSize: '0.9rem',
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
                     letterSpacing: '-0.01em',
                     color: 'var(--text)',
                     margin: 0,
@@ -122,7 +119,7 @@ export function LandingValueProp({ lang: _ }: { lang: 'ru' | 'en' }) {
                   style={{
                     fontFamily: 'var(--font-sans)',
                     fontSize: '0.9rem',
-                    lineHeight: 1.6,
+                    lineHeight: 1.65,
                     color: 'var(--text-muted)',
                     margin: 0,
                   }}
@@ -134,47 +131,42 @@ export function LandingValueProp({ lang: _ }: { lang: 'ru' | 'en' }) {
           </div>
         </RevealOnScroll>
 
-        {/* Статистика — типографическое высказывание */}
+        {/* Статистика */}
         <RevealOnScroll direction="up">
           <div
             style={{
-              padding: '64px 0 80px',
+              padding: '56px 0 72px',
               display: 'grid',
               gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '0',
             }}
           >
             {[
-              { value: 29, suffix: '', label: 'Работ в галерее' },
-              { value: 12, suffix: '+', label: 'Художников' },
-              { value: 3402, suffix: '', label: 'Верификаций' },
+              { value: 29,   suffix: '',  label: 'Работ в галерее' },
+              { value: 12,   suffix: '+', label: 'Художников' },
+              { value: 3402, suffix: '',  label: 'Верификаций' },
             ].map((stat, i) => (
               <div
                 key={stat.label}
                 style={{
-                  padding: '0 32px',
+                  padding: '0 0 0 32px',
                   borderLeft: i > 0 ? '1px solid var(--border)' : 'none',
+                  paddingLeft: i === 0 ? '0' : '32px',
                 }}
               >
                 <div
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '3.5rem',
-                    lineHeight: 1,
-                    color: 'var(--text)',
-                    letterSpacing: '-0.03em',
-                  }}
+                  className="text-display"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--text)' }}
                 >
                   <AnimatedCounter value={stat.value} suffix={stat.suffix} />
                 </div>
                 <p
                   style={{
                     fontFamily: 'var(--font-sans)',
-                    fontSize: '0.75rem',
-                    letterSpacing: '0.08em',
-                    color: 'var(--text-muted)',
-                    margin: '12px 0 0',
+                    fontSize: '0.72rem',
+                    letterSpacing: '0.1em',
                     textTransform: 'uppercase',
+                    color: 'var(--text-muted)',
+                    margin: '10px 0 0',
                   }}
                 >
                   {stat.label}

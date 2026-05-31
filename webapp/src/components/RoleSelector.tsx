@@ -30,8 +30,8 @@ export function RoleSelector({ onSelect }: RoleSelectorProps) {
     <div className="space-y-4">
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
         <h2
+          className="font-display"
           style={{
-            fontFamily: 'var(--font-display)',
             fontSize: '1.75rem',
             fontWeight: 700,
             marginBottom: '8px',

@@ -2,6 +2,9 @@ import { Link } from '@tanstack/react-router'
 import { ArtworkCard } from '@/components/artwork/ArtworkCard'
 import { Typography } from '@/components/ui/typography'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
+import Container from '@/components/layout/Container'
+import Section from '@/components/layout/Section'
+import Stack from '@/components/layout/Stack'
 
 interface FeaturedWorksProps {
   works: Array<{
@@ -23,27 +26,31 @@ const HEADLINE_EN = 'Featured Works'
 export function LandingFeaturedWorks({ works, lang }: FeaturedWorksProps) {
   if (works.length === 0) {
     return (
-      <section className="mx-auto w-full max-w-6xl px-5 py-16 text-center">
-        <Typography tone="muted">{lang === 'ru' ? 'Работы скоро появятся' : 'Works coming soon'}</Typography>
-      </section>
+      <Section>
+        <Container>
+          <Typography tone="muted">{lang === 'ru' ? 'Работы скоро появятся' : 'Works coming soon'}</Typography>
+        </Container>
+      </Section>
     )
   }
 
   return (
-    <section className="mx-auto w-full max-w-6xl space-y-10 px-5 py-16">
-      <div className="flex items-end justify-between">
-        <h2 className="text-display-sm" style={{ fontFamily: 'var(--font-display)' }}>
-          {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
-        </h2>
-        <Typography asChild variant="control" tone="muted">
-          <Link to="/gallery" className="hover:text-accent">
-            {lang === 'ru' ? 'Вся галерея →' : 'Full gallery →'}
-          </Link>
-        </Typography>
-      </div>
+    <Section>
+      <Container>
+        <Stack gap="md">
+          <div className="flex items-end justify-between">
+            <h2 className="text-display-sm">
+              {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
+            </h2>
+            <Typography asChild variant="control" tone="muted">
+              <Link to="/gallery" className="hover:text-accent">
+                {lang === 'ru' ? 'Вся галерея →' : 'Full gallery →'}
+              </Link>
+            </Typography>
+          </div>
 
-      {/* Editorial grid — asymmetric 12-col spans */}
-      <div className="grid grid-cols-12 gap-5">
+          {/* Editorial grid — asymmetric 12-col spans */}
+          <div className="grid grid-cols-12 gap-5">
         {works.map((w, i) => {
           // Row 1: 8+4, Row 2: 5+7, Row 3: 4+4+4, Row 4: 6 centered
           const spans = [
@@ -75,6 +82,8 @@ export function LandingFeaturedWorks({ works, lang }: FeaturedWorksProps) {
           )
         })}
       </div>
-    </section>
+        </Stack>
+      </Container>
+    </Section>
   )
 }

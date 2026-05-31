@@ -6,8 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { apiBaseUrl } from '@/lib/api'
 
 export function DashboardProfileSettings() {
   const auth = useAuth()
@@ -28,7 +27,7 @@ export function DashboardProfileSettings() {
     let cancelled = false
     setLoading(true)
 
-    fetch(`${API_BASE}/api/artists/me`, {
+    fetch(`${apiBaseUrl}/api/artists/me`, {
       headers: { Authorization: `Bearer ${auth.accessToken}` },
     })
       .then(async (r) => {
@@ -76,7 +75,7 @@ export function DashboardProfileSettings() {
       : statement.trim()
 
     try {
-      const res = await fetch(`${API_BASE}/api/artists/${artistId}`, {
+      const res = await fetch(`${apiBaseUrl}/api/artists/${artistId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.accessToken!}` },
         body: JSON.stringify({
@@ -133,7 +132,7 @@ export function DashboardProfileSettings() {
   return (
     <DashboardLayout>
       <RevealOnScroll direction="up">
-        <h1 className="text-display-sm mb-8" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1 className="text-display-sm mb-8">
           Профиль / Settings
         </h1>
       </RevealOnScroll>

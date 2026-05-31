@@ -1,4 +1,5 @@
 import type { DbClient } from '../db'
+import { ValidationError, NotFoundError, ForbiddenError } from '../http/errors'
 
 const VALID_ROLES = ['GUEST', 'ARTIST', 'COLLECTOR', 'ADMIN'] as const
 
@@ -160,28 +161,3 @@ export class AdminService {
     })
   }
 }
-
-// ─── Lightweight error types (avoid pulling in full framework types) ───
-
-class ValidationError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = 'ValidationError'
-  }
-}
-
-class NotFoundError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = 'NotFoundError'
-  }
-}
-
-class ForbiddenError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = 'ForbiddenError'
-  }
-}
-
-export { ValidationError, NotFoundError, ForbiddenError }

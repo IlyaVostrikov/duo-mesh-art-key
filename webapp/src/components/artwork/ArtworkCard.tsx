@@ -122,7 +122,6 @@ export function ArtworkCard({
         <h3
           className="text-display-sm truncate group-hover:text-accent"
           style={{
-            fontFamily: 'var(--font-display)',
             fontSize: '1rem',
             lineHeight: 1.3,
             color: 'var(--text)',

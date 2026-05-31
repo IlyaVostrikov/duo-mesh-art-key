@@ -2,17 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/lib/use-auth'
 import { DashboardLayout } from './DashboardLayout'
-import { assetUrl } from '@/lib/asset-url'
 import { layoutTemplates, type ArtworkSlot } from '@/components/hall3d/layoutTemplates'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
-
-interface HallArtwork {
-  id: string
-  title: string
-  posterUrl: string | null
-  mediaType: 'IMAGE_2D' | 'MODEL_3D'
-}
+import { HallSlotCell } from '@/components/hall3d/HallSlotCell'
+import { HallArtworkChip } from '@/components/hall3d/HallArtworkChip'
+import type { HallArtwork } from '@/components/hall3d/types'
+import { apiBaseUrl } from '@/lib/api'
 
 interface HallMeta {
   slug: string
@@ -44,7 +38,7 @@ export function DashboardHallLayout() {
       setLoading(true)
       try {
         // Get artist profile to find hall slug
-        const artistRes = await fetch(`${API_BASE}/api/artists/me`, {
+        const artistRes = await fetch(`${apiBaseUrl}/api/artists/me`, {
           headers: { Authorization: `Bearer ${auth.accessToken}` },
         })
         if (!artistRes.ok) throw new Error('Failed to load artist profile')
@@ -57,7 +51,7 @@ export function DashboardHallLayout() {
         }
 
         // Get hall detail
-        const hallRes = await fetch(`${API_BASE}/api/halls/${artist.hall.slug}`)
+        const hallRes = await fetch(`${apiBaseUrl}/api/halls/${artist.hall.slug}`)
         if (!hallRes.ok) throw new Error('Failed to load hall')
         const hallData = await hallRes.json()
 
@@ -135,7 +129,7 @@ export function DashboardHallLayout() {
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch(`${API_BASE}/api/halls/${hall.slug}`, {
+      const res = await fetch(`${apiBaseUrl}/api/halls/${hall.slug}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -184,7 +178,7 @@ export function DashboardHallLayout() {
     <DashboardLayout>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
         <div>
-          <h1 className="text-display-sm" style={{ fontFamily: 'var(--font-display)' }}>
+          <h1 className="text-display-sm">
             Раскладка зала / Hall Layout
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '4px' }}>
@@ -306,10 +300,9 @@ export function DashboardHallLayout() {
             {layout.slots.map((slot, i) => {
               const assigned = artworks.find((aw) => aw.id === slot.artworkId)
               return (
-                <SlotCell
+                <HallSlotCell
                   key={i}
                   index={i}
-                  slot={slot}
                   assigned={assigned ?? null}
                   onDrop={(artworkId) => handleDrop(i, artworkId)}
                   onRemove={() => handleRemove(i)}
@@ -336,161 +329,11 @@ export function DashboardHallLayout() {
             gap: '12px',
           }}>
             {unassignedArtworks.map((aw) => (
-              <ArtworkChip key={aw.id} artwork={aw} />
+              <HallArtworkChip key={aw.id} artwork={aw} />
             ))}
           </div>
         )}
       </div>
     </DashboardLayout>
-  )
-}
-
-// ─── Slot cell ───
-
-function SlotCell({
-  index,
-  slot: _slot,
-  assigned,
-  onDrop,
-  onRemove,
-}: {
-  index: number
-  slot: LayoutConfig['slots'][number]
-  assigned: HallArtwork | null
-  onDrop: (artworkId: string) => void
-  onRemove: () => void
-}) {
-  const [dragOver, setDragOver] = useState(false)
-
-  return (
-    <div
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setDragOver(false)
-        const id = e.dataTransfer.getData('text/artwork-id')
-        if (id) onDrop(id)
-      }}
-      style={{
-        aspectRatio: '0.77',
-        borderRadius: 'var(--radius-sm)',
-        border: assigned
-          ? '1px solid var(--accent)'
-          : dragOver
-            ? '2px dashed var(--accent)'
-            : '1px dashed var(--border)',
-        backgroundColor: dragOver ? 'rgba(198,255,58,0.05)' : assigned ? 'var(--surface)' : 'transparent',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        position: 'relative',
-        cursor: 'pointer',
-        transition: 'all 0.15s ease',
-        overflow: 'hidden',
-      }}
-    >
-      {assigned ? (
-        <>
-          <img
-            src={assigned.posterUrl ? assetUrl(assigned.posterUrl) : '/placeholder-artwork.svg'}
-            alt={assigned.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
-          />
-          {/* Overlay with info */}
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            padding: '6px 8px',
-            backgroundColor: 'rgba(0,0,0,0.75)',
-            backdropFilter: 'blur(4px)',
-          }}>
-            <p style={{ fontSize: '0.65rem', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
-              {assigned.title.split(' / ')[0]}
-            </p>
-            <p style={{ fontSize: '0.6rem', color: 'var(--accent)', margin: 0 }}>
-              {assigned.mediaType === 'MODEL_3D' ? '3D' : '2D'}
-            </p>
-          </div>
-          {/* Remove button */}
-          <button
-            onClick={(e) => { e.stopPropagation(); onRemove() }}
-            title="Убрать / Remove"
-            style={{
-              position: 'absolute', top: '4px', right: '4px',
-              width: '20px', height: '20px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(0,0,0,0.6)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff',
-              fontSize: '0.65rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              lineHeight: 1,
-            }}
-          >
-            ✕
-          </button>
-        </>
-      ) : (
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textAlign: 'center' }}>
-          Слот {index + 1}<br />
-          <span style={{ color: 'var(--text-disabled)' }}>drop artwork</span>
-        </span>
-      )}
-    </div>
-  )
-}
-
-// ─── Artwork chip (drag source from bank) ───
-
-function ArtworkChip({ artwork }: { artwork: HallArtwork }) {
-  const [dragging, setDragging] = useState(false)
-
-  return (
-    <div
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('text/artwork-id', artwork.id)
-        e.dataTransfer.effectAllowed = 'move'
-        setDragging(true)
-      }}
-      onDragEnd={() => setDragging(false)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '8px',
-        borderRadius: 'var(--radius-sm)',
-        border: '1px solid var(--border)',
-        backgroundColor: 'var(--surface)',
-        cursor: 'grab',
-        opacity: dragging ? 0.5 : 1,
-        transition: 'opacity 0.15s',
-      }}
-    >
-      <img
-        src={artwork.posterUrl ? assetUrl(artwork.posterUrl) : '/placeholder-artwork.svg'}
-        alt=""
-        style={{ width: '36px', height: '36px', borderRadius: '3px', objectFit: 'cover', flexShrink: 0 }}
-      />
-      <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: '0.7rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {artwork.title.split(' / ')[0]}
-        </p>
-        <span style={{
-          fontSize: '0.6rem',
-          padding: '1px 5px',
-          borderRadius: '3px',
-          backgroundColor: artwork.mediaType === 'MODEL_3D' ? 'rgba(198,255,58,0.1)' : 'rgba(96,165,250,0.1)',
-          color: artwork.mediaType === 'MODEL_3D' ? 'var(--accent)' : '#60a5fa',
-        }}>
-          {artwork.mediaType === 'MODEL_3D' ? '3D' : '2D'}
-        </span>
-      </div>
-    </div>
   )
 }

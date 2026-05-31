@@ -5,6 +5,7 @@ import { ArtworkCard } from '@/components/artwork/ArtworkCard'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
 import { assetUrl } from '@/lib/asset-url'
+import { apiBaseUrl } from '@/lib/api'
 
 interface PurchasedArtwork {
   id: string
@@ -25,8 +26,6 @@ interface PurchasedArtwork {
   artKey: { keyCode: string } | null
 }
 
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
-
 export function CollectionPage() {
   const auth = useAuth()
   const [artworks, setArtworks] = useState<PurchasedArtwork[]>([])
@@ -38,7 +37,7 @@ export function CollectionPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API_BASE}/api/sales/me`, {
+      const res = await fetch(`${apiBaseUrl}/api/sales/me`, {
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -60,7 +59,7 @@ export function CollectionPage() {
     return (
       <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 20px' }}>
         <RevealOnScroll direction="up">
-          <h1 className="text-display-hero" style={{ fontFamily: 'var(--font-display)', marginBottom: '16px' }}>
+          <h1 className="text-display-hero" style={{ marginBottom: '16px' }}>
             Моя коллекция / My Collection
           </h1>
         </RevealOnScroll>
@@ -76,7 +75,7 @@ export function CollectionPage() {
   return (
     <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 20px' }}>
       <RevealOnScroll direction="up">
-        <h1 className="text-display-hero" style={{ fontFamily: 'var(--font-display)', marginBottom: '8px' }}>
+        <h1 className="text-display-hero" style={{ marginBottom: '8px' }}>
           Моя коллекция / My Collection
         </h1>
       </RevealOnScroll>

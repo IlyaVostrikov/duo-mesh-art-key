@@ -12,8 +12,7 @@ import { useScrollPosition } from '@/hooks/use-scroll-position'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { apiBaseUrl } from '@/lib/api'
 
 const navLinkClass = cn(
   buttonVariants({ variant: 'ghost', size: 'sm' }),
@@ -122,8 +121,8 @@ function ArtistHub({ accessToken }: { accessToken: string | null }) {
     if (!accessToken) return
     try {
       const [artistRes, salesRes] = await Promise.all([
-        fetch(`${API_BASE}/api/artists/me`, { headers: { Authorization: `Bearer ${accessToken}` } }),
-        fetch(`${API_BASE}/api/sales/artist`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch(`${apiBaseUrl}/api/artists/me`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch(`${apiBaseUrl}/api/sales/artist`, { headers: { Authorization: `Bearer ${accessToken}` } }),
       ])
       const artist = artistRes.ok ? await artistRes.json() : null
       const sales = salesRes.ok ? await salesRes.json() : null

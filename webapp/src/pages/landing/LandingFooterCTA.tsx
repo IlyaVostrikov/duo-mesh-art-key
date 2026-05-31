@@ -2,6 +2,9 @@ import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Typography } from '@/components/ui/typography'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
+import Container from '@/components/layout/Container'
+import Section from '@/components/layout/Section'
+import Stack from '@/components/layout/Stack'
 
 interface FooterCTAProps {
   lang: 'ru' | 'en'
@@ -17,12 +20,12 @@ const COLLECTOR_EN = 'For Collectors'
 
 export function LandingFooterCTA({ lang, onToggleLang }: FooterCTAProps) {
   return (
-    <footer className="border-t bg-surface/50">
-      <div className="mx-auto w-full max-w-4xl space-y-10 px-5 py-20 text-center">
+    <Section as="footer" border="top" background="surface" paddingY="lg">
+      <Container size="narrow">
+        <Stack gap="md" className="text-center">
         <RevealOnScroll direction="up">
           <h2
             className="text-display"
-            style={{ fontFamily: 'var(--font-display)' }}
           >
             {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
           </h2>
@@ -67,7 +70,8 @@ export function LandingFooterCTA({ lang, onToggleLang }: FooterCTAProps) {
             DUO MESH 2026 · {lang === 'ru' ? 'Платформа верифицированного цифрового искусства' : 'Verified digital art platform'}
           </Typography>
         </RevealOnScroll>
-      </div>
-    </footer>
+        </Stack>
+      </Container>
+    </Section>
   )
 }

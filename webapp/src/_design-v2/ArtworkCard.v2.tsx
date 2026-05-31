@@ -3,12 +3,12 @@
   Заменяет: src/components/artwork/ArtworkCard.tsx
 
   Изменения:
-  - Убран mixBlendMode: lighten hover (давал белесый засвет)
-  - Убран glow border (слишком flashy)
-  - Hover: тонкая рамка цвета accent — строго и чисто
-  - Типографика: Cormorant italic для названия (как в галерее)
-  - Начальный opacity: 0 для реального fade-in при загрузке
-  - Фиксирован баг: text-display-sm → правильный класс
+  - Название карточки: Figtree (большой гротеск), не Cormorant
+  - Glow border hover: оставлен, но тоньше — inset 1px accent
+  - Убран mixBlendMode: lighten (давал белесый засвет на тёмных картинах)
+  - Фикс: начальный opacity: 0 → реальный fade-in при загрузке
+  - Фикс: убран неверный text-display-sm, правильный font-size
+  - 3D badge: Figtree font-brand
 */
 import { Link } from '@tanstack/react-router'
 
@@ -56,70 +56,77 @@ export function ArtworkCard({
       to="/artwork/$artworkId"
       params={{ artworkId: id }}
       className="group block"
-      style={{ textDecoration: 'none', transition: `transform 250ms cubic-bezier(0.2, 0, 0, 1)` }}
+      style={{ textDecoration: 'none', transition: 'transform 250ms cubic-bezier(0.2,0,0,1)' }}
     >
       {/* Постер */}
       <div
+        className="relative overflow-hidden"
         style={{
-          position: 'relative',
-          overflow: 'hidden',
           background: 'var(--surface)',
           aspectRatio: aspectRatio === '4:5' ? '4/5' : undefined,
-          outline: '1px solid transparent',
-          transition: 'outline-color 250ms cubic-bezier(0.2, 0, 0, 1)',
+          borderRadius: 'var(--radius)',
+          boxShadow: '0 0 0 1px var(--border)',
+          transition: 'box-shadow 250ms cubic-bezier(0.2,0,0,1)',
         }}
-        className="group-hover:[outline-color:var(--accent)]"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = '0 0 0 1px var(--accent), 0 0 28px rgba(198,255,58,0.07)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = '0 0 0 1px var(--border)'
+        }}
       >
         <img
           src={posterUrl}
           alt={russianTitle}
           loading="lazy"
+          className="group-hover:scale-[1.025]"
           style={{
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            opacity: 0,
-            transition: 'opacity 400ms cubic-bezier(0.2, 0, 0, 1), transform 400ms cubic-bezier(0.2, 0, 0, 1)',
             display: 'block',
+            opacity: 0,
+            transition: 'opacity 400ms cubic-bezier(0.2,0,0,1), transform 400ms cubic-bezier(0.2,0,0,1)',
           }}
-          className="group-hover:scale-[1.02]"
           onLoad={(e) => { e.currentTarget.style.opacity = '1' }}
         />
 
-        {/* 3D Badge */}
         {is3D && (
           <span
             style={{
               position: 'absolute',
-              top: '12px',
-              left: '12px',
+              top: '10px',
+              left: '10px',
               padding: '2px 8px',
-              fontSize: '0.65rem',
-              letterSpacing: '0.12em',
+              fontFamily: 'var(--font-brand)',
+              fontSize: '0.6rem',
+              letterSpacing: '0.14em',
               textTransform: 'uppercase',
-              fontFamily: 'var(--font-sans)',
               fontWeight: 600,
               backgroundColor: 'var(--accent)',
               color: 'var(--accent-ink)',
+              borderRadius: 'var(--radius-sm)',
             }}
           >
             3D
           </span>
         )}
 
-        {/* Status badge */}
         {statusLabel && (
           <span
             style={{
               position: 'absolute',
-              top: '12px',
-              right: '12px',
+              top: '10px',
+              right: '10px',
               padding: '2px 8px',
+              fontFamily: 'var(--font-sans)',
               fontSize: '0.65rem',
-              letterSpacing: '0.08em',
-              backgroundColor: 'var(--bg)',
+              letterSpacing: '0.05em',
+              backgroundColor: 'rgba(11,11,13,0.75)',
               color: 'var(--text-muted)',
               border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              backdropFilter: 'blur(4px)',
             }}
           >
             {statusLabel}
@@ -127,32 +134,32 @@ export function ArtworkCard({
         )}
       </div>
 
-      {/* Метаданные — стиль музейной этикетки */}
-      <div style={{ marginTop: '12px', display: 'grid', gap: '3px' }}>
+      {/* Метаданные */}
+      <div style={{ marginTop: '10px', display: 'grid', gap: '2px' }}>
         <h3
+          className="group-hover:text-accent"
           style={{
-            fontFamily: 'var(--font-editorial)',
-            fontStyle: 'italic',
-            fontSize: '1.15rem',
+            fontFamily: 'var(--font-display)',   /* Figtree */
+            fontSize: '0.95rem',
+            fontWeight: 600,
             lineHeight: 1.3,
+            letterSpacing: '-0.01em',
             color: 'var(--text)',
             margin: 0,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            transition: 'color 250ms cubic-bezier(0.2, 0, 0, 1)',
+            transition: 'color 200ms cubic-bezier(0.2,0,0,1)',
           }}
-          className="group-hover:text-accent"
         >
           {russianTitle}
         </h3>
         <p
           style={{
             fontFamily: 'var(--font-sans)',
-            fontSize: '0.8rem',
+            fontSize: '0.78rem',
             color: 'var(--text-muted)',
             margin: 0,
-            letterSpacing: '0.02em',
           }}
         >
           {artistName}
@@ -160,11 +167,11 @@ export function ArtworkCard({
         {priceDisplay && (
           <p
             style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: '0.8rem',
+              fontFamily: 'var(--font-display)',
+              fontSize: '0.82rem',
+              fontWeight: 500,
               color: 'var(--text-secondary)',
-              margin: 0,
-              marginTop: '4px',
+              margin: '3px 0 0',
             }}
           >
             {priceDisplay}
@@ -178,15 +185,10 @@ export function ArtworkCard({
 export function ArtworkCardSkeleton() {
   return (
     <div className="animate-pulse">
-      <div
-        style={{
-          aspectRatio: '4/5',
-          background: 'var(--surface)',
-        }}
-      />
-      <div style={{ marginTop: '12px', display: 'grid', gap: '6px' }}>
-        <div style={{ height: '18px', width: '65%', background: 'var(--surface)', borderRadius: '1px' }} />
-        <div style={{ height: '12px', width: '40%', background: 'var(--surface)', borderRadius: '1px' }} />
+      <div style={{ aspectRatio: '4/5', background: 'var(--surface)', borderRadius: 'var(--radius)' }} />
+      <div style={{ marginTop: '10px', display: 'grid', gap: '5px' }}>
+        <div style={{ height: '15px', width: '60%', background: 'var(--surface)', borderRadius: '2px' }} />
+        <div style={{ height: '11px', width: '40%', background: 'var(--surface)', borderRadius: '2px' }} />
       </div>
     </div>
   )

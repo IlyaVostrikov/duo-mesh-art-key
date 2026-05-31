@@ -7,12 +7,12 @@ import { cn } from "@/lib/utils"
 const typographyVariants = cva("min-w-0 tracking-normal", {
   variants: {
     variant: {
-      h1: "font-heading text-4xl leading-tight font-semibold",
-      h2: "font-heading text-3xl leading-tight font-semibold",
-      h3: "font-heading text-2xl leading-snug font-semibold",
-      h4: "font-heading text-xl leading-snug font-semibold",
-      h5: "font-heading text-lg leading-snug font-medium",
-      h6: "font-heading text-base leading-snug font-medium",
+      h1: "font-display text-4xl leading-tight font-semibold",
+      h2: "font-display text-3xl leading-tight font-semibold",
+      h3: "font-display text-2xl leading-snug font-semibold",
+      h4: "font-display text-xl leading-snug font-semibold",
+      h5: "font-display text-lg leading-snug font-medium",
+      h6: "font-display text-base leading-snug font-medium",
       lead: "text-lg leading-7 font-normal",
       body: "text-base leading-7 font-normal",
       bodySm: "text-sm leading-normal font-normal",
@@ -38,6 +38,12 @@ const typographyVariants = cva("min-w-0 tracking-normal", {
       commandGroup:
         "text-sm leading-normal font-normal **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:leading-normal **:[[cmdk-group-heading]]:font-medium",
       srOnly: "sr-only",
+    },
+    font: {
+      sans: "font-sans",
+      display: "font-display",
+      editorial: "font-editorial",
+      mono: "font-mono",
     },
     tone: {
       current: "",
@@ -127,6 +133,7 @@ function Typography<TElement extends React.ElementType = "span">({
   asChild = false,
   className,
   variant,
+  font,
   tone,
   align,
   balance,
@@ -146,6 +153,7 @@ function Typography<TElement extends React.ElementType = "span">({
       className={cn(
         typographyVariants({
           variant: resolvedVariant,
+          font,
           tone,
           align,
           balance,

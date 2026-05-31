@@ -81,9 +81,8 @@ export function Preloader() {
           />
         </div>
         <span
-          className="text-sm font-medium tracking-[0.2em] uppercase"
+          className="font-display text-sm font-medium tracking-[0.2em] uppercase"
           style={{
-            fontFamily: 'var(--font-display)',
             color: 'var(--text-secondary)',
             letterSpacing: '0.2em',
           }}

@@ -15,6 +15,9 @@ import { HallService } from './services/hall.service'
 import { ArtKeyService } from './services/art-key.service'
 import { FeaturedService } from './services/featured.service'
 import { AdminService } from './services/admin.service'
+import { SaleService } from './services/sale.service'
+import { FollowService } from './services/follow.service'
+import { InquiryService } from './services/inquiry.service'
 import { createArtistRoutes } from './routes/artists'
 import { createArtworkRoutes } from './routes/artworks'
 import { createHallRoutes } from './routes/halls'
@@ -36,6 +39,9 @@ type AppBindings = {
     artKeyService: ArtKeyService
     featuredService: FeaturedService
     adminService: AdminService
+    saleService: SaleService
+    followService: FollowService
+    inquiryService: InquiryService
     env: AppEnv
     prisma: DbClient
     storageService: StorageService | null
@@ -55,6 +61,9 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   const artKeyService = new ArtKeyService(prisma)
   const featuredService = new FeaturedService(prisma)
   const adminService = new AdminService(prisma)
+  const saleService = new SaleService(prisma)
+  const followService = new FollowService(prisma)
+  const inquiryService = new InquiryService(prisma)
   const storageService = createStorageServiceFromEnv(env)
 
   const app = new OpenAPIHono<AppBindings>({
@@ -83,6 +92,9 @@ export function createApp({ env, prisma }: CreateAppOptions) {
     c.set('artKeyService', artKeyService)
     c.set('featuredService', featuredService)
     c.set('adminService', adminService)
+    c.set('saleService', saleService)
+    c.set('followService', followService)
+    c.set('inquiryService', inquiryService)
     c.set('env', env)
     c.set('prisma', prisma)
     c.set('storageService', storageService)

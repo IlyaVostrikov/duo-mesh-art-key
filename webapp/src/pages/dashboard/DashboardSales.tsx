@@ -5,7 +5,7 @@ export function DashboardSales() {
   return (
     <DashboardLayout>
       <RevealOnScroll direction="up">
-        <h1 className="text-display-sm mb-4" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1 className="text-display-sm mb-4">
           Продажи / Sales
         </h1>
       </RevealOnScroll>

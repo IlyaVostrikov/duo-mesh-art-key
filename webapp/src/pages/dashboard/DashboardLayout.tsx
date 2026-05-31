@@ -5,8 +5,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Typography } from '@/components/ui/typography'
 import { Card, CardContent } from '@/components/ui/card'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-
-const API_BASE = import.meta.env?.VITE_API_URL ?? 'http://localhost:3000'
+import { apiBaseUrl } from '@/lib/api'
 
 const ARTIST_NAV = [
   { to: '/dashboard', label: 'Обзор / Overview', exact: true },
@@ -40,7 +39,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (auth.user?.role !== 'ARTIST' || !auth.accessToken) return
     let cancelled = false
-    fetch(`${API_BASE}/api/artists/me`, {
+    fetch(`${apiBaseUrl}/api/artists/me`, {
       headers: { Authorization: `Bearer ${auth.accessToken}` },
     })
       .then(async (r) => {
@@ -83,17 +82,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     : GUEST_NAV
 
   return (
-    <div className="flex" style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 20px', minHeight: '100vh' }}>
+    <div className="flex max-w-[1280px] mx-auto px-5 min-h-screen">
       {/* Sidebar */}
-      <nav
-        className="flex-shrink-0"
-        style={{
-          width: '220px',
-          paddingTop: '48px',
-          paddingRight: '32px',
-          borderRight: '1px solid var(--border)',
-        }}
-      >
+      <nav className="shrink-0 w-[220px] pt-12 pr-8 border-r border-border">
         <Link to="/" className="block mb-8 text-sm" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
           ← Галерея / Gallery
         </Link>
@@ -140,7 +131,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Content */}
-      <main className="flex-1" style={{ paddingTop: '48px', paddingLeft: '48px', paddingBottom: '96px' }}>
+      <main className="flex-1 pt-12 pl-12 pb-24">
         <RevealOnScroll direction="up">
           {children}
         </RevealOnScroll>

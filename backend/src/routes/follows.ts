@@ -1,12 +1,11 @@
 import { Hono } from 'hono'
 import { authGuard, getAuthUser, optionalAuth } from '../guards/auth'
-import type { DbClient } from '../db'
-
+import type { FollowService } from '../services/follow.service'
 import type { ArtistService } from '../services/artist.service'
 
 type FollowRouteEnv = {
   Variables: {
-    prisma: DbClient
+    followService: FollowService
     artistService: ArtistService
   }
 }
@@ -14,65 +13,29 @@ type FollowRouteEnv = {
 export function createFollowRoutes() {
   const routes = new Hono<FollowRouteEnv>()
 
-  // List followed artists for current user
   routes.get('/', authGuard(), async (c) => {
     const svc = c.get('artistService')
-    const authUser = getAuthUser(c)
-    const artists = await svc.getFollowing(authUser!.userId)
+    const authUser = getAuthUser(c)!
+    const artists = await svc.getFollowing(authUser.userId)
     return c.json({ artists, total: artists.length })
   })
 
-  // Follow an artist
   routes.post('/:artistId', authGuard(), async (c) => {
-    const prisma = c.get('prisma')
-    const authUser = getAuthUser(c)
-    const artistId = c.req.param('artistId')
-
-    // Check artist exists
-    const artist = await prisma.artist.findUnique({ where: { id: artistId } })
-    if (!artist) return c.json({ error: 'NOT_FOUND', message: 'Artist not found' }, 404)
-
-    // Upsert follow
-    await prisma.follow.upsert({
-      where: { followerId_artistId: { followerId: authUser!.userId, artistId } },
-      create: { followerId: authUser!.userId, artistId },
-      update: {},
-    })
-
-    const count = await prisma.follow.count({ where: { artistId } })
-    return c.json({ isFollowing: true, followersCount: count })
+    const svc = c.get('followService')
+    const authUser = getAuthUser(c)!
+    return c.json(await svc.followArtist(authUser.userId, c.req.param('artistId')))
   })
 
-  // Unfollow an artist
   routes.delete('/:artistId', authGuard(), async (c) => {
-    const prisma = c.get('prisma')
-    const authUser = getAuthUser(c)
-    const artistId = c.req.param('artistId')
-
-    await prisma.follow.deleteMany({
-      where: { followerId: authUser!.userId, artistId },
-    })
-
-    const count = await prisma.follow.count({ where: { artistId } })
-    return c.json({ isFollowing: false, followersCount: count })
+    const svc = c.get('followService')
+    const authUser = getAuthUser(c)!
+    return c.json(await svc.unfollowArtist(authUser.userId, c.req.param('artistId')))
   })
 
-  // Check follow status
   routes.get('/:artistId', optionalAuth(), async (c) => {
-    const prisma = c.get('prisma')
+    const svc = c.get('followService')
     const authUser = getAuthUser(c)
-    const artistId = c.req.param('artistId')
-
-    const count = await prisma.follow.count({ where: { artistId } })
-    let isFollowing = false
-    if (authUser) {
-      const follow = await prisma.follow.findUnique({
-        where: { followerId_artistId: { followerId: authUser.userId, artistId } },
-      })
-      isFollowing = !!follow
-    }
-
-    return c.json({ isFollowing, followersCount: count })
+    return c.json(await svc.getFollowStatus(c.req.param('artistId'), authUser?.userId))
   })
 
   return routes
