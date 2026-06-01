@@ -15,7 +15,7 @@ export function LandingFooterCTA({ lang: _ }: { lang: 'ru' | 'en'; onToggleLang:
           style={{ padding: '96px 0 80px' }}
         >
           <RevealOnScroll direction="up">
-            <h2 className="text-editorial m-0 text-foreground">
+            <h2 className="text-display-sm m-0 text-foreground">
               Присоединяйтесь
               <br />
               <span style={{ color: 'var(--text-secondary)' }}>к DUO MESH</span>
@@ -24,7 +24,7 @@ export function LandingFooterCTA({ lang: _ }: { lang: 'ru' | 'en'; onToggleLang:
 
           <RevealOnScroll direction="up" delay={80}>
             <div className="flex flex-col gap-4" style={{ maxWidth: '320px' }}>
-              <Typography variant="body" font="editorial" tone="muted">
+              <Typography variant="body" font="sans" tone="muted">
                 Создавайте 3D-галереи, выпускайте ArtKey-сертификаты
                 и участвуйте в экосистеме верифицированного цифрового искусства.
               </Typography>

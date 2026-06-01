@@ -42,7 +42,6 @@ const typographyVariants = cva("min-w-0 tracking-normal", {
     font: {
       sans: "font-sans",
       display: "font-display",
-      editorial: "font-editorial",
       mono: "font-mono",
     },
     tone: {

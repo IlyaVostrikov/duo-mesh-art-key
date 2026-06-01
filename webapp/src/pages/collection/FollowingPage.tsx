@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/use-auth'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
 import { apiBaseUrl } from '@/lib/api'
+import { UserAvatar } from '@/components/ui/user-avatar'
 
 interface FollowedArtist {
   id: string
@@ -211,32 +212,15 @@ export function FollowingPage() {
                 }}
               >
                 {/* Avatar */}
-                <div
-                  style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--surface-2)',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.25rem',
-                    fontWeight: 600,
-                    color: 'var(--text-secondary)',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {artist.avatarUrl ? (
+                {artist.avatarUrl ? (
                     <img
                       src={artist.avatarUrl}
                       alt={artist.displayName ?? ''}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                     />
                   ) : (
-                    (artist.displayName ?? '?').charAt(0).toUpperCase()
+                    <UserAvatar userId={artist.id} displayName={artist.displayName} size={56} />
                   )}
-                </div>
 
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>

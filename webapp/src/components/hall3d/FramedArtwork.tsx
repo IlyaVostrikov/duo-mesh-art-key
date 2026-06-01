@@ -71,13 +71,13 @@ export function FramedArtwork({
         hovered={hovered}
       />
 
-      {/* Subtle spotlight glow on hover */}
+      {/* Soft wide glow on hover — gentle pool, not harsh spotlight */}
       {hovered && (
         <pointLight
-          position={[0, 0, 0.3]}
-          intensity={2}
-          distance={1.5}
-          color="#ffffff"
+          position={[0, 0, 0.4]}
+          intensity={1.2}
+          distance={3}
+          color="#fffaf0"
         />
       )}
 
@@ -126,8 +126,8 @@ function FrameBox({
   const halfH = frameOuterH / 2
   const halfT = frameThickness / 2
 
-  const stripColor = hovered ? '#ddaa66' : '#8b7355'
-  const stripEmissive = hovered ? '#3a3a35' : '#000000'
+  const stripColor = hovered ? '#c4a060' : '#8b7355'
+  const stripEmissive = hovered ? '#2a2a24' : '#000000'
 
   return (
     <group>

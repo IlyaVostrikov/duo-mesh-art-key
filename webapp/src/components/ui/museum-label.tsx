@@ -13,9 +13,9 @@ export function MuseumLabel({ artistName, medium, mediaType }: MuseumLabelProps)
       <div>
         <p
           style={{
-            fontFamily: 'var(--font-editorial)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--font-display)',
             fontSize: '0.95rem',
+            fontWeight: 500,
             color: 'var(--text-secondary)',
             margin: 0,
           }}

@@ -1,16 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useParams, useNavigate } from '@tanstack/react-router'
-import { ModelViewer3D } from '@/components/artwork/ModelViewer3D'
-import { ArtworkCard } from '@/components/artwork/ArtworkCard'
-import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-import { FollowButton } from '@/components/FollowButton'
-import { VerifiedBadge } from '@/components/ui/verified-badge'
+import { useState, useEffect } from 'react'
+import { useParams } from '@tanstack/react-router'
+import { HallHero } from '@/components/hall/HallHero'
+import { HallWorksGrid } from '@/components/hall/HallWorksGrid'
 import { assetUrl } from '@/lib/asset-url'
-import { useReducedMotion } from '@/hooks/use-reduced-motion'
-import { Hall3DCanvas } from '@/components/hall3d/Hall3DCanvas'
-import { singleRow, salonHang } from '@/components/hall3d/layoutTemplates'
-import type { Hall3DArtwork } from '@/components/hall3d/Hall3DScene'
+import { parseBilingualTitle, parseBilingual } from '@/lib/utils'
 import { apiBaseUrl } from '@/lib/api'
+import Container from '@/components/layout/Container'
 
 interface HallArtwork {
   id: string
@@ -39,17 +34,14 @@ interface HallDetail {
   description: string | null
   coverImageUrl: string | null
   viewCount: number
+  theme: string | null
   layoutConfig: HallLayoutConfig | null
   artist: { id: string; displayName: string; avatarUrl: string | null; verified: boolean }
   artworks: HallArtwork[]
 }
 
-import { parseBilingual, parseBilingualTitle } from '@/lib/utils'
-
 export function HallPage() {
   const { hallSlug } = useParams({ from: '/hall/$hallSlug' })
-  const navigate = useNavigate()
-  const reduced = useReducedMotion()
   const [hall, setHall] = useState<HallDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -77,76 +69,27 @@ export function HallPage() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  // ─── All hooks before early returns (Rules of Hooks) ───
-
-  const hall3dArtworks = useMemo<Hall3DArtwork[]>(() =>
-    (hall?.artworks ?? []).map((aw) => ({
-      id: aw.id,
-      title: aw.title,
-      posterUrl: aw.posterUrl ? assetUrl(aw.posterUrl) : null,
-      modelUrl: aw.modelUrl ?? null,
-      mediaType: aw.mediaType,
-      displayTitle: parseBilingualTitle(aw.title)[0],
-    })), [hall?.artworks])
-
-  const layout3d = useMemo(() => {
-    if (hall?.layoutConfig?.slots?.length) {
-      return {
-        name: hall.layoutConfig.template,
-        capacity: hall.layoutConfig.slots.length,
-        slots: hall.layoutConfig.slots.map((s) => ({
-          x: s.x, y: s.y, z: s.z,
-          width: s.width, height: s.height,
-        })),
-      }
-    }
-    return (hall?.artworks?.length ?? 0) <= 4 ? singleRow : salonHang
-  }, [hall?.layoutConfig, hall?.artworks?.length])
-
-  const sorted3dArtworks = useMemo(() => {
-    if (!hall?.layoutConfig?.slots) return hall3dArtworks
-    const map = new Map(hall3dArtworks.map((a) => [a.id, a]))
-    const result: Hall3DArtwork[] = []
-    const used = new Set<string>()
-    for (const slot of hall.layoutConfig.slots) {
-      if (slot.artworkId && map.has(slot.artworkId)) {
-        result.push(map.get(slot.artworkId)!)
-        used.add(slot.artworkId)
-      }
-    }
-    for (const a of hall3dArtworks) {
-      if (!used.has(a.id)) result.push(a)
-    }
-    return result
-  }, [hall3dArtworks, hall?.layoutConfig])
-
-  const handleArtworkClick = useCallback((id: string) => {
-    navigate({ to: '/artwork/$artworkId', params: { artworkId: id } })
-  }, [navigate])
-
-  const show3D = !reduced && !isMobile
-
   // ─── Loading ───
   if (loading) {
     return (
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 20px' }}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12" style={{ paddingTop: '64px' }}>
+      <Container>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-16">
           <div className="space-y-4">
-            <div className="h-10 w-64 bg-[var(--surface)] rounded animate-pulse" />
-            <div className="h-6 w-40 bg-[var(--surface)] rounded animate-pulse" />
-            <div className="h-32 w-full bg-[var(--surface)] rounded animate-pulse mt-8" />
+            <div className="h-10 w-64 bg-surface rounded animate-pulse" />
+            <div className="h-6 w-40 bg-surface rounded animate-pulse" />
+            <div className="h-32 w-full bg-surface rounded animate-pulse mt-8" />
           </div>
-          <div className="animate-pulse bg-[var(--surface)] rounded-xl" style={{ height: '500px' }} />
+          <div className="animate-pulse bg-surface rounded-xl" style={{ height: '500px' }} />
         </div>
-      </div>
+      </Container>
     )
   }
 
   // ─── Error ───
   if (error || !hall) {
     return (
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '96px 20px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
+      <div className="max-w-7xl mx-auto px-5 py-24 text-center">
+        <h2 className="text-2xl mb-2">
           {error === 'NOT_FOUND' ? 'Зал не найден / Hall not found' : 'Ошибка загрузки / Load error'}
         </h2>
         <p style={{ color: 'var(--text-muted)' }}>{error !== 'NOT_FOUND' ? error : ''}</p>
@@ -158,119 +101,31 @@ export function HallPage() {
   const titleParts = parseBilingualTitle(hall.title)
   const descParts = hall.description ? parseBilingual(hall.description) : ['', '']
   const featuredWork = hall.artworks.find((aw) => aw.mediaType === 'MODEL_3D' && aw.modelUrl)
-  const is3DFeatured = Boolean(featuredWork)
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 20px' }}>
-      {/* Hero */}
-      <header style={{
-        paddingTop: '64px', paddingBottom: '80px',
-        display: 'grid',
-        gridTemplateColumns: is3DFeatured ? '1fr 1fr' : '1fr',
-        gap: '48px', alignItems: 'center',
-      }}>
-        <div>
-          <RevealOnScroll direction="up">
-            <h1 className="text-display-hero" style={{ marginBottom: '24px' }}>
-              {titleParts[lang === 'ru' ? 0 : 1]}
-            </h1>
-          </RevealOnScroll>
-          <RevealOnScroll direction="up" delay={80}>
-            <p className="text-display-sm flex items-center gap-2.5 mb-4" style={{ color: 'var(--text-secondary)' }}>
-              {hall.artist.displayName}
-              {hall.artist.verified && <VerifiedBadge size="md" />}
-            </p>
-          </RevealOnScroll>
-          <RevealOnScroll direction="up" delay={100}>
-            <div style={{ marginBottom: '24px' }}>
-              <FollowButton artistId={hall.artist.id} size="sm" />
-            </div>
-          </RevealOnScroll>
+    <>
+      <div className="max-w-7xl mx-auto px-5">
+        <HallHero
+          title={titleParts[lang === 'ru' ? 0 : 1]}
+          artist={hall.artist}
+          description={descParts[lang === 'ru' ? 0 : 1]}
+          lang={lang}
+          onToggleLang={() => setLang(lang === 'ru' ? 'en' : 'ru')}
+          featuredModel={featuredWork ? {
+            modelUrl: featuredWork.modelUrl!,
+            posterUrl: featuredWork.posterUrl ? assetUrl(featuredWork.posterUrl) : undefined,
+            iosSrc: featuredWork.modelUrl!.replace(/\.(glb|gltf)$/i, '.usdz'),
+          } : undefined}
+        />
+      </div>
 
-          <RevealOnScroll direction="up" delay={160}>
-            <blockquote
-              className="font-editorial italic max-w-[540px] pl-4 mb-6 whitespace-pre-wrap"
-              style={{ fontSize: '1.5rem', lineHeight: 1.5, color: 'var(--text-secondary)', borderLeft: '2px solid var(--accent)' }}
-            >
-              {descParts[lang === 'ru' ? 0 : 1]}
-            </blockquote>
-          </RevealOnScroll>
-
-          <RevealOnScroll direction="up" delay={240}>
-            <button
-              onClick={() => setLang(lang === 'ru' ? 'en' : 'ru')}
-              className="text-sm font-medium px-3 py-1 bg-surface border border-border rounded cursor-pointer transition"
-              style={{ color: 'var(--text-secondary)' }}
-            >
-              {lang === 'ru' ? 'EN' : 'RU'}
-            </button>
-          </RevealOnScroll>
-        </div>
-
-        {is3DFeatured && featuredWork && (
-          <RevealOnScroll direction="up" delay={120}>
-            <div
-              data-lenis-prevent
-              style={{ borderRadius: 'var(--radius)', overflow: 'hidden', height: '500px', boxShadow: 'var(--elev-2)' }}
-            >
-              <ModelViewer3D
-                modelUrl={featuredWork.modelUrl!}
-                posterUrl={featuredWork.posterUrl ? assetUrl(featuredWork.posterUrl) : undefined}
-                iosSrc={featuredWork.modelUrl!.replace(/\.(glb|gltf)$/i, '.usdz')}
-              />
-            </div>
-          </RevealOnScroll>
-        )}
-      </header>
-
-      {/* Works — 3D Gallery Wall (desktop + no reduced motion) or 2D grid fallback */}
-      {show3D && hall.artworks.length > 0 ? (
-        <section style={{ paddingBottom: '0' }}>
-          <Hall3DCanvas
-            artworks={sorted3dArtworks}
-            layout={layout3d}
-            onArtworkClick={handleArtworkClick}
-          />
-        </section>
-      ) : (
-        <section style={{ paddingBottom: '96px' }}>
-          <h2 className="text-display-sm" style={{ marginBottom: '48px' }}>
-            Работы / Works
-          </h2>
-
-          {hall.artworks.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)' }}>Пока нет работ / No artworks yet.</p>
-          ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(12, 1fr)',
-              gap: '24px',
-            }}>
-              {hall.artworks.map((work, i) => {
-                const spans = [
-                  { col: 'span 6' }, { col: 'span 6' }, { col: 'span 8' }, { col: 'span 4' },
-                ][i % 4]
-                return (
-                  <RevealOnScroll key={work.id} direction="up" delay={i * 60}>
-                    <div style={{ gridColumn: spans.col }}>
-                      <ArtworkCard
-                        id={work.id}
-                        title={parseBilingualTitle(work.title)[0]}
-                        artistName={hall.artist.displayName}
-                        posterUrl={assetUrl(work.posterUrl ?? '')}
-                        mediaType={work.mediaType}
-                        price={work.price}
-                        currency={work.currency}
-                        status={work.status}
-                      />
-                    </div>
-                  </RevealOnScroll>
-                )
-              })}
-            </div>
-          )}
-        </section>
-      )}
-    </div>
+      <HallWorksGrid
+        artworks={hall.artworks}
+        artistName={hall.artist.displayName}
+        layoutConfig={hall.layoutConfig}
+        isMobile={isMobile}
+        theme={hall.theme}
+      />
+    </>
   )
 }

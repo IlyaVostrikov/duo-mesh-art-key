@@ -41,7 +41,7 @@ export class FeaturedService {
     hero: ArtworkPublicDto | null
     works: ArtworkPublicDto[]
     artists: ReturnType<typeof toArtistPublicDto>[]
-    halls: Array<{ slug: string; title: string; coverImageUrl: string | null; viewCount: number; theme: string | null; artist: { id: string; displayName: string | null } }>
+    halls: Array<{ slug: string; title: string; coverImageUrl: string | null; viewCount: number; artworkCount: number; theme: string | null; artist: { id: string; displayName: string | null; avatarUrl: string | null } }>
   }> {
     const heroArtistSlug = ARTWORK_ARTIST[FEATURED_CONFIG.heroArtworkSlug]
     const heroId = makeDeterministicId(heroArtistSlug, FEATURED_CONFIG.heroArtworkSlug)
@@ -91,10 +91,12 @@ export class FeaturedService {
         },
       }),
 
-      // All published halls
+      // All published halls — artwork count comes through artist include
       this.prisma.exhibitionHall.findMany({
         where: { isPublished: true },
-        include: { artist: { include: { user: true } } },
+        include: {
+          artist: { include: { user: true, _count: { select: { artworks: true } } } },
+        },
       }),
     ])
 
@@ -113,8 +115,9 @@ export class FeaturedService {
         title: h.title,
         coverImageUrl: h.coverImageUrl,
         viewCount: h.viewCount,
+        artworkCount: h.artist._count?.artworks ?? 0,
         theme: h.theme,
-        artist: { id: h.artist.id, displayName: h.artist.user.displayName },
+        artist: { id: h.artist.id, displayName: h.artist.user.displayName, avatarUrl: h.artist.user.avatarUrl },
       })),
     }
   }

@@ -7,6 +7,7 @@ import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import Container from '@/components/layout/Container'
 import Section from '@/components/layout/Section'
 import Stack from '@/components/layout/Stack'
+import { UserAvatar } from '@/components/ui/user-avatar'
 
 interface FeaturedArtistsProps {
   artists: Array<{
@@ -65,9 +66,7 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
                 </div>
               ) : (
                 <div className="flex aspect-[3/1] items-center justify-center rounded-md bg-surface-2">
-                  <span className="font-display text-5xl opacity-15">
-                    {a.displayName[0]}
-                  </span>
+                  <UserAvatar userId={a.id} displayName={a.displayName} size={64} />
                 </div>
               )}
 
@@ -95,7 +94,7 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
                 <Typography
                   variant="bodySm"
                   tone="muted"
-                  className="line-clamp-3 italic font-editorial"
+                  className="line-clamp-3"
                 >
                   "{statement.slice(0, 200)}{statement.length > 200 ? '...' : ''}"
                 </Typography>
@@ -104,9 +103,7 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
               ) : (
               <div className="flex flex-col gap-4 rounded-lg border bg-surface p-6">
                 <div className="flex aspect-[3/1] items-center justify-center rounded-md bg-surface-2">
-                  <span className="font-display text-5xl opacity-15">
-                    {a.displayName[0]}
-                  </span>
+                  <UserAvatar userId={a.id} displayName={a.displayName} size={64} />
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -122,7 +119,7 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
                   {a.verified && <Badge variant="outline" className="shrink-0 border-accent/30 text-accent">Verified</Badge>}
                 </div>
                 {statement && (
-                  <Typography variant="bodySm" tone="muted" className="line-clamp-3 italic font-editorial">
+                  <Typography variant="bodySm" tone="muted" className="line-clamp-3">
                     "{statement.slice(0, 200)}{statement.length > 200 ? '...' : ''}"
                   </Typography>
                 )}

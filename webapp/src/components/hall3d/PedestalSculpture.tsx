@@ -59,10 +59,10 @@ export function PedestalSculpture({
       {/* Hover label */}
       {hovered && (
         <pointLight
-          position={[0, PEDESTAL_H + 0.6, 0.2]}
-          intensity={1.5}
-          distance={2}
-          color="#ffffff"
+          position={[0, PEDESTAL_H + 0.6, 0.3]}
+          intensity={1}
+          distance={3}
+          color="#fffaf0"
         />
       )}
       {hovered && (

@@ -85,13 +85,13 @@ export function LandingHero({ heroWork, lang: _lang }: HeroProps) {
             DUO MESH
           </Badge>
 
-          <h1 className="text-display-hero" style={{ fontFamily: 'var(--font-display)' }}>
+          <h1 className="text-display max-w-[600px]" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 4.5vw, 4rem)' }}>
             {MISSION}
           </h1>
 
           <Typography
             variant="body"
-            font="editorial"
+            font="sans"
             tone="muted"
             className="max-w-xl"
           >
@@ -112,15 +112,7 @@ export function LandingHero({ heroWork, lang: _lang }: HeroProps) {
               className="grid gap-1 pt-5"
               style={{ borderTop: '1px solid var(--border)' }}
             >
-              <span
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '0.65rem',
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-muted)',
-                }}
-              >
+              <span className="text-kicker" style={{ color: 'var(--text-muted)' }}>
                 Избранная работа
               </span>
               <div className="flex items-baseline gap-2 flex-wrap">
@@ -128,9 +120,9 @@ export function LandingHero({ heroWork, lang: _lang }: HeroProps) {
                   to="/artwork/$artworkId"
                   params={{ artworkId: heroWork.id }}
                   style={{
-                    fontFamily: 'var(--font-editorial)',
-                    fontStyle: 'italic',
+                    fontFamily: 'var(--font-display)',
                     fontSize: '1.05rem',
+                    fontWeight: 500,
                     color: 'var(--accent)',
                     textDecoration: 'none',
                   }}

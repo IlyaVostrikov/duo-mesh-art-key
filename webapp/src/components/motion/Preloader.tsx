@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { LogoSeal } from '@/components/ui/duo-mesh-logo'
 
 const PRELOAD_KEY = 'duo-mesh-preloaded'
 const MAX_DURATION_MS = 2800
@@ -133,9 +134,10 @@ export function Preloader() {
                 ? 'preloaderLogoEnter 0.7s cubic-bezier(0.16,1,0.3,1) both, preloaderFlicker 0.5s ease both'
                 : 'none',
               opacity: phase === 'enter' ? 0 : undefined,
+              color: 'rgba(255,255,255,0.85)',
             }}
           >
-            <LogoMark animate />
+            <LogoSeal size={56} />
           </div>
         </div>
 
@@ -181,42 +183,6 @@ export function Preloader() {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-// ─── Logo mark — two intersecting rings + center dot ───
-
-function LogoMark({ animate }: { animate: boolean }) {
-  return (
-    <div style={{ position: 'relative', width: 56, height: 56 }}>
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: '50%',
-          border: '2px solid rgba(255,255,255,0.7)',
-          animation: animate ? 'breathe 2.5s ease-in-out infinite' : 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 10,
-          borderRadius: '50%',
-          border: '1.5px solid rgba(255,255,255,0.35)',
-          animation: animate ? 'breathe 2.5s ease-in-out infinite 0.6s' : 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 20,
-          borderRadius: '50%',
-          background: 'rgba(255,255,255,0.9)',
-          animation: animate ? 'breathe 2.5s ease-in-out infinite 1.2s' : 'none',
-        }}
-      />
     </div>
   )
 }

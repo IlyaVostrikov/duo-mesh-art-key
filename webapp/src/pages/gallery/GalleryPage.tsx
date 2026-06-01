@@ -138,9 +138,8 @@ export function GalleryPage() {
         <div style={{ textAlign: 'center', padding: '96px 0' }}>
           <p
             style={{
-              fontFamily: 'var(--font-editorial)',
-              fontStyle: 'italic',
-              fontSize: '1.5rem',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '1.15rem',
               color: 'var(--text-muted)',
               marginBottom: '24px',
             }}
@@ -170,9 +169,8 @@ export function GalleryPage() {
         <div style={{ textAlign: 'center', padding: '96px 0' }}>
           <p
             style={{
-              fontFamily: 'var(--font-editorial)',
-              fontStyle: 'italic',
-              fontSize: '1.5rem',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '1.15rem',
               color: 'var(--text-muted)',
             }}
           >

@@ -46,7 +46,7 @@ export function LandingValueProp({ lang: _ }: { lang: 'ru' | 'en' }) {
               подлинностью
             </h2>
             <div>
-              <Typography variant="body" font="editorial" tone="muted">
+              <Typography variant="body" font="sans" tone="muted">
                 ArtKey — это не блокчейн. Криптографическая цепочка владения без газа, кошельков и комиссий. Только SHA-256 и математика.
               </Typography>
               <div className="mt-7">

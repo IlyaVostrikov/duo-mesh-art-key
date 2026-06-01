@@ -8,6 +8,7 @@ import { HubCard } from '@/components/ui/hub-card'
 import { HubGrid } from '@/components/layout/hub-grid'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
+import { LogoLockup } from '@/components/ui/duo-mesh-logo'
 import { useAuth } from '@/lib/use-auth'
 import { useCallback, useEffect, useState } from 'react'
 import { apiBaseUrl } from '@/lib/api'
@@ -27,16 +28,9 @@ export function RootLayout() {
         >
           <Link
             to="/"
-            style={{
-              fontFamily: 'var(--font-brand)',
-              fontSize: '0.82rem',
-              letterSpacing: '0.08em',
-              color: 'var(--text)',
-              textDecoration: 'none',
-              flexShrink: 0,
-            }}
+            style={{ textDecoration: 'none', flexShrink: 0, color: 'var(--text)' }}
           >
-            DUO MESH
+            <LogoLockup size={16} />
           </Link>
 
           <div style={{ width: '1px', height: '14px', background: 'var(--border)' }} />
