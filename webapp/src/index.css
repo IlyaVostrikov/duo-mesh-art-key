@@ -2,8 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/unbounded";
+@import "@fontsource-variable/figtree";
+@import "@fontsource-variable/onest";
 @import "@fontsource-variable/cormorant";
+@import "@fontsource-variable/unbounded";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -11,7 +13,8 @@
 
 @theme inline {
   --font-sans: 'Inter Variable', sans-serif;
-  --font-display: 'Unbounded Variable', sans-serif;
+  --font-display: 'Figtree Variable', sans-serif;
+  --font-brand: 'Unbounded Variable', sans-serif;
   --font-editorial: 'Cormorant Variable', serif;
 
   --color-background: var(--bg);
@@ -43,20 +46,27 @@
   --radius-4xl: 6px;
 }
 
-/* ─── Black Box (default) ─── */
+/* ─── White Cube (default) ─── */
 :root {
-  --bg: #0B0B0D;
-  --surface: #141417;
-  --surface-2: #1C1C21;
-  --border: #2A2A31;
-  --text: #F5F5F4;
-  --text-secondary: #A1A1AA;
-  --text-muted: #71717A;
-  --accent: #C6FF3A;
-  --accent-ink: #0B0B0D;
+  --bg: #FAFAF8;
+  --surface: #FFFFFF;
+  --surface-2: #F1F1EE;
+  --border: #E6E6E1;
+  --text: #1A1A18;
+  --text-secondary: #57574F;
+  --text-muted: #8C8C83;
+  --accent: #1A1A18;
+  --accent-ink: #FFFFFF;
+  --highlight: #C6FF3A;
+  --accent-rgb: 26, 26, 24;
+  --highlight-rgb: 198, 255, 58;
 
-  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --elev-2: 0 8px 30px rgba(0, 0, 0, 0.5);
+  --mesh-a: #BAC2D8;
+  --mesh-b: #CDC0D6;
+  --mesh-mid: #C3C1D7;
+
+  --elev-1: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --elev-2: 0 8px 30px rgba(0, 0, 0, 0.08);
 
   --dur-fast: 150ms;
   --dur: 250ms;
@@ -78,19 +88,26 @@
   --color-chart-1: var(--surface);
 }
 
-/* ─── White Cube (light alternative, .light) ─── */
-.light {
-  --bg: #FAFAF8;
-  --surface: #FFFFFF;
-  --surface-2: #F5F5F0;
-  --border: #E5E5E0;
-  --text: #1A1A18;
-  --text-secondary: #6B6B65;
-  --text-muted: #9B9B95;
-  --accent: #0B0B0D;
-  --accent-ink: #FAFAF8;
-  --elev-1: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --elev-2: 0 8px 30px rgba(0, 0, 0, 0.12);
+/* ─── Black Box (dark alternative, .dark) ─── */
+.dark {
+  --bg: #0B0B0D;
+  --surface: #141417;
+  --surface-2: #1C1C21;
+  --border: #2A2A31;
+  --text: #F5F5F4;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --accent: #C6FF3A;
+  --accent-ink: #0B0B0D;
+  --highlight: #C6FF3A;
+  --accent-rgb: 198, 255, 58;
+  --highlight-rgb: 198, 255, 58;
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elev-2: 0 8px 30px rgba(0, 0, 0, 0.5);
+
+  --mesh-a: #BAC2D8;
+  --mesh-b: #CDC0D6;
+  --mesh-mid: #C3C1D7;
 }
 
 @layer base {
@@ -98,11 +115,29 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    color: var(--text);
     font-feature-settings: 'cv02', 'cv03', 'cv04';
+    background-color: var(--mesh-mid);
+    background-image:
+      radial-gradient(60% 60% at 18% 22%, var(--mesh-a) 0%, transparent 60%),
+      radial-gradient(55% 55% at 82% 18%, var(--mesh-b) 0%, transparent 55%),
+      radial-gradient(65% 65% at 78% 82%, var(--mesh-a) 0%, transparent 60%),
+      radial-gradient(55% 55% at 22% 78%, var(--mesh-b) 0%, transparent 55%);
+    background-attachment: fixed;
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* OKLCH interpolation — гладкий перелив без грязи в середине */
+@supports (background: linear-gradient(in oklch, red, blue)) {
+  body {
+    background-image:
+      radial-gradient(60% 60% at 18% 22% in oklch, var(--mesh-a) 0%, transparent 60%),
+      radial-gradient(55% 55% at 82% 18% in oklch, var(--mesh-b) 0%, transparent 55%),
+      radial-gradient(65% 65% at 78% 82% in oklch, var(--mesh-a) 0%, transparent 60%),
+      radial-gradient(55% 55% at 22% 78% in oklch, var(--mesh-b) 0%, transparent 55%);
   }
 }
 
@@ -119,12 +154,12 @@ body::after {
   inset: 0;
   z-index: 99990;
   pointer-events: none;
-  opacity: 0.025;
+  opacity: 0.018;
   background-image:
-    radial-gradient(circle at 13% 27%, rgba(255,255,255,0.015) 0px, transparent 1.5px),
-    radial-gradient(circle at 47% 11%, rgba(255,255,255,0.01) 0px, transparent 1px),
-    radial-gradient(circle at 81% 63%, rgba(255,255,255,0.012) 0px, transparent 1.5px),
-    radial-gradient(circle at 29% 84%, rgba(255,255,255,0.01) 0px, transparent 1px);
+    radial-gradient(circle at 13% 27%, rgba(0,0,0,0.03) 0px, transparent 1.5px),
+    radial-gradient(circle at 47% 11%, rgba(0,0,0,0.02) 0px, transparent 1px),
+    radial-gradient(circle at 81% 63%, rgba(0,0,0,0.025) 0px, transparent 1.5px),
+    radial-gradient(circle at 29% 84%, rgba(0,0,0,0.02) 0px, transparent 1px);
   background-size: 80px 80px, 60px 60px, 90px 90px, 70px 70px;
   background-position: 0 0, 20px 15px, 10px 30px, 40px 10px;
 }
@@ -145,9 +180,92 @@ body::after {
   100% { background-position: 200% center; }
 }
 
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(var(--highlight-rgb), 0.08); }
+  50%      { box-shadow: 0 0 40px rgba(var(--highlight-rgb), 0.18); }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Preloader intro keyframes ─── */
+
+@keyframes blurReveal {
+  0% {
+    filter: blur(10px);
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    filter: blur(0px);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes energyPulse {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes preloaderLogoEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+    filter: brightness(1);
+  }
+  38% {
+    opacity: 1;
+    filter: brightness(2.2);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.04);
+    filter: brightness(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes preloaderFlicker {
+  0%, 100% { opacity: 1; }
+  3% { opacity: 0.7; }
+  6% { opacity: 1; }
+  9% { opacity: 0.5; }
+  12% { opacity: 1; }
+}
+
+@keyframes overlayDissolve {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes meshShift {
+  from { background-position: 0% 0%; }
+  to   { background-position: 100% 100%; }
+}
+
+.preloader-blur-stagger .char,
+.blur-reveal-stagger .char {
+  display: inline-block;
+  animation: blurReveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* ─── Motion discipline ─── */
@@ -156,6 +274,20 @@ body::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body {
+    background-size: 140% 140%;
+    animation: meshShift 40s ease-in-out infinite alternate;
+  }
+}
+
+/* Mobile: fixed attachment degrades scroll performance */
+@media (max-width: 768px) {
+  body {
+    background-attachment: scroll;
   }
 }
 
@@ -198,27 +330,57 @@ body::after {
 
 /* ─── Type scale utilities ─── */
 .text-display-hero {
-  font-family: 'Unbounded Variable', sans-serif;
-  font-size: 4.5rem;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-family: 'Figtree Variable', sans-serif;
+  font-size: 5.5rem;
+  line-height: 1.0;
+  letter-spacing: -0.04em;
+  font-weight: 800;
 }
 
 .text-display {
-  font-family: 'Unbounded Variable', sans-serif;
-  font-size: 3rem;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
+  font-family: 'Figtree Variable', sans-serif;
+  font-size: 3.5rem;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 700;
 }
 
 .text-display-sm {
-  font-family: 'Unbounded Variable', sans-serif;
+  font-family: 'Figtree Variable', sans-serif;
   font-size: 2rem;
   line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.text-editorial-hero {
+  font-family: 'Cormorant Variable', serif;
+  font-size: 5rem;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.text-editorial {
+  font-family: 'Cormorant Variable', serif;
+  font-size: 3rem;
+  line-height: 1.1;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.text-brand {
+  font-family: 'Unbounded Variable', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {
-  .text-display-hero { font-size: 3rem; }
-  .text-display { font-size: 2rem; }
-  .text-display-sm { font-size: 1.5rem; }
+  .text-display-hero  { font-size: 3rem; }
+  .text-display       { font-size: 2.25rem; }
+  .text-display-sm    { font-size: 1.5rem; }
+  .text-editorial-hero { font-size: 3rem; }
+  .text-editorial     { font-size: 2rem; }
 }

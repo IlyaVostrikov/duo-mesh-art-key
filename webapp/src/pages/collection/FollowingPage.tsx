@@ -203,7 +203,7 @@ export function FollowingPage() {
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = 'var(--accent)'
-                  e.currentTarget.style.boxShadow = '0 0 24px rgba(198,255,58,0.06)'
+                  e.currentTarget.style.boxShadow = '0 0 24px rgba(var(--accent-rgb),0.06)'
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'var(--border)'

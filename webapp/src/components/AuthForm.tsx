@@ -49,7 +49,7 @@ export function AuthForm() {
             <div
               className="flex items-center gap-2 px-3 py-2 text-sm"
               style={{
-                backgroundColor: 'rgba(198,255,58,0.06)',
+                backgroundColor: 'rgba(var(--accent-rgb),0.06)',
                 border: '1px solid var(--accent)',
                 borderRadius: 'var(--radius-sm)',
                 color: 'var(--text)',

@@ -18,7 +18,7 @@ export function GalleryWall({ width, height }: GalleryWallProps) {
     >
       <planeGeometry args={[width, height]} />
       <meshStandardMaterial
-        color="#14141a"
+        color="#e8e8e2"
         roughness={0.85}
         metalness={0.05}
       />

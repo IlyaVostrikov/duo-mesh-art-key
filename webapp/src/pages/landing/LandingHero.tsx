@@ -5,6 +5,8 @@ import { ParticleField } from '@/components/motion/ParticleField'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Typography } from '@/components/ui/typography'
+import { LabelBar } from '@/components/ui/label-bar'
+import { MuseumLabel } from '@/components/ui/museum-label'
 import { parseBilingualTitle } from '@/lib/utils'
 import { assetUrl } from '@/lib/asset-url'
 
@@ -21,16 +23,12 @@ interface HeroProps {
   lang: 'ru' | 'en'
 }
 
-const MISSION_RU = 'Цифровое искусство с проверяемой подлинностью'
-const MISSION_EN = 'Digital Art with Verifiable Authenticity'
-const SUB_RU = 'Виртуальные 3D-галереи, SHA-256 ArtKey-сертификаты и provenance-цепочки — платформа для художников и коллекционеров нового поколения.'
-const SUB_EN = 'Virtual 3D galleries, SHA-256 ArtKey certificates, and provenance chains — a platform for next-generation artists and collectors.'
+const MISSION = 'Цифровое искусство с доказуемой подлинностью'
+const SUB = 'Виртуальные 3D-галереи, SHA-256 ArtKey-сертификаты и provenance-цепочки — платформа для художников и коллекционеров нового поколения.'
 
-export function LandingHero({ heroWork, lang }: HeroProps) {
-  const [artworkRu, artworkEn] = heroWork ? parseBilingualTitle(heroWork.title) : ['', '']
-  const artworkTitle = lang === 'ru' ? artworkRu : artworkEn
+export function LandingHero({ heroWork, lang: _lang }: HeroProps) {
+  const [artworkRu] = heroWork ? parseBilingualTitle(heroWork.title) : ['']
   const spotlightRef = useRef<HTMLDivElement>(null)
-  const sectionRef = useRef<HTMLElement>(null)
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
     const el = spotlightRef.current
@@ -38,9 +36,8 @@ export function LandingHero({ heroWork, lang }: HeroProps) {
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-    // Direct DOM write via RAF — zero React re-renders
     requestAnimationFrame(() => {
-      el.style.background = `radial-gradient(400px circle at ${x}px ${y}px, rgba(198,255,58,0.04), transparent 60%)`
+      el.style.background = `radial-gradient(500px circle at ${x}px ${y}px, rgba(198,255,58,0.035), transparent 65%)`
       el.style.opacity = '1'
     })
   }, [])
@@ -52,114 +49,177 @@ export function LandingHero({ heroWork, lang }: HeroProps) {
 
   return (
     <section
-      ref={sectionRef}
-      className="relative mx-auto grid w-full max-w-6xl gap-8 px-5 py-12 lg:grid-cols-[minmax(0,1fr)_480px] lg:items-center lg:py-20 overflow-hidden"
+      className="relative mx-auto w-full max-w-6xl overflow-hidden px-5 py-12 lg:py-20"
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
     >
-      {/* Particle field background */}
-      <ParticleField particleCount={35} connectionDistance={90} />
+      <ParticleField particleCount={22} connectionDistance={120} />
 
-      {/* Cursor spotlight — DOM-driven, zero React renders */}
       <div
         ref={spotlightRef}
         className="pointer-events-none absolute inset-0 z-0"
-        style={{
-          opacity: 0,
-          transition: 'opacity 0.4s ease',
-        }}
+        style={{ opacity: 0, transition: 'opacity 0.5s ease' }}
       />
 
-      {/* Text block — floats subtly */}
-      <div
-        className="grid gap-5 relative z-10"
-        style={{ animation: 'float 6s ease-in-out infinite' }}
-      >
-        <Badge
-          variant="outline"
-          className="w-fit border-accent/30 text-accent relative overflow-hidden"
-          style={{
-            background: 'linear-gradient(90deg, transparent 0%, rgba(198,255,58,0.06) 50%, transparent 100%)',
-            backgroundSize: '200% 100%',
-            animation: 'shimmer 3s ease-in-out infinite',
-          }}
-        >
-          DUO MESH
-        </Badge>
-        <h1
-          className="text-display-hero leading-[1.08] tracking-tight"
-        >
-          {lang === 'ru' ? MISSION_RU : MISSION_EN}
-        </h1>
-        <Typography
-          variant="body"
-          tone="muted"
-          className="max-w-xl font-editorial"
-          style={{ fontSize: '1.15rem', lineHeight: 1.6 }}
-        >
-          {lang === 'ru' ? SUB_RU : SUB_EN}
-        </Typography>
-        <div className="flex flex-wrap gap-3">
-          <Button asChild size="lg">
-            <Link to="/gallery">
-              {lang === 'ru' ? 'Смотреть галерею' : 'Explore Gallery'}
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg">
-            <Link to="/verify">
-              {lang === 'ru' ? 'Проверить сертификат' : 'Verify Certificate'}
-            </Link>
-          </Button>
-        </div>
-        {heroWork && artworkTitle && (
-          <Typography variant="caption" tone="muted" className="mt-2">
-            {lang === 'ru' ? 'Избранная работа:' : 'Featured work:'}{' '}
-            <Link to="/artwork/$artworkId" params={{ artworkId: heroWork.id }} className="text-accent hover:underline">
-              {artworkTitle}
-            </Link>
-            {' — '}
-            <Link
-              to="/hall/$hallSlug"
-              params={{ hallSlug: heroWork.artist.hallSlug ?? '' }}
-              className="text-text-secondary hover:underline"
-            >
-              {heroWork.artist.displayName}
-            </Link>
-          </Typography>
-        )}
-      </div>
+      <LabelBar
+        left="Платформа верифицированного цифрового искусства"
+        right="2026"
+      />
 
-      {/* 3D Viewer */}
-      {heroWork && heroWork.mediaType === 'MODEL_3D' && heroWork.modelUrl ? (
+      {/* Main grid */}
+      <div className="relative z-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_1px_480px] lg:items-start">
+
+        {/* Left column — text */}
+        <div className="grid gap-6">
+
+          {/* Shimmer badge */}
+          <Badge
+            variant="outline"
+            className="w-fit border-accent/30 text-accent relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(90deg, transparent 0%, rgba(198,255,58,0.08) 50%, transparent 100%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 3.5s ease-in-out infinite',
+            }}
+          >
+            DUO MESH
+          </Badge>
+
+          <h1 className="text-display-hero" style={{ fontFamily: 'var(--font-display)' }}>
+            {MISSION}
+          </h1>
+
+          <Typography
+            variant="body"
+            font="editorial"
+            tone="muted"
+            className="max-w-xl"
+          >
+            {SUB}
+          </Typography>
+
+          <div className="flex flex-wrap gap-3">
+            <Button asChild size="lg">
+              <Link to="/gallery">Смотреть галерею</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <Link to="/verify">Проверить сертификат</Link>
+            </Button>
+          </div>
+
+          {heroWork && artworkRu && (
+            <div
+              className="grid gap-1 pt-5"
+              style={{ borderTop: '1px solid var(--border)' }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '0.65rem',
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                Избранная работа
+              </span>
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <Link
+                  to="/artwork/$artworkId"
+                  params={{ artworkId: heroWork.id }}
+                  style={{
+                    fontFamily: 'var(--font-editorial)',
+                    fontStyle: 'italic',
+                    fontSize: '1.05rem',
+                    color: 'var(--accent)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {artworkRu}
+                </Link>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>—</span>
+                {heroWork.artist.hallSlug ? (
+                  <Link
+                    to="/hall/$hallSlug"
+                    params={{ hallSlug: heroWork.artist.hallSlug }}
+                    style={{
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: '0.875rem',
+                      color: 'var(--text-secondary)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {heroWork.artist.displayName}
+                  </Link>
+                ) : (
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                    {heroWork.artist.displayName}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Vertical divider */}
         <div
-          className="overflow-hidden rounded-xl border bg-black relative z-10"
-          style={{
-            height: '70vh',
-            minHeight: '500px',
-            boxShadow: '0 0 80px rgba(198,255,58,0.06)',
-            animation: 'breathe 3s ease-in-out infinite',
-          }}
-          data-lenis-prevent
-        >
-          <ModelViewer3D
-            modelUrl={heroWork.modelUrl}
-            posterUrl={assetUrl(heroWork.posterUrl)}
-            iosSrc={heroWork.modelUrl.replace(/\.(glb|gltf)$/i, '.usdz')}
-          />
+          className="hidden lg:block"
+          style={{ background: 'var(--border)', minHeight: '500px' }}
+        />
+
+        {/* Right column — 3D model or image */}
+        <div className="relative z-10">
+          {heroWork && heroWork.mediaType === 'MODEL_3D' && heroWork.modelUrl ? (
+            <div
+              className="overflow-hidden rounded-lg border relative"
+              style={{
+                height: '68vh',
+                minHeight: '480px',
+                animation: 'float 7s ease-in-out infinite, glow-pulse 4s ease-in-out infinite',
+                borderColor: 'var(--border)',
+              }}
+              data-lenis-prevent
+            >
+              <ModelViewer3D
+                modelUrl={heroWork.modelUrl}
+                posterUrl={assetUrl(heroWork.posterUrl)}
+                iosSrc={heroWork.modelUrl.replace(/\.(glb|gltf)$/i, '.usdz')}
+              />
+            </div>
+          ) : heroWork ? (
+            <div
+              className="overflow-hidden rounded-lg border"
+              style={{
+                height: '68vh',
+                minHeight: '480px',
+                animation: 'float 7s ease-in-out infinite, glow-pulse 4s ease-in-out infinite',
+                borderColor: 'var(--border)',
+              }}
+            >
+              <img
+                src={assetUrl(heroWork.posterUrl)}
+                alt={artworkRu}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ) : (
+            <div
+              className="flex items-center justify-center rounded-lg border bg-surface-2"
+              style={{ height: '68vh', minHeight: '480px' }}
+            >
+              <Typography tone="muted">Загрузка...</Typography>
+            </div>
+          )}
+
+          {heroWork && (
+            <MuseumLabel
+              artistName={heroWork.artist.displayName}
+              medium={heroWork.medium}
+              mediaType={heroWork.mediaType}
+            />
+          )}
         </div>
-      ) : heroWork ? (
-        <div className="overflow-hidden rounded-xl border bg-black relative z-10" style={{ height: '70vh', minHeight: '500px' }}>
-          <img
-            src={assetUrl(heroWork.posterUrl)}
-            alt={artworkTitle}
-            className="h-full w-full object-cover"
-          />
-        </div>
-      ) : (
-        <div className="flex min-h-[70vh] items-center justify-center rounded-xl border bg-surface-2 relative z-10">
-          <Typography tone="muted">{lang === 'ru' ? 'Загрузка...' : 'Loading...'}</Typography>
-        </div>
-      )}
+      </div>
     </section>
   )
 }

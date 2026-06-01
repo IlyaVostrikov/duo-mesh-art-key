@@ -4,6 +4,7 @@ import { ModelViewer3D } from '@/components/artwork/ModelViewer3D'
 import { ArtworkCard } from '@/components/artwork/ArtworkCard'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { FollowButton } from '@/components/FollowButton'
+import { VerifiedBadge } from '@/components/ui/verified-badge'
 import { assetUrl } from '@/lib/asset-url'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { Hall3DCanvas } from '@/components/hall3d/Hall3DCanvas'
@@ -175,25 +176,9 @@ export function HallPage() {
             </h1>
           </RevealOnScroll>
           <RevealOnScroll direction="up" delay={80}>
-            <p className="text-display-sm" style={{
-              color: 'var(--text-secondary)', marginBottom: '16px',
-              display: 'flex', alignItems: 'center', gap: '10px',
-            }}>
+            <p className="text-display-sm flex items-center gap-2.5 mb-4" style={{ color: 'var(--text-secondary)' }}>
               {hall.artist.displayName}
-              {hall.artist.verified && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '4px',
-                  fontSize: '0.65rem', fontWeight: 600,
-                  color: 'var(--accent)', border: '1px solid rgba(198,255,58,0.3)',
-                  borderRadius: 'var(--radius-sm)', padding: '2px 8px',
-                  letterSpacing: '0.04em', textTransform: 'uppercase',
-                }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Verified
-                </span>
-              )}
+              {hall.artist.verified && <VerifiedBadge size="md" />}
             </p>
           </RevealOnScroll>
           <RevealOnScroll direction="up" delay={100}>
@@ -203,12 +188,10 @@ export function HallPage() {
           </RevealOnScroll>
 
           <RevealOnScroll direction="up" delay={160}>
-            <blockquote className="font-editorial" style={{
-              fontSize: '1.5rem', lineHeight: 1.5,
-              color: 'var(--text-secondary)', fontStyle: 'italic', maxWidth: '540px',
-              paddingLeft: '16px', borderLeft: '2px solid var(--accent)', marginBottom: '24px',
-              whiteSpace: 'pre-wrap',
-            }}>
+            <blockquote
+              className="font-editorial italic max-w-[540px] pl-4 mb-6 whitespace-pre-wrap"
+              style={{ fontSize: '1.5rem', lineHeight: 1.5, color: 'var(--text-secondary)', borderLeft: '2px solid var(--accent)' }}
+            >
               {descParts[lang === 'ru' ? 0 : 1]}
             </blockquote>
           </RevealOnScroll>
@@ -216,12 +199,8 @@ export function HallPage() {
           <RevealOnScroll direction="up" delay={240}>
             <button
               onClick={() => setLang(lang === 'ru' ? 'en' : 'ru')}
-              className="text-sm font-medium px-3 py-1"
-              style={{
-                backgroundColor: 'var(--surface)', color: 'var(--text-secondary)',
-                border: '1px solid var(--border)', borderRadius: 'var(--radius)', cursor: 'pointer',
-                transition: `all var(--dur-fast) var(--ease)`,
-              }}
+              className="text-sm font-medium px-3 py-1 bg-surface border border-border rounded cursor-pointer transition"
+              style={{ color: 'var(--text-secondary)' }}
             >
               {lang === 'ru' ? 'EN' : 'RU'}
             </button>

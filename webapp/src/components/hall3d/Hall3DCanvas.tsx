@@ -118,7 +118,7 @@ function SceneContent({
 
   return (
     <>
-      <Environment preset="studio" environmentIntensity={0.4} />
+      <Environment preset="studio" environmentIntensity={0.6} />
       <ContactShadows position={[0, 0.001, 0]} opacity={0.4} scale={WALL_WIDTH} blur={2} far={FLOOR_DEPTH} />
 
       <GalleryWall width={WALL_WIDTH} height={WALL_HEIGHT} />
@@ -149,9 +149,9 @@ function SceneContent({
         ),
       )}
 
-      <ambientLight intensity={0.3} color="#222233" />
+      <ambientLight intensity={0.5} color="#f0f0ee" />
       <directionalLight
-        position={[5, 5, 5]} intensity={0.5}
+        position={[5, 5, 5]} intensity={0.7}
         castShadow
         shadow-mapSize-width={1024} shadow-mapSize-height={1024}
         shadow-camera-far={20}
@@ -203,7 +203,7 @@ export function Hall3DCanvas({ artworks, layout, onArtworkClick }: Hall3DCanvasP
       <div style={{
         position: 'sticky', top: 0, left: 0,
         width: '100%', height: '100vh',
-        backgroundColor: '#0a0a0a', overflow: 'hidden',
+        backgroundColor: 'var(--bg)', overflow: 'hidden',
       }}>
         <Canvas
           dpr={[1, 2]}
@@ -211,7 +211,7 @@ export function Hall3DCanvas({ artworks, layout, onArtworkClick }: Hall3DCanvasP
           gl={{
             antialias: true,
             toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.2,
+            toneMappingExposure: 1.0,
             outputColorSpace: THREE.SRGBColorSpace,
           }}
           style={{ width: '100%', height: '100%' }}

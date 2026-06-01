@@ -23,7 +23,7 @@ export function GalleryFloor({ width, depth }: GalleryFloorProps) {
         depthScale={0.5}
         minDepthThreshold={0.4}
         maxDepthThreshold={1.2}
-        color="#0a0a0f"
+        color="#d8d8d2"
         metalness={0.2}
       />
     </mesh>

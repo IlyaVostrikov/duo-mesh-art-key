@@ -5,6 +5,7 @@ import { ArtKeyQR } from '@/components/artwork/ArtKeyQR'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { InquiryForm } from '@/components/inquiry/InquiryForm'
 import { FollowButton } from '@/components/FollowButton'
+import { VerifiedBadge } from '@/components/ui/verified-badge'
 import { assetUrl } from '@/lib/asset-url'
 import { apiBaseUrl } from '@/lib/api'
 
@@ -174,8 +175,8 @@ export function ArtworkDetailPage() {
               <Link
                 to="/hall/$hallSlug"
                 params={{ hallSlug: aw.artist.hallSlug }}
-                className="text-sm inline-block mb-6"
-                style={{ color: 'var(--accent)', textDecoration: 'none', transition: `opacity var(--dur-fast) var(--ease)` }}
+                className="text-sm inline-block mb-6 no-underline transition-opacity"
+                style={{ color: 'var(--accent)' }}
               >
                 ← {aw.artist.displayName} / Зал
               </Link>
@@ -188,24 +189,9 @@ export function ArtworkDetailPage() {
             </h1>
           </RevealOnScroll>
           <RevealOnScroll direction="up" delay={100}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', marginBottom: '16px',
-              display: 'flex', alignItems: 'center', gap: '10px',
-            }}>
+            <p className="text-lg flex items-center gap-2.5 mb-4" style={{ color: 'var(--text-secondary)' }}>
               {aw.artist.displayName}
-              {aw.artist.verified && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '4px',
-                  fontSize: '0.6rem', fontWeight: 600,
-                  color: 'var(--accent)', border: '1px solid rgba(198,255,58,0.3)',
-                  borderRadius: 'var(--radius-sm)', padding: '1px 6px',
-                  letterSpacing: '0.04em', textTransform: 'uppercase',
-                }}>
-                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Verified
-                </span>
-              )}
+              {aw.artist.verified && <VerifiedBadge size="sm" />}
             </p>
           </RevealOnScroll>
           <RevealOnScroll direction="up" delay={120}>
@@ -218,15 +204,12 @@ export function ArtworkDetailPage() {
           <RevealOnScroll direction="up" delay={140}>
             <div className="flex items-center gap-3 mb-8">
               {aw.status === 'SOLD' && (
-                <span className="text-sm font-medium px-3 py-1" style={{
-                  backgroundColor: 'var(--surface)', color: 'var(--text-muted)',
-                  borderRadius: 'var(--radius)', border: '1px solid var(--border)',
-                }}>
+                <span className="text-sm font-medium px-3 py-1 bg-surface border border-border rounded" style={{ color: 'var(--text-muted)' }}>
                   Продано / Sold
                 </span>
               )}
               {aw.price && (
-                <span className="font-display" style={{ fontSize: '1.5rem' }}>
+                <span className="font-display text-2xl">
                   {aw.currency === 'RUB'
                     ? `${Number(aw.price).toLocaleString('ru-RU')} ₽`
                     : `$${Number(aw.price).toLocaleString('en-US')}`}
@@ -238,23 +221,21 @@ export function ArtworkDetailPage() {
           {/* 3D metadata */}
           {is3D && (
             <RevealOnScroll direction="up" delay={180}>
-              <div className="grid grid-cols-2 gap-2 mb-8 p-4" style={{
-                backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)',
-              }}>
+              <div className="grid grid-cols-2 gap-2 mb-8 p-4 bg-surface rounded border border-border">
                 {aw.software && (
                   <>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Софт / Software</span>
-                    <span style={{ fontSize: '0.875rem', textAlign: 'right' }}>{aw.software}</span>
+                    <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Софт / Software</span>
+                    <span className="text-sm text-right">{aw.software}</span>
                   </>
                 )}
                 {aw.polyCount && (
                   <>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Полигонов / Tris</span>
-                    <span style={{ fontSize: '0.875rem', textAlign: 'right' }}>{(aw.polyCount / 1000).toFixed(0)}K</span>
+                    <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Полигонов / Tris</span>
+                    <span className="text-sm text-right">{(aw.polyCount / 1000).toFixed(0)}K</span>
                   </>
                 )}
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Скан / Scanned</span>
-                <span style={{ fontSize: '0.875rem', textAlign: 'right' }}>{aw.isScanned ? 'Да / Yes' : 'Нет / No'}</span>
+                <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Скан / Scanned</span>
+                <span className="text-sm text-right">{aw.isScanned ? 'Да / Yes' : 'Нет / No'}</span>
               </div>
             </RevealOnScroll>
           )}
@@ -264,15 +245,12 @@ export function ArtworkDetailPage() {
             <div style={{ marginBottom: '32px' }}>
               <button
                 onClick={() => setLang(lang === 'ru' ? 'en' : 'ru')}
-                className="text-xs font-medium px-2 py-0.5 mb-3"
-                style={{
-                  backgroundColor: 'var(--surface)', color: 'var(--text-muted)',
-                  border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
-                }}
+                className="text-xs font-medium px-2 py-0.5 mb-3 bg-surface border border-border rounded-sm cursor-pointer"
+                style={{ color: 'var(--text-muted)' }}
               >
                 {lang === 'ru' ? 'EN' : 'RU'}
               </button>
-              <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '0.9375rem', whiteSpace: 'pre-wrap' }}>
+              <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>
                 {description}
               </p>
             </div>
@@ -280,7 +258,7 @@ export function ArtworkDetailPage() {
 
           {/* Medium / Dimensions */}
           <RevealOnScroll direction="up" delay={240}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '32px' }}>
+            <div className="text-sm mb-8" style={{ color: 'var(--text-muted)' }}>
               {[aw.medium, aw.dimensions, aw.year].filter(Boolean).join(' · ')}
             </div>
           </RevealOnScroll>
@@ -298,32 +276,25 @@ export function ArtworkDetailPage() {
           {aw.artKey && (
             <RevealOnScroll direction="up" delay={320}>
               <section>
-                <h3 className="font-display" style={{ fontSize: '1.125rem', marginBottom: '16px', color: 'var(--text)' }}>
+                <h3 className="font-display text-lg mb-4" style={{ color: 'var(--text)' }}>
                   Art Key · Сертификат
                 </h3>
 
                 {/* Key Code */}
-                <div className="p-4 mb-4" style={{
-                  backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)',
-                }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
+                <div className="p-4 mb-4 bg-surface rounded border border-border">
+                  <span className="block text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
                     Ключ / Key Code
                   </span>
-                  <code className="font-mono" style={{ fontSize: '1.125rem', color: 'var(--accent)' }}>
+                  <code className="font-mono text-lg" style={{ color: 'var(--accent)' }}>
                     {aw.artKey.keyCode}
                   </code>
-                  <div style={{ marginTop: '12px', display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div className="flex gap-4 items-end flex-wrap mt-3">
                     <ArtKeyQR keyCode={aw.artKey.keyCode} size={100} />
                     <a
                       href={`${apiBaseUrl}/api/art-keys/${encodeURIComponent(aw.artKey.keyCode)}/certificate.pdf`}
                       download
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                        padding: '8px 16px', fontSize: '0.8125rem', fontWeight: 600,
-                        backgroundColor: 'var(--surface)', color: 'var(--accent)',
-                        border: '1px solid var(--accent)', borderRadius: 'var(--radius-sm)',
-                        textDecoration: 'none', cursor: 'pointer',
-                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-[0.8125rem] font-semibold bg-surface rounded-sm no-underline cursor-pointer"
+                      style={{ color: 'var(--accent)', border: '1px solid var(--accent)' }}
                     >
                       ↓ PDF · Сертификат
                     </a>
@@ -331,13 +302,11 @@ export function ArtworkDetailPage() {
                 </div>
 
                 {/* Integrity Hash */}
-                <div className="p-4 mb-4" style={{
-                  backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)',
-                }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
+                <div className="p-4 mb-4 bg-surface rounded border border-border">
+                  <span className="block text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
                     SHA-256 / Integrity Hash
                   </span>
-                  <code className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
+                  <code className="font-mono text-xs break-all" style={{ color: 'var(--text-secondary)' }}>
                     {aw.artKey.integrityHash}
                   </code>
                 </div>
@@ -345,21 +314,20 @@ export function ArtworkDetailPage() {
                 {/* Provenance Chain */}
                 {aw.provenance && aw.provenance.length > 0 && (
                   <div>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
+                    <span className="block text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
                       Provenance · Цепочка владения
                     </span>
-                    <div style={{ borderLeft: '2px solid var(--border)', paddingLeft: '16px' }}>
+                    <div className="pl-4" style={{ borderLeft: '2px solid var(--border)' }}>
                       {aw.provenance.map((rec, idx) => (
-                        <div key={rec.sequence} style={{
-                          paddingBottom: idx < aw.provenance!.length - 1 ? '16px' : '0',
-                          position: 'relative',
-                        }}>
-                          <div style={{
-                            position: 'absolute', left: '-22px', top: '4px',
-                            width: '8px', height: '8px', borderRadius: '50%',
-                            backgroundColor: idx === 0 ? 'var(--accent)' : 'var(--text-muted)',
-                          }} />
-                          <p style={{ fontSize: '0.875rem', marginBottom: '2px' }}>
+                        <div key={rec.sequence} className="relative" style={{ paddingBottom: idx < aw.provenance!.length - 1 ? '16px' : '0' }}>
+                          <div
+                            className="absolute rounded-full"
+                            style={{
+                              left: '-22px', top: '4px', width: '8px', height: '8px',
+                              backgroundColor: idx === 0 ? 'var(--accent)' : 'var(--text-muted)',
+                            }}
+                          />
+                          <p className="text-sm mb-0.5">
                             <span style={{ color: 'var(--text)' }}>{rec.toOwnerName}</span>
                             {' ← '}
                             {rec.fromOwnerName ? (
@@ -368,14 +336,11 @@ export function ArtworkDetailPage() {
                               <span style={{ color: 'var(--text-muted)' }}>Genesis</span>
                             )}
                           </p>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                             {TRANSFER_LABELS[rec.transferType] || rec.transferType} · {new Date(rec.createdAt).toLocaleDateString('ru-RU')}
                             {rec.price && ` · $${Number(rec.price).toLocaleString('en-US')}`}
                           </p>
-                          <code className="font-mono" style={{
-                            fontSize: '0.625rem', color: 'var(--text-muted)',
-                            wordBreak: 'break-all', display: 'block', marginTop: '4px',
-                          }}>
+                          <code className="font-mono block mt-1 break-all" style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
                             hash: {rec.recordHash.slice(0, 32)}...
                           </code>
                         </div>

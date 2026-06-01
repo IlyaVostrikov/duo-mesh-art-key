@@ -40,7 +40,7 @@ export function HallArtworkChip({ artwork }: { artwork: HallArtwork }) {
           fontSize: '0.6rem',
           padding: '1px 5px',
           borderRadius: '3px',
-          backgroundColor: artwork.mediaType === 'MODEL_3D' ? 'rgba(198,255,58,0.1)' : 'rgba(96,165,250,0.1)',
+          backgroundColor: artwork.mediaType === 'MODEL_3D' ? 'rgba(var(--accent-rgb),0.1)' : 'rgba(96,165,250,0.1)',
           color: artwork.mediaType === 'MODEL_3D' ? 'var(--accent)' : '#60a5fa',
         }}>
           {artwork.mediaType === 'MODEL_3D' ? '3D' : '2D'}

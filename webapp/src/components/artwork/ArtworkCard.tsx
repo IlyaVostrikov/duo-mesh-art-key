@@ -13,9 +13,9 @@ interface ArtworkCardProps {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  SOLD: 'Продано / Sold',
-  RESERVED: 'Резерв / Reserved',
-  IN_EXHIBITION: 'На выставке / In Exhibition',
+  SOLD: 'Продано',
+  RESERVED: 'Резерв',
+  IN_EXHIBITION: 'На выставке',
 }
 
 export function ArtworkCard({
@@ -31,6 +31,7 @@ export function ArtworkCard({
 }: ArtworkCardProps) {
   const is3D = mediaType === 'MODEL_3D'
   const statusLabel = status ? STATUS_LABELS[status] : null
+  const russianTitle = title.split(' / ')[0]
 
   const priceDisplay = price
     ? currency === 'RUB'
@@ -43,55 +44,53 @@ export function ArtworkCard({
       to="/artwork/$artworkId"
       params={{ artworkId: id }}
       className="group block"
-      style={{
-        transition: `transform var(--dur) var(--ease)`,
-      }}
+      style={{ textDecoration: 'none', transition: 'transform 250ms cubic-bezier(0.2,0,0,1)' }}
     >
-      {/* Poster container */}
+      {/* Poster */}
       <div
-        className="relative overflow-hidden bg-[var(--surface)]"
+        className="relative overflow-hidden"
         style={{
+          background: 'var(--surface)',
           aspectRatio: aspectRatio === '4:5' ? '4/5' : undefined,
           borderRadius: 'var(--radius)',
+          boxShadow: '0 0 0 1px var(--border)',
+          transition: 'box-shadow 250ms cubic-bezier(0.2,0,0,1)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = '0 0 0 1px var(--accent), 0 0 28px rgba(var(--highlight-rgb),0.07)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = '0 0 0 1px var(--border)'
         }}
       >
         <img
           src={posterUrl}
-          alt={title}
-          className="w-full h-full object-cover group-hover:scale-[1.03]"
+          alt={russianTitle}
           loading="lazy"
+          className="group-hover:scale-[1.025]"
           style={{
-            transition: `opacity var(--dur-slow) var(--ease), transform var(--dur-slow) var(--ease)`,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            opacity: 0,
+            transition: 'opacity 400ms cubic-bezier(0.2,0,0,1), transform 400ms cubic-bezier(0.2,0,0,1)',
           }}
-          onLoad={(e) => (e.currentTarget.style.opacity = '1')}
+          onLoad={(e) => { e.currentTarget.style.opacity = '1' }}
         />
 
-        {/* Glow border on hover */}
-        <div
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none"
-          style={{
-            boxShadow: 'inset 0 0 0 1px var(--accent), 0 0 30px rgba(198,255,58,0.06)',
-            transition: `opacity var(--dur) var(--ease)`,
-            borderRadius: 'var(--radius)',
-          }}
-        />
-
-        {/* Hover overlay — surface lift on group hover */}
-        <div
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none"
-          style={{
-            background: 'var(--surface-2)',
-            mixBlendMode: 'lighten',
-            transition: `opacity var(--dur) var(--ease)`,
-            borderRadius: 'var(--radius)',
-          }}
-        />
-
-        {/* 3D Badge */}
         {is3D && (
           <span
-            className="absolute top-3 left-3 z-10 px-2 py-0.5 text-xs font-semibold tracking-wider uppercase"
             style={{
+              position: 'absolute',
+              top: '10px',
+              left: '10px',
+              padding: '2px 8px',
+              fontFamily: 'var(--font-brand)',
+              fontSize: '0.6rem',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              fontWeight: 600,
               backgroundColor: 'var(--accent)',
               color: 'var(--accent-ink)',
               borderRadius: 'var(--radius-sm)',
@@ -101,15 +100,21 @@ export function ArtworkCard({
           </span>
         )}
 
-        {/* Status badge (SOLD, etc.) */}
         {statusLabel && (
           <span
-            className="absolute top-3 right-3 z-10 px-2 py-0.5 text-xs font-medium"
             style={{
-              backgroundColor: 'var(--surface)',
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              padding: '2px 8px',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.65rem',
+              letterSpacing: '0.05em',
+              backgroundColor: 'rgba(11,11,13,0.75)',
               color: 'var(--text-muted)',
-              borderRadius: 'var(--radius-sm)',
               border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              backdropFilter: 'blur(4px)',
             }}
           >
             {statusLabel}
@@ -117,24 +122,46 @@ export function ArtworkCard({
         )}
       </div>
 
-      {/* Meta */}
-      <div className="mt-3 space-y-1">
+      {/* Metadata */}
+      <div style={{ marginTop: '10px', display: 'grid', gap: '2px' }}>
         <h3
-          className="text-display-sm truncate group-hover:text-accent"
+          className="group-hover:text-accent"
           style={{
-            fontSize: '1rem',
+            fontFamily: 'var(--font-display)',
+            fontSize: '0.95rem',
+            fontWeight: 600,
             lineHeight: 1.3,
+            letterSpacing: '-0.01em',
             color: 'var(--text)',
-            transition: `color var(--dur) var(--ease)`,
+            margin: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            transition: 'color 200ms cubic-bezier(0.2,0,0,1)',
           }}
         >
-          {title.split(' / ')[0]}
+          {russianTitle}
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+        <p
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.78rem',
+            color: 'var(--text-muted)',
+            margin: 0,
+          }}
+        >
           {artistName}
         </p>
         {priceDisplay && (
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+          <p
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              color: 'var(--text-secondary)',
+              margin: '3px 0 0',
+            }}
+          >
             {priceDisplay}
           </p>
         )}
@@ -146,13 +173,10 @@ export function ArtworkCard({
 export function ArtworkCardSkeleton() {
   return (
     <div className="animate-pulse">
-      <div
-        className="bg-[var(--surface)]"
-        style={{ aspectRatio: '4/5', borderRadius: 'var(--radius)' }}
-      />
-      <div className="mt-3 space-y-2">
-        <div className="h-4 w-3/4 bg-[var(--surface)] rounded" />
-        <div className="h-3 w-1/2 bg-[var(--surface)] rounded" />
+      <div style={{ aspectRatio: '4/5', background: 'var(--surface)', borderRadius: 'var(--radius)' }} />
+      <div style={{ marginTop: '10px', display: 'grid', gap: '5px' }}>
+        <div style={{ height: '15px', width: '60%', background: 'var(--surface)', borderRadius: '2px' }} />
+        <div style={{ height: '11px', width: '40%', background: 'var(--surface)', borderRadius: '2px' }} />
       </div>
     </div>
   )

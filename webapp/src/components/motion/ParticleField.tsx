@@ -79,7 +79,7 @@ export function ParticleField({
             ctx.beginPath()
             ctx.moveTo(p.x, p.y)
             ctx.lineTo(q.x, q.y)
-            ctx.strokeStyle = `rgba(198,255,58,${alpha})`
+            ctx.strokeStyle = `rgba(26,26,24,${alpha})`
             ctx.lineWidth = 0.5
             ctx.stroke()
           }
@@ -88,7 +88,7 @@ export function ParticleField({
         // Draw particle
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(198,255,58,0.15)'
+        ctx.fillStyle = 'rgba(26,26,24,0.08)'
         ctx.fill()
       }
 

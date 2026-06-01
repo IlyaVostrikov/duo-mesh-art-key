@@ -101,7 +101,7 @@ export function CustomCursor() {
           const alpha = (p.life / p.maxLife) * p.opacity
           ctx.beginPath()
           ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(198,255,58,${alpha})`
+          ctx.fillStyle = `rgba(var(--accent-rgb),${alpha})`
           ctx.fill()
           alive.push(p)
         }
@@ -128,7 +128,7 @@ export function CustomCursor() {
         ring.style.height = `${rs}px`
         ring.style.transform = `translate(${posRef.current.x - rs / 2}px, ${posRef.current.y - rs / 2}px)`
         ring.style.borderColor = hoveringRef.current ? 'var(--accent)' : 'var(--text-muted)'
-        ring.style.boxShadow = hoveringRef.current ? '0 0 20px rgba(198,255,58,0.15)' : 'none'
+        ring.style.boxShadow = hoveringRef.current ? '0 0 20px rgba(var(--accent-rgb),0.15)' : 'none'
         ring.style.opacity = vis
       }
 
@@ -241,7 +241,7 @@ export function CustomCursor() {
           background: 'var(--accent)',
           pointerEvents: 'none',
           zIndex: 99999,
-          boxShadow: '0 0 12px rgba(198,255,58,0.5), 0 0 24px rgba(198,255,58,0.2)',
+          boxShadow: '0 0 12px rgba(var(--accent-rgb),0.5), 0 0 24px rgba(var(--accent-rgb),0.2)',
         }}
       />
       {/* Ring — positioned by RAF DOM write, no React render */}

@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, type ElementType } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { cn } from '@/lib/utils'
 
@@ -8,7 +8,6 @@ interface RevealOnScrollProps {
   delay?: number
   threshold?: number
   className?: string
-  as?: ElementType
 }
 
 const INITIAL: Record<string, string> = {
@@ -27,7 +26,6 @@ export function RevealOnScroll({
   delay = 0,
   threshold = 0.12,
   className,
-  as: Comp = 'div',
 }: RevealOnScrollProps) {
   const reduced = useReducedMotion()
   const ref = useRef<HTMLDivElement>(null)
@@ -57,7 +55,7 @@ export function RevealOnScroll({
   }, [reduced, threshold])
 
   return (
-    <Comp
+    <div
       ref={ref}
       className={cn(className)}
       style={{
@@ -70,6 +68,6 @@ export function RevealOnScroll({
       }}
     >
       {children}
-    </Comp>
+    </div>
   )
 }

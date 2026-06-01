@@ -32,7 +32,7 @@ export function ArtKeyQR({ keyCode, size = 120 }: { keyCode: string; size?: numb
         transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
       }}
-      className="group-hover:border-accent group-hover:shadow-[0_0_16px_rgba(198,255,58,0.2)]"
+      className="group-hover:border-accent group-hover:shadow-[0_0_16px_rgba(var(--accent-rgb),0.2)]"
       >
         <img
           src={dataUrl}

@@ -137,7 +137,7 @@ export function FileUpload({ accept, maxSize, onFileSelect, label, error, imageP
           style={{
             borderRadius: 'var(--radius)',
             border: `2px dashed ${dragging ? 'var(--accent)' : 'var(--border)'}`,
-            backgroundColor: dragging ? 'rgba(198, 255, 58, 0.04)' : 'var(--bg)',
+            backgroundColor: dragging ? 'rgba(var(--accent-rgb), 0.04)' : 'var(--bg)',
             opacity: disabled ? 0.5 : 1,
           }}
         >

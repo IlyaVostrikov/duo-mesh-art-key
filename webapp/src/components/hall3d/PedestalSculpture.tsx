@@ -42,9 +42,9 @@ export function PedestalSculpture({
       >
         <boxGeometry args={[PEDESTAL_W, PEDESTAL_H, PEDESTAL_D]} />
         <meshStandardMaterial
-          color={hovered ? '#1a1a22' : '#12121a'}
-          roughness={0.3}
-          metalness={0.6}
+          color={hovered ? '#e8e8e2' : '#f0f0eb'}
+          roughness={0.5}
+          metalness={0.1}
         />
       </mesh>
 
@@ -62,7 +62,7 @@ export function PedestalSculpture({
           position={[0, PEDESTAL_H + 0.6, 0.2]}
           intensity={1.5}
           distance={2}
-          color="#c6ff3a"
+          color="#ffffff"
         />
       )}
       {hovered && (
@@ -75,11 +75,12 @@ export function PedestalSculpture({
             className="font-display"
             style={{
               fontSize: '0.75rem',
-              color: '#c6ff3a',
-              backgroundColor: 'rgba(0,0,0,0.7)',
+              color: 'var(--text)',
+              backgroundColor: 'rgba(255,255,255,0.9)',
               padding: '4px 12px',
               borderRadius: '4px',
               whiteSpace: 'nowrap',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
             }}
           >
             {artwork.displayTitle ?? artwork.title}

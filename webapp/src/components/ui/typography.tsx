@@ -143,29 +143,38 @@ function Typography<TElement extends React.ElementType = "span">({
   ...props
 }: TypographyProps<TElement>) {
   const resolvedVariant = variant ?? "body"
-  const Comp = asChild ? Slot.Root : (as ?? defaultElementByVariant[resolvedVariant])
-  const slotProps = asChild ? {} : { "data-slot": "typography" }
-
-  return (
-    <Comp
-      {...slotProps}
-      data-variant={resolvedVariant}
-      className={cn(
-        typographyVariants({
-          variant: resolvedVariant,
-          font,
-          tone,
-          align,
-          balance,
-          pretty,
-          truncate,
-          wrap,
-        }),
-        className
-      )}
-      {...props}
-    />
+  const classes = cn(
+    typographyVariants({
+      variant: resolvedVariant,
+      font,
+      tone,
+      align,
+      balance,
+      pretty,
+      truncate,
+      wrap,
+    }),
+    className,
   )
+
+  if (asChild) {
+    return (
+      <Slot.Root
+        data-variant={resolvedVariant}
+        className={classes}
+        {...(props as any)}
+      />
+    )
+  }
+
+  const Tag = as ?? defaultElementByVariant[resolvedVariant]
+
+  return React.createElement(Tag, {
+    'data-slot': 'typography' as any,
+    'data-variant': resolvedVariant,
+    className: classes,
+    ...(props as any),
+  })
 }
 
 export { Typography }

@@ -77,11 +77,11 @@ export function FramedArtwork({
           position={[0, 0, 0.3]}
           intensity={2}
           distance={1.5}
-          color="#c6ff3a"
+          color="#ffffff"
         />
       )}
 
-      {/* Hover label — title above the frame */}
+      {/* Hover label — museum-style plaque above the frame */}
       {hovered && (
         <Html
           center
@@ -92,11 +92,12 @@ export function FramedArtwork({
             className="font-display"
             style={{
               fontSize: '0.75rem',
-              color: '#c6ff3a',
-              backgroundColor: 'rgba(0,0,0,0.7)',
+              color: 'var(--text)',
+              backgroundColor: 'rgba(255,255,255,0.9)',
               padding: '4px 12px',
               borderRadius: '4px',
               whiteSpace: 'nowrap',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
             }}
           >
             {artwork.displayTitle ?? artwork.title}
@@ -126,7 +127,7 @@ function FrameBox({
   const halfT = frameThickness / 2
 
   const stripColor = hovered ? '#ddaa66' : '#8b7355'
-  const stripEmissive = hovered ? '#c6ff3a' : '#000000'
+  const stripEmissive = hovered ? '#3a3a35' : '#000000'
 
   return (
     <group>

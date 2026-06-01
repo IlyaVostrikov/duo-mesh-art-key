@@ -1,65 +1,73 @@
-import { useCallback, useEffect, useState } from 'react'
 import { Link, Outlet } from '@tanstack/react-router'
-
 import { AccountMenu } from '@/components/AccountMenu'
-import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { Typography } from '@/components/ui/typography'
-import { cn } from '@/lib/utils'
-import { useAuth } from '@/lib/use-auth'
-import { useScrollPosition } from '@/hooks/use-scroll-position'
+import { NavPill } from '@/components/ui/nav-pill'
+import { HubCard } from '@/components/ui/hub-card'
+import { HubGrid } from '@/components/layout/hub-grid'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
+import { useAuth } from '@/lib/use-auth'
+import { useCallback, useEffect, useState } from 'react'
 import { apiBaseUrl } from '@/lib/api'
-
-const navLinkClass = cn(
-  buttonVariants({ variant: 'ghost', size: 'sm' }),
-  'text-muted-foreground data-[status=active]:bg-secondary data-[status=active]:text-secondary-foreground data-[status=active]:hover:bg-secondary/80 data-[status=active]:hover:text-secondary-foreground',
-)
 
 export function RootLayout() {
   const auth = useAuth()
-  const scrolled = useScrollPosition()
 
   return (
-    <main className="min-h-svh bg-background text-foreground">
+    <main style={{ minHeight: '100svh', background: 'transparent', color: 'var(--text)' }}>
       <header
-        className={cn(
-          'sticky top-0 z-50 border-b transition-all duration-500',
-          scrolled
-            ? 'bg-background/98 backdrop-blur-xl border-border/80 shadow-[0_1px_0_rgba(198,255,58,0.04)]'
-            : 'bg-background/80 backdrop-blur border-transparent',
-        )}
+        className="sticky top-0 z-50 border-b border-border"
+        style={{ background: 'var(--bg)' }}
       >
-        <div className="mx-auto flex min-h-16 w-full max-w-6xl flex-wrap items-center gap-3 px-5 py-3">
-          <Typography asChild variant="h6">
-            <Link to="/">DUO MESH</Link>
-          </Typography>
-          <nav className="ml-auto flex items-center gap-2" aria-label="Primary">
-            <Typography asChild variant="control" tone="muted">
-              <Link to="/gallery" className={navLinkClass}>
-                Галерея / Gallery
-              </Link>
-            </Typography>
-            <Typography asChild variant="control" tone="muted">
-              <Link to="/verify" className={navLinkClass}>
-                ArtKey
-              </Link>
-            </Typography>
+        <div
+          className="flex items-center mx-auto h-14 gap-8"
+          style={{ maxWidth: '1280px', padding: '0 20px' }}
+        >
+          <Link
+            to="/"
+            style={{
+              fontFamily: 'var(--font-brand)',
+              fontSize: '0.82rem',
+              letterSpacing: '0.08em',
+              color: 'var(--text)',
+              textDecoration: 'none',
+              flexShrink: 0,
+            }}
+          >
+            DUO MESH
+          </Link>
+
+          <div style={{ width: '1px', height: '14px', background: 'var(--border)' }} />
+
+          <nav className="flex items-center gap-6">
+            <NavPill to="/gallery" label="Галерея" />
+            <NavPill to="/verify" label="ArtKey" />
+          </nav>
+
+          <div className="ml-auto flex items-center">
             {auth.isAuthenticated ? (
               <AccountMenu />
             ) : (
-              <Typography asChild variant="control" tone="muted">
-                <Link to="/login" className={navLinkClass}>
-                  Войти / Sign In
-                </Link>
-              </Typography>
+              <Link
+                to="/login"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  color: 'var(--text)',
+                  textDecoration: 'none',
+                  transition: 'color 150ms',
+                }}
+              >
+                Войти
+              </Link>
             )}
-          </nav>
+          </div>
         </div>
       </header>
+
       <PageTransition>
         <Outlet />
       </PageTransition>
@@ -69,13 +77,11 @@ export function RootLayout() {
 
 export function LoadingState() {
   return (
-    <section className="mx-auto w-full max-w-6xl px-5 py-16">
-      <Card className="w-fit">
+    <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 20px' }}>
+      <Card style={{ width: 'fit-content' }}>
         <CardContent className="flex items-center gap-3">
           <Spinner />
-          <Typography variant="bodySm" tone="muted">
-            Checking session...
-          </Typography>
+          <Typography variant="bodySm" tone="muted">Загрузка...</Typography>
         </CardContent>
       </Card>
     </section>
@@ -89,33 +95,38 @@ export function AppPage() {
 
   if (!auth.user) {
     return (
-      <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-16">
-        <Typography variant="h2">Login required</Typography>
-        <Typography tone="muted">Please sign in to access this page.</Typography>
+      <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 20px' }}>
+        <Typography variant="h2">Войдите в аккаунт</Typography>
+        <Typography tone="muted">Для доступа к этой странице необходима авторизация.</Typography>
       </section>
     )
   }
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-5 py-12">
+    <section style={{ maxWidth: '1280px', margin: '0 auto', padding: '48px 20px 96px' }}>
       <RevealOnScroll direction="up">
-        <Typography variant="h1" className="mb-1">
-          {auth.user.displayName ?? auth.user.email}
-        </Typography>
-      </RevealOnScroll>
-      <RevealOnScroll direction="up" delay={60}>
-        <Typography tone="muted" className="mb-8">
-          {auth.user.email}
-        </Typography>
+        <div className="border-b border-border pb-6 mb-12">
+          <h1
+            className="text-display-sm"
+            style={{ fontFamily: 'var(--font-display)', margin: '0 0 4px' }}
+          >
+            {auth.user.displayName ?? auth.user.email}
+          </h1>
+          <Typography tone="muted" style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem' }}>
+            {auth.user.email}
+          </Typography>
+        </div>
       </RevealOnScroll>
 
-      {auth.user.role === 'ARTIST' ? <ArtistHub accessToken={auth.accessToken} /> : <CollectorHub />}
+      {auth.user.role === 'ARTIST'
+        ? <ArtistHub accessToken={auth.accessToken} />
+        : <CollectorHub />}
     </section>
   )
 }
 
 function ArtistHub({ accessToken }: { accessToken: string | null }) {
-  const [stats, setStats] = useState<{ artworks: number; halls: number; sales: number } | null>(null)
+  const [stats, setStats] = useState<{ artworks: number; sales: number } | null>(null)
 
   const fetchStats = useCallback(async () => {
     if (!accessToken) return
@@ -126,83 +137,65 @@ function ArtistHub({ accessToken }: { accessToken: string | null }) {
       ])
       const artist = artistRes.ok ? await artistRes.json() : null
       const sales = salesRes.ok ? await salesRes.json() : null
-      setStats({
-        artworks: artist?.totalSalesCount ?? 0,
-        halls: artist?.hall ? 1 : 0,
-        sales: sales?.total ?? 0,
-      })
-    } catch {
-      // Stats are non-critical
-    }
+      setStats({ artworks: artist?.totalSalesCount ?? 0, sales: sales?.total ?? 0 })
+    } catch { /* non-critical */ }
   }, [accessToken])
 
   useEffect(() => { fetchStats() }, [fetchStats])
 
-  const links = [
-    { to: '/dashboard/artworks', title: 'Мои работы / My Works', desc: 'Управление произведениями / Manage artworks', stat: stats?.artworks, statLabel: 'работ / works' },
-    { to: '/dashboard/hall', title: 'Выставочный зал / Exhibition Hall', desc: 'Настройка виртуальной галереи / Virtual gallery settings' },
-    { to: '/dashboard/sales', title: 'Продажи / Sales', desc: 'История и статистика / History and stats', stat: stats?.sales, statLabel: 'продаж / sales' },
-    { to: '/dashboard/settings', title: 'Профиль / Profile', desc: 'Statement, контакты, ссылки / Statement, contacts, links' },
-  ]
-
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {links.map((link, i) => (
-        <RevealOnScroll key={link.to} direction="up" delay={i * 80}>
-          <Link to={link.to} style={{ textDecoration: 'none' }}>
-            <Card className="group transition-all duration-300 hover:border-accent hover:shadow-[0_0_24px_rgba(198,255,58,0.04)] cursor-pointer">
-              <CardContent className="flex flex-col gap-2 p-6">
-                <Typography variant="h6" className="group-hover:text-accent transition-colors">
-                  {link.title}
-                </Typography>
-                <Typography variant="bodySm" tone="muted">
-                  {link.desc}
-                </Typography>
-                {link.stat !== undefined && (
-                  <div className="flex items-baseline gap-1 mt-2">
-                    <span className="text-2xl font-bold" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      <AnimatedCounter value={link.stat} />
-                    </span>
-                    <Typography variant="bodySm" tone="muted">
-                      {link.statLabel}
-                    </Typography>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-        </RevealOnScroll>
-      ))}
-    </div>
+    <HubGrid>
+      <HubCard
+        to="/dashboard/artworks"
+        title="Мои работы"
+        description="Управление произведениями"
+        stat={stats?.artworks}
+        statLabel="работ"
+      />
+      <HubCard
+        to="/dashboard/hall"
+        title="Выставочный зал"
+        description="Настройка виртуальной галереи"
+      />
+      <HubCard
+        to="/dashboard/sales"
+        title="Продажи"
+        description="История и статистика"
+        stat={stats?.sales}
+        statLabel="продаж"
+      />
+      <HubCard
+        to="/dashboard/settings"
+        title="Профиль"
+        description="Statement, контакты, ссылки"
+      />
+    </HubGrid>
   )
 }
 
 function CollectorHub() {
-  const links = [
-    { to: '/collection', title: 'Моя коллекция / My Collection', desc: 'Приобретённые работы и сертификаты ArtKey / Acquired artworks and ArtKey certificates' },
-    { to: '/collection/saved', title: 'Сохранённое / Saved', desc: 'Избранные работы для просмотра / Favorite artworks for later' },
-    { to: '/following', title: 'Подписки / Following', desc: 'Отслеживаемые художники / Followed artists' },
-    { to: '/dashboard/settings', title: 'Профиль / Settings', desc: 'Персональные настройки / Personal settings' },
-  ]
-
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {links.map((link, i) => (
-        <RevealOnScroll key={link.to} direction="up" delay={i * 80}>
-          <Link to={link.to} style={{ textDecoration: 'none' }}>
-            <Card className="group transition-all duration-300 hover:border-accent hover:shadow-[0_0_24px_rgba(198,255,58,0.04)] cursor-pointer">
-              <CardContent className="flex flex-col gap-2 p-6">
-                <Typography variant="h6" className="group-hover:text-accent transition-colors">
-                  {link.title}
-                </Typography>
-                <Typography variant="bodySm" tone="muted">
-                  {link.desc}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Link>
-        </RevealOnScroll>
-      ))}
-    </div>
+    <HubGrid>
+      <HubCard
+        to="/collection"
+        title="Моя коллекция"
+        description="Приобретённые работы и сертификаты ArtKey"
+      />
+      <HubCard
+        to="/collection/saved"
+        title="Сохранённое"
+        description="Избранные работы для просмотра"
+      />
+      <HubCard
+        to="/following"
+        title="Подписки"
+        description="Отслеживаемые художники"
+      />
+      <HubCard
+        to="/dashboard/settings"
+        title="Профиль"
+        description="Персональные настройки"
+      />
+    </HubGrid>
   )
 }

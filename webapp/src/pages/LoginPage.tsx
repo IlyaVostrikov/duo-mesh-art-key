@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { Typography } from '@/components/ui/typography'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-import { AuroraBackground } from '@/components/ui/aurora-background'
 import { useAuth } from '@/lib/use-auth'
 
 export function LoginPage() {
@@ -57,8 +56,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuroraBackground>
-      <section className="mx-auto grid w-full max-w-6xl gap-8 px-5 py-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
+    <section className="mx-auto grid w-full max-w-6xl gap-8 px-5 py-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
         <div className="grid gap-5">
           <RevealOnScroll direction="up">
             <Badge variant="outline" className="w-fit">
@@ -80,7 +78,6 @@ export function LoginPage() {
         <RevealOnScroll direction="up" delay={200}>
           <AuthForm />
         </RevealOnScroll>
-      </section>
-    </AuroraBackground>
+    </section>
   )
 }

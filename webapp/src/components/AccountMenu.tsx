@@ -97,9 +97,9 @@ export function AccountMenu() {
               <span
                 className="inline-block text-xs mt-1 px-2 py-0.5 rounded-full"
                 style={{
-                  backgroundColor: 'rgba(198,255,58,0.08)',
+                  backgroundColor: 'rgba(var(--accent-rgb),0.08)',
                   color: 'var(--accent)',
-                  border: '1px solid rgba(198,255,58,0.2)',
+                  border: '1px solid rgba(var(--accent-rgb),0.2)',
                 }}
               >
                 {ROLE_LABELS[user.role] ?? user.role}

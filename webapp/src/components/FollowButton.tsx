@@ -73,7 +73,7 @@ export function FollowButton({
         fontWeight: 500,
         borderRadius: 'var(--radius-sm)',
         border: `1px solid ${isFollowing ? 'var(--accent)' : 'var(--border)'}`,
-        backgroundColor: isFollowing ? 'rgba(198,255,58,0.06)' : 'transparent',
+        backgroundColor: isFollowing ? 'rgba(var(--accent-rgb),0.06)' : 'transparent',
         color: isFollowing ? 'var(--accent)' : 'var(--text-secondary)',
         cursor: pending || !auth.accessToken ? 'default' : 'pointer',
         opacity: pending ? 0.7 : 1,
@@ -87,13 +87,13 @@ export function FollowButton({
           e.currentTarget.style.backgroundColor = 'rgba(255,60,60,0.06)'
         } else {
           e.currentTarget.style.borderColor = 'var(--accent)'
-          e.currentTarget.style.backgroundColor = 'rgba(198,255,58,0.1)'
+          e.currentTarget.style.backgroundColor = 'rgba(var(--accent-rgb),0.1)'
         }
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = isFollowing ? 'var(--accent)' : 'var(--border)'
         e.currentTarget.style.color = isFollowing ? 'var(--accent)' : 'var(--text-secondary)'
-        e.currentTarget.style.backgroundColor = isFollowing ? 'rgba(198,255,58,0.06)' : 'transparent'
+        e.currentTarget.style.backgroundColor = isFollowing ? 'rgba(var(--accent-rgb),0.06)' : 'transparent'
       }}
       title={
         !auth.accessToken

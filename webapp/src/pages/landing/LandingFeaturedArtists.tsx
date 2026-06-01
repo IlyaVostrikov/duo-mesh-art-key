@@ -46,14 +46,15 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
 
           return (
             <RevealOnScroll key={a.id} direction="up" delay={0}>
+              {a.hall?.slug ? (
               <Link
               key={a.id}
               to="/hall/$hallSlug"
-              params={{ hallSlug: a.hall?.slug ?? '' }}
+              params={{ hallSlug: a.hall.slug }}
               className="group flex flex-col gap-4 rounded-lg border bg-surface p-6 transition-all hover:border-accent/40 hover:shadow-lg"
             >
               {/* Cover image */}
-              {a.hall?.coverImageUrl ? (
+              {a.hall.coverImageUrl ? (
                 <div className="aspect-[3/1] overflow-hidden rounded-md bg-surface-2">
                   <img
                     src={assetUrl(a.hall.coverImageUrl)}
@@ -64,7 +65,7 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
                 </div>
               ) : (
                 <div className="flex aspect-[3/1] items-center justify-center rounded-md bg-surface-2">
-                  <span className="font-display" style={{ opacity: 0.15, fontSize: '3rem' }}>
+                  <span className="font-display text-5xl opacity-15">
                     {a.displayName[0]}
                   </span>
                 </div>
@@ -100,6 +101,33 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
                 </Typography>
               )}
             </Link>
+              ) : (
+              <div className="flex flex-col gap-4 rounded-lg border bg-surface p-6">
+                <div className="flex aspect-[3/1] items-center justify-center rounded-md bg-surface-2">
+                  <span className="font-display text-5xl opacity-15">
+                    {a.displayName[0]}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Typography variant="h5" className="truncate font-display">
+                      {a.displayName}
+                    </Typography>
+                    {a.location && (
+                      <Typography variant="caption" tone="muted">
+                        {a.location}
+                      </Typography>
+                    )}
+                  </div>
+                  {a.verified && <Badge variant="outline" className="shrink-0 border-accent/30 text-accent">Verified</Badge>}
+                </div>
+                {statement && (
+                  <Typography variant="bodySm" tone="muted" className="line-clamp-3 italic font-editorial">
+                    "{statement.slice(0, 200)}{statement.length > 200 ? '...' : ''}"
+                  </Typography>
+                )}
+              </div>
+              )}
             </RevealOnScroll>
           )
         })}

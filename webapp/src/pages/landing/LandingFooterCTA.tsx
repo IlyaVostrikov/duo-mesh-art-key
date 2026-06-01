@@ -1,77 +1,50 @@
 import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
-import { Typography } from '@/components/ui/typography'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-import Container from '@/components/layout/Container'
-import Section from '@/components/layout/Section'
-import Stack from '@/components/layout/Stack'
+import { Typography } from '@/components/ui/typography'
+import { FooterBar } from '@/components/ui/footer-bar'
 
-interface FooterCTAProps {
-  lang: 'ru' | 'en'
-  onToggleLang: () => void
-}
-
-const HEADLINE_RU = 'Присоединяйтесь к DUO MESH'
-const HEADLINE_EN = 'Join DUO MESH'
-const ARTIST_RU = 'Для художников'
-const ARTIST_EN = 'For Artists'
-const COLLECTOR_RU = 'Для коллекционеров'
-const COLLECTOR_EN = 'For Collectors'
-
-export function LandingFooterCTA({ lang, onToggleLang }: FooterCTAProps) {
+export function LandingFooterCTA({ lang: _ }: { lang: 'ru' | 'en'; onToggleLang: () => void }) {
   return (
-    <Section as="footer" border="top" background="surface" paddingY="lg">
-      <Container size="narrow">
-        <Stack gap="md" className="text-center">
-        <RevealOnScroll direction="up">
-          <h2
-            className="text-display"
-          >
-            {lang === 'ru' ? HEADLINE_RU : HEADLINE_EN}
-          </h2>
-        </RevealOnScroll>
+    <footer style={{ borderTop: '1px solid var(--border)' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 20px' }}>
 
-        <RevealOnScroll direction="up" delay={120}>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Button asChild size="lg">
-              <Link to="/onboarding/artist">
-                {lang === 'ru' ? ARTIST_RU : ARTIST_EN}
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link to="/verify">
-                {lang === 'ru' ? COLLECTOR_RU : COLLECTOR_EN}
-              </Link>
-            </Button>
-          </div>
-        </RevealOnScroll>
+        {/* CTA block */}
+        <div
+          className="grid grid-cols-2 items-center gap-16 border-b border-border"
+          style={{ padding: '96px 0 80px' }}
+        >
+          <RevealOnScroll direction="up">
+            <h2 className="text-editorial m-0 text-foreground">
+              Присоединяйтесь
+              <br />
+              <span style={{ color: 'var(--text-secondary)' }}>к DUO MESH</span>
+            </h2>
+          </RevealOnScroll>
 
-        {/* Language toggle */}
-        <RevealOnScroll direction="up" delay={180}>
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={lang === 'en' ? onToggleLang : undefined}
-              className={`text-sm transition-colors ${lang === 'ru' ? 'text-text font-medium' : 'text-text-muted hover:text-text-secondary'}`}
-            >
-              RU
-            </button>
-            <span className="text-text-muted">|</span>
-            <button
-              onClick={lang === 'ru' ? onToggleLang : undefined}
-              className={`text-sm transition-colors ${lang === 'en' ? 'text-text font-medium' : 'text-text-muted hover:text-text-secondary'}`}
-            >
-              EN
-            </button>
-          </div>
-        </RevealOnScroll>
+          <RevealOnScroll direction="up" delay={80}>
+            <div className="flex flex-col gap-4" style={{ maxWidth: '320px' }}>
+              <Typography variant="body" font="editorial" tone="muted">
+                Создавайте 3D-галереи, выпускайте ArtKey-сертификаты
+                и участвуйте в экосистеме верифицированного цифрового искусства.
+              </Typography>
+              <div className="flex flex-wrap gap-3 mt-2">
+                <Button asChild size="lg">
+                  <Link to="/onboarding/artist">Для художников</Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link to="/login">Войти</Link>
+                </Button>
+              </div>
+            </div>
+          </RevealOnScroll>
+        </div>
 
-        <RevealOnScroll direction="up" delay={240}>
-          <Typography variant="caption" tone="muted">
-            DUO MESH 2026 · {lang === 'ru' ? 'Платформа верифицированного цифрового искусства' : 'Verified digital art platform'}
-          </Typography>
-        </RevealOnScroll>
-        </Stack>
-      </Container>
-    </Section>
+        <FooterBar
+          copyright="DUO MESH © 2026"
+          tagline="Платформа верифицированного цифрового искусства"
+        />
+      </div>
+    </footer>
   )
 }

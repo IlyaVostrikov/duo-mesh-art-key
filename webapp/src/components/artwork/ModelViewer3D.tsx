@@ -33,6 +33,10 @@ export interface ModelViewer3DProps {
   exposure?: number
   /** Show fullscreen button (default true) */
   showFullscreen?: boolean
+  /** Disable mouse-wheel zoom so page scroll passes through (default false) */
+  disableZoom?: boolean
+  /** Override environment-image: "neutral" for specular-glossiness models, "" to disable IBL (default "") */
+  environmentImage?: string
 }
 
 function isViewableFormat(url: string): boolean {
@@ -53,8 +57,10 @@ export function ModelViewer3D({
   iosSrc,
   interactionPrompt = true,
   autoRotateDelay = 3000,
-  exposure = 1.1,
+  exposure = 1.4,
   showFullscreen = true,
+  disableZoom = false,
+  environmentImage,
 }: ModelViewer3DProps) {
   const resolvedModelUrl = assetUrl(modelUrl)
   const resolvedPosterUrl = posterUrl ? assetUrl(posterUrl) : undefined
@@ -138,7 +144,7 @@ export function ModelViewer3D({
                 gap: '8px',
                 padding: '10px 24px',
                 backgroundColor: 'var(--accent)',
-                color: '#000',
+                color: 'var(--accent-ink)',
                 borderRadius: 'var(--radius)',
                 textDecoration: 'none',
                 fontWeight: 600,
@@ -174,9 +180,11 @@ export function ModelViewer3D({
     el.setAttribute('reveal', 'auto')
 
     // ─── Light & Materials ───
-    // No environment-image: model-viewer's default directional + ambient
-    // lights produce more dramatic gallery-appropriate contrast than neutral IBL.
-    el.setAttribute('environment-image', '')
+    // Only override when explicitly provided; otherwise let model-viewer use its
+    // built-in default (works for both standard PBR and specular-glossiness).
+    if (environmentImage !== undefined) {
+      el.setAttribute('environment-image', environmentImage)
+    }
     el.setAttribute('tone-mapping', 'aces')
     el.setAttribute('exposure', String(exposure))
     el.setAttribute('shadow-intensity', '1.2')
@@ -184,6 +192,11 @@ export function ModelViewer3D({
 
     // ─── Controls & Presentation (Task 3) ───
     el.setAttribute('camera-controls', '')
+    if (disableZoom) {
+      el.setAttribute('disable-zoom', '')
+    } else {
+      el.removeAttribute('disable-zoom')
+    }
     el.setAttribute('auto-rotate', '')
     el.setAttribute('rotation-per-second', '15deg')
     el.setAttribute('auto-rotate-delay', String(autoRotateDelay))
@@ -226,6 +239,7 @@ export function ModelViewer3D({
     resolvedModelUrl, resolvedPosterUrl, resolvedIosSrc,
     cameraOrbit, cameraTarget, minCameraOrbit, maxCameraOrbit,
     arScale, interactionPrompt, autoRotateDelay, exposure,
+    disableZoom, environmentImage,
   ])
 
   return (

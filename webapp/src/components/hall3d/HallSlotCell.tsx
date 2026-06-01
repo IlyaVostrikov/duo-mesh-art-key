@@ -32,7 +32,7 @@ export function HallSlotCell({
         border: dragOver
           ? '2px dashed var(--accent)'
           : '1px dashed var(--border)',
-        backgroundColor: dragOver ? 'rgba(198,255,58,0.05)' : assigned ? 'var(--surface)' : 'transparent',
+        backgroundColor: dragOver ? 'rgba(var(--accent-rgb),0.05)' : assigned ? 'var(--surface)' : 'transparent',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

@@ -52,6 +52,7 @@
         "@fontsource-variable/cormorant": "^5.2.8",
         "@fontsource-variable/figtree": "^5.2.10",
         "@fontsource-variable/inter": "^5.2.8",
+        "@fontsource-variable/onest": "^5.2.11",
         "@fontsource-variable/unbounded": "^5.2.8",
         "@google/model-viewer": "^4.2.0",
         "@hugeicons/core-free-icons": "^4.1.3",
@@ -391,6 +392,8 @@
     "@fontsource-variable/figtree": ["@fontsource-variable/figtree@5.2.10", "", {}, "sha512-a5Gumbpy3mdd+Yg31g6Qb7CmjYbrfyutJa3bWfP5q8A4GclIOwX7mI+ZuSHsJnw/mHvW6r9oh1AHJcJTIxK4JA=="],
 
     "@fontsource-variable/inter": ["@fontsource-variable/inter@5.2.8", "", {}, "sha512-kOfP2D+ykbcX/P3IFnokOhVRNoTozo5/JxhAIVYLpea/UBmCQ/YWPBfWIDuBImXX/15KH+eKh4xpEUyS2sQQGQ=="],
+
+    "@fontsource-variable/onest": ["@fontsource-variable/onest@5.2.11", "", {}, "sha512-knJww1KxK4g66+qu90q3CPBvl4zhL5oDRi3/JMkYMmlhW3OgyRgT4MMfgd6jg2lvho7bLPAXfsYPh59h0yzwUA=="],
 
     "@fontsource-variable/unbounded": ["@fontsource-variable/unbounded@5.2.8", "", {}, "sha512-DWC/HEdNNbjMH6ngeeCAPExKMsedoY+pV3ZnRXzFcAzXuGHB6dEwsXNVQ4fiuuYMGguq9TSAEUat4Oy5prdwWQ=="],
 

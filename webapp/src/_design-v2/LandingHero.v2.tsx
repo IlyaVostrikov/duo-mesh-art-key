@@ -38,7 +38,7 @@ interface HeroProps {
 const MISSION = 'Цифровое искусство с доказуемой подлинностью'
 const SUB = 'Виртуальные 3D-галереи, SHA-256 ArtKey-сертификаты и provenance-цепочки — платформа для художников и коллекционеров нового поколения.'
 
-export function LandingHero({ heroWork, lang }: HeroProps) {
+export function LandingHero({ heroWork, lang: _lang }: HeroProps) {
   const [artworkRu] = heroWork ? parseBilingualTitle(heroWork.title) : ['']
   const spotlightRef = useRef<HTMLDivElement>(null)
 

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ArtworkCard, ArtworkCardSkeleton } from '@/components/artwork/ArtworkCard'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
+import { FilterTab } from '@/components/ui/filter-tab'
+import { SearchField } from '@/components/ui/search-field'
+import { GalleryHeader } from '@/components/ui/gallery-header'
 import { assetUrl } from '@/lib/asset-url'
 import { apiBaseUrl } from '@/lib/api'
 
@@ -19,11 +21,11 @@ interface ArtworkItem {
 }
 
 const SORT_OPTIONS = [
-  { value: 'newest', label: 'Новые / Newest' },
-  { value: 'oldest', label: 'Старые / Oldest' },
-  { value: 'price_asc', label: 'Цена ↑ / Price ↑' },
-  { value: 'price_desc', label: 'Цена ↓ / Price ↓' },
-  { value: 'popular', label: 'Популярные / Popular' },
+  { value: 'newest', label: 'Новые' },
+  { value: 'oldest', label: 'Старые' },
+  { value: 'price_asc', label: 'Цена ↑' },
+  { value: 'price_desc', label: 'Цена ↓' },
+  { value: 'popular', label: 'Популярные' },
 ]
 
 const MEDIA_FILTERS = [
@@ -62,176 +64,138 @@ export function GalleryPage() {
       setArtworks(data.artworks)
       setTotal(data.total)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки')
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    fetchArtworks(mediaFilter, sort, search)
-  }, [mediaFilter, sort, search, fetchArtworks])
+  useEffect(() => { fetchArtworks(mediaFilter, sort, search) }, [mediaFilter, sort, search, fetchArtworks])
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 20px' }}>
-      {/* Hero row */}
-      <header style={{ paddingTop: '48px', paddingBottom: '64px' }}>
-        <h1 className="text-display-hero" style={{ marginBottom: '16px' }}>
-          Галерея / Gallery
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1.25rem', maxWidth: '600px', lineHeight: 1.6 }}>
-          Кураторская подборка независимых художников.
-          <br />
-          A curated selection of independent artists.
-        </p>
-        {total > 0 && (
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <AnimatedCounter value={total} />
-            {' '}
-            {total === 1 ? 'работа / work' : total < 5 ? 'работы / works' : 'работ / works'}
-          </p>
-        )}
-      </header>
 
-      {/* Filters bar */}
+      <GalleryHeader
+        title="Галерея"
+        subtitle="Кураторская подборка независимых художников"
+        count={total > 0 ? total : undefined}
+      />
+
+      {/* Filters — layout-only container, visual styling lives in FilterTab / SearchField */}
       <div
-        className="flex flex-wrap items-center gap-4"
-        style={{
-          paddingBottom: '32px',
-          borderBottom: '1px solid var(--border)',
-          marginBottom: '48px',
-        }}
+        className="flex items-stretch border-b border-border mb-12"
+        style={{ gap: 0 }}
       >
-        {/* Media filter */}
-        <div className="flex items-center gap-2">
+        <div className="flex border-r border-border pr-4 mr-4">
           {MEDIA_FILTERS.map((m) => (
-            <button
+            <FilterTab
               key={m.value}
+              active={mediaFilter === m.value}
               onClick={() => setMediaFilter(m.value)}
-              className="px-3 py-1 text-sm font-medium hover:text-text"
-              style={{
-                borderRadius: 'var(--radius)',
-                backgroundColor: mediaFilter === m.value ? 'var(--surface-2)' : 'transparent',
-                color: mediaFilter === m.value ? 'var(--text)' : 'var(--text-muted)',
-                border: `1px solid ${mediaFilter === m.value ? 'var(--accent)' : 'transparent'}`,
-                transition: `all var(--dur-fast) var(--ease)`,
-                cursor: 'pointer',
-                transform: mediaFilter === m.value ? 'scale(1.02)' : 'scale(1)',
-              }}
             >
               {m.label}
-            </button>
+            </FilterTab>
           ))}
         </div>
 
-        {/* Search input */}
-        <input
-          type="text"
-          value={searchInput}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          placeholder="Поиск / Search..."
-          aria-label="Search artworks"
-          style={{
-            flex: 1,
-            maxWidth: '320px',
-            backgroundColor: 'var(--surface)',
-            color: 'var(--text)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            padding: '6px 12px',
-            fontSize: '0.875rem',
-            outline: 'none',
-            transition: 'border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)',
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = 'var(--accent)'
-            e.target.style.boxShadow = '0 0 0 1px rgba(198,255,58,0.2)'
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = 'var(--border)'
-            e.target.style.boxShadow = 'none'
-          }}
-        />
-
-        {/* Sort */}
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value)}
-          className="ml-auto text-sm px-3 py-1"
-          style={{
-            backgroundColor: 'var(--surface)',
-            color: 'var(--text-secondary)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            cursor: 'pointer',
-          }}
-        >
+        <div className="flex">
           {SORT_OPTIONS.map((s) => (
-            <option key={s.value} value={s.value}>
+            <FilterTab
+              key={s.value}
+              active={sort === s.value}
+              onClick={() => setSort(s.value)}
+            >
               {s.label}
-            </option>
+            </FilterTab>
           ))}
-        </select>
+        </div>
+
+        <div className="ml-auto flex items-center pb-3">
+          <SearchField
+            value={searchInput}
+            onChange={handleSearchChange}
+            placeholder="Поиск..."
+            aria-label="Поиск работ"
+          />
+        </div>
       </div>
 
-      {/* Content area */}
+      {/* Grid */}
       {loading && (
         <div
-          className="grid gap-x-6 gap-y-12"
           style={{
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: '24px 24px',
             paddingBottom: '96px',
           }}
         >
-          {Array.from({ length: 12 }).map((_, i) => (
-            <ArtworkCardSkeleton key={i} />
-          ))}
+          {Array.from({ length: 12 }).map((_, i) => <ArtworkCardSkeleton key={i} />)}
         </div>
       )}
 
       {error && !loading && (
-        <div style={{ textAlign: 'center', padding: '64px 0' }}>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>
-            Не удалось загрузить галерею / Failed to load gallery
+        <div style={{ textAlign: 'center', padding: '96px 0' }}>
+          <p
+            style={{
+              fontFamily: 'var(--font-editorial)',
+              fontStyle: 'italic',
+              fontSize: '1.5rem',
+              color: 'var(--text-muted)',
+              marginBottom: '24px',
+            }}
+          >
+            Не удалось загрузить галерею
           </p>
           <button
             onClick={() => fetchArtworks(mediaFilter, sort, search)}
-            className="px-4 py-2 text-sm font-medium"
             style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.75rem',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
               backgroundColor: 'var(--accent)',
               color: 'var(--accent-ink)',
-              borderRadius: 'var(--radius)',
               border: 'none',
+              padding: '10px 24px',
               cursor: 'pointer',
             }}
           >
-            Попробовать снова / Retry
+            Попробовать снова
           </button>
         </div>
       )}
 
       {!loading && !error && artworks.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '64px 0' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem' }}>
-            Ничего не найдено / No results
+        <div style={{ textAlign: 'center', padding: '96px 0' }}>
+          <p
+            style={{
+              fontFamily: 'var(--font-editorial)',
+              fontStyle: 'italic',
+              fontSize: '1.5rem',
+              color: 'var(--text-muted)',
+            }}
+          >
+            Ничего не найдено
           </p>
         </div>
       )}
 
       {!loading && !error && artworks.length > 0 && (
         <div
-          className="grid gap-x-6 gap-y-12"
           style={{
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: '24px 24px',
             paddingBottom: '96px',
           }}
         >
           {artworks.map((aw, i) => (
-            <RevealOnScroll key={aw.id} direction="up" delay={i * 60}>
+            <RevealOnScroll key={aw.id} direction="up" delay={i * 40}>
               <ArtworkCard
                 id={aw.id}
                 title={aw.title}
-                artistName={aw.artist.displayName ?? 'Unknown'}
+                artistName={aw.artist.displayName ?? 'Неизвестный художник'}
                 posterUrl={assetUrl(aw.posterUrl)}
                 mediaType={aw.mediaType}
                 price={aw.price}

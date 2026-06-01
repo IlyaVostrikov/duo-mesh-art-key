@@ -204,7 +204,7 @@ export function AdminArtworks() {
                       padding: '2px 8px',
                       fontSize: '0.7rem',
                       borderRadius: 'var(--radius-sm)',
-                      backgroundColor: aw.mediaType === 'MODEL_3D' ? 'rgba(198,255,58,0.1)' : 'rgba(96,165,250,0.1)',
+                      backgroundColor: aw.mediaType === 'MODEL_3D' ? 'rgba(var(--accent-rgb),0.1)' : 'rgba(96,165,250,0.1)',
                       color: aw.mediaType === 'MODEL_3D' ? 'var(--accent)' : '#60a5fa',
                     }}>
                       {aw.mediaType === 'MODEL_3D' ? '3D' : '2D'}

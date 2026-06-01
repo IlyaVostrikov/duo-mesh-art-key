@@ -35,7 +35,7 @@ export function LandingFeaturedHalls({ halls, lang }: FeaturedHallsProps) {
             </h2>
           </RevealOnScroll>
 
-          <div className="flex gap-5 overflow-x-auto pb-4" style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'thin' }}>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {halls.map((h, i) => {
           const [titleRu, titleEn] = parseBilingualTitle(h.title)
           const title = lang === 'ru' ? titleRu : titleEn
@@ -45,8 +45,7 @@ export function LandingFeaturedHalls({ halls, lang }: FeaturedHallsProps) {
             <Link
               to="/hall/$hallSlug"
               params={{ hallSlug: h.slug }}
-              className="group flex w-[280px] shrink-0 flex-col gap-4 rounded-lg border bg-surface p-5 transition-all hover:border-accent/40 hover:shadow-lg"
-              style={{ scrollSnapAlign: 'start' }}
+              className="group flex flex-col gap-4 rounded-lg border bg-surface p-5 transition-all hover:border-accent/40 hover:shadow-lg"
             >
               {/* Cover */}
               <div className="aspect-[4/3] overflow-hidden rounded-md bg-surface-2">
@@ -59,7 +58,7 @@ export function LandingFeaturedHalls({ halls, lang }: FeaturedHallsProps) {
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center">
-                    <Typography variant="h4" tone="muted" className="font-display" style={{ opacity: 0.12 }}>
+                    <Typography variant="h4" tone="muted" className="font-display opacity-10">
                       {title[0]}
                     </Typography>
                   </div>
