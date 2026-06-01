@@ -18,6 +18,7 @@ import { AdminService } from './services/admin.service'
 import { SaleService } from './services/sale.service'
 import { FollowService } from './services/follow.service'
 import { InquiryService } from './services/inquiry.service'
+import { UploadService } from './services/upload.service'
 import { createArtistRoutes } from './routes/artists'
 import { createArtworkRoutes } from './routes/artworks'
 import { createHallRoutes } from './routes/halls'
@@ -42,6 +43,7 @@ type AppBindings = {
     saleService: SaleService
     followService: FollowService
     inquiryService: InquiryService
+    uploadService: UploadService
     env: AppEnv
     prisma: DbClient
     storageService: StorageService | null
@@ -64,6 +66,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   const saleService = new SaleService(prisma)
   const followService = new FollowService(prisma)
   const inquiryService = new InquiryService(prisma)
+  const uploadService = new UploadService()
   const storageService = createStorageServiceFromEnv(env)
 
   const app = new OpenAPIHono<AppBindings>({
@@ -95,6 +98,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
     c.set('saleService', saleService)
     c.set('followService', followService)
     c.set('inquiryService', inquiryService)
+    c.set('uploadService', uploadService)
     c.set('env', env)
     c.set('prisma', prisma)
     c.set('storageService', storageService)

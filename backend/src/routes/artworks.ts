@@ -11,6 +11,10 @@ type ArtworkRouteEnv = {
   }
 }
 
+function isOwnerOrAdmin(artwork: { artistId: string }, artistId: string, role: string): boolean {
+  return artwork.artistId === artistId || role === 'ADMIN'
+}
+
 export function createArtworkRoutes() {
   const routes = new Hono<ArtworkRouteEnv>()
 
@@ -83,7 +87,7 @@ export function createArtworkRoutes() {
 
     const existing = await svc.getById(c.req.param('id'))
     if (!existing) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
-    if ((existing as any).artistId !== artist.id && authUser!.role !== 'ADMIN') {
+    if (!isOwnerOrAdmin(existing, artist.id, authUser!.role)) {
       return c.json({ error: 'FORBIDDEN', message: 'Not your artwork' }, 403)
     }
 
@@ -106,7 +110,7 @@ export function createArtworkRoutes() {
 
     const existing = await svc.getById(c.req.param('id'))
     if (!existing) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
-    if ((existing as any).artistId !== artist.id && authUser!.role !== 'ADMIN') {
+    if (!isOwnerOrAdmin(existing, artist.id, authUser!.role)) {
       return c.json({ error: 'FORBIDDEN', message: 'Not your artwork' }, 403)
     }
 

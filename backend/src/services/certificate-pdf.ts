@@ -1,13 +1,25 @@
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import QRCode from 'qrcode'
 import { PDFDocument, rgb } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 
 const VERIFY_BASE = process.env.PUBLIC_VERIFY_BASE ?? 'http://localhost:5173'
 
+const FONT_DIRS = [
+  resolve(import.meta.dir, '../../assets/fonts'),
+  'C:/Windows/Fonts',
+  '/usr/share/fonts/truetype',
+  '/usr/share/fonts',
+  '/System/Library/Fonts',
+  '/Library/Fonts',
+]
+
 function loadFont(name: string): Uint8Array {
-  // Windows dev; for Linux/macOS deployment, bundle fonts in backend/assets/fonts/
-  return readFileSync(`C:/Windows/Fonts/${name}`)
+  for (const dir of FONT_DIRS) {
+    try { return readFileSync(resolve(dir, name)) } catch { /* try next */ }
+  }
+  throw new Error(`Font not found: ${name}. Place it in backend/assets/fonts/`)
 }
 
 export async function generateCertificatePdf(result: {

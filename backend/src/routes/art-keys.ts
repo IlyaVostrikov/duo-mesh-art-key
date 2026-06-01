@@ -18,7 +18,10 @@ export function createArtKeyRoutes() {
     if (!result) return c.json({ error: 'NOT_FOUND', message: 'ArtKey not found' }, 404)
 
     try {
-      const pdf = await generateCertificatePdf(result)
+      const pdf = await generateCertificatePdf({
+        ...result,
+        artist: { displayName: result.artist.displayName ?? 'Unknown Artist' },
+      })
       return new Response(pdf, {
         headers: {
           'Content-Type': 'application/pdf',

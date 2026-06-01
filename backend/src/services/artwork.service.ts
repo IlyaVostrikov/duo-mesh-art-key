@@ -1,6 +1,6 @@
 import type { DbClient } from '../db'
 import type { Prisma } from '../generated/prisma/client'
-import { toArtworkDto, toArtworkPublicDto, toArtworkPublicDtoFull } from '../dto/artwork.dto'
+import { toArtworkDto, toArtworkPublicDto, toArtworkPublicDtoFull, type ArtworkDto, type ArtworkPublicDto, type ArtworkPublicFullDto } from '../dto/artwork.dto'
 import { ArtKeyService } from './art-key.service'
 
 export class ArtworkService {
@@ -23,7 +23,7 @@ export class ArtworkService {
     sort?: string
     q?: string
     artistId?: string
-  }) {
+  }): Promise<{ artworks: ArtworkPublicDto[]; total: number; page: number; pageSize: number }> {
     const { page = 1, pageSize = 20, category, mediaType, status, style, priceMin, priceMax, editionType, sort = 'newest', q, artistId } = params
     const where: Prisma.ArtworkWhereInput = { status: status ? (status as any) : (artistId ? undefined : { not: 'DRAFT' }) }
 
@@ -72,7 +72,7 @@ export class ArtworkService {
     }
   }
 
-  async getById(artworkId: string) {
+  async getById(artworkId: string): Promise<ArtworkPublicFullDto | null> {
     const artwork = await this.prisma.artwork.findUnique({
       where: { id: artworkId },
       include: { artist: { include: { user: true, hall: true } }, artKeys: true, provenanceRecords: { include: { toOwner: true, fromOwner: true }, orderBy: { sequence: 'asc' } } },
@@ -117,7 +117,7 @@ export class ArtworkService {
     return toArtworkDto(artwork)
   }
 
-  async update(artworkId: string, data: any) {
+  async update(artworkId: string, data: any): Promise<ArtworkPublicFullDto> {
     const artwork = await this.prisma.artwork.update({
       where: { id: artworkId },
       data,

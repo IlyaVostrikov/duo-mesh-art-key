@@ -1,6 +1,6 @@
 import type { DbClient } from '../db'
 import { FEATURED_CONFIG } from '@duo-mesh/contracts'
-import { toArtworkPublicDto } from '../dto/artwork.dto'
+import { toArtworkPublicDto, type ArtworkPublicDto } from '../dto/artwork.dto'
 import { toArtistPublicDto } from '../dto/artist.dto'
 import crypto from 'node:crypto'
 
@@ -37,7 +37,12 @@ function makeDeterministicId(artistSlug: string, artworkSlug: string): string {
 export class FeaturedService {
   constructor(private prisma: DbClient) {}
 
-  async getFeatured() {
+  async getFeatured(): Promise<{
+    hero: ArtworkPublicDto | null
+    works: ArtworkPublicDto[]
+    artists: ReturnType<typeof toArtistPublicDto>[]
+    halls: Array<{ slug: string; title: string; coverImageUrl: string | null; viewCount: number; theme: string | null; artist: { id: string; displayName: string | null } }>
+  }> {
     const heroArtistSlug = ARTWORK_ARTIST[FEATURED_CONFIG.heroArtworkSlug]
     const heroId = makeDeterministicId(heroArtistSlug, FEATURED_CONFIG.heroArtworkSlug)
 
