@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import Lenis from 'lenis'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 
@@ -10,13 +10,13 @@ export function useLenis() {
 
 export function LenisProvider({ children }: { children: React.ReactNode }) {
   const reduced = useReducedMotion()
-  const lenisRef = useRef<Lenis | null>(null)
+  const [lenis, setLenis] = useState<Lenis | null>(null)
   const rafIdRef = useRef<number>(0)
 
   useEffect(() => {
-    if (reduced || lenisRef.current) return
+    if (reduced || lenis) return
 
-    const lenis = new Lenis({
+    const instance = new Lenis({
       duration: 1.2,
       easing: (t: number) => Math.min(1, 1.001 - 2 ** (-10 * t)),
       smoothWheel: true,
@@ -24,23 +24,22 @@ export function LenisProvider({ children }: { children: React.ReactNode }) {
       touchMultiplier: 2,
     })
 
-    lenisRef.current = lenis
+    setLenis(instance)
 
     const raf = (time: number) => {
-      lenis.raf(time)
+      instance.raf(time)
       rafIdRef.current = requestAnimationFrame(raf)
     }
     rafIdRef.current = requestAnimationFrame(raf)
 
     return () => {
       cancelAnimationFrame(rafIdRef.current)
-      lenis.destroy()
-      lenisRef.current = null
+      instance.destroy()
     }
   }, [reduced])
 
   return (
-    <LenisContext.Provider value={lenisRef.current}>
+    <LenisContext.Provider value={lenis}>
       {children}
     </LenisContext.Provider>
   )

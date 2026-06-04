@@ -56,7 +56,7 @@ export function FramedArtwork({
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
           map={texture}
-          roughness={0.35}
+          roughness={0.55}
           metalness={0.05}
           toneMapped
         />
@@ -71,14 +71,12 @@ export function FramedArtwork({
         hovered={hovered}
       />
 
-      {/* Soft wide glow on hover — gentle pool, not harsh spotlight */}
+      {/* Two offset point lights — wide soft wash, no center hotspot */}
       {hovered && (
-        <pointLight
-          position={[0, 0, 0.4]}
-          intensity={1.2}
-          distance={3}
-          color="#fffaf0"
-        />
+        <>
+          <pointLight position={[-frameOuterW * 0.28, frameOuterH * 0.28, 0.7]} intensity={0.5} distance={4} color="#fffaf0" />
+          <pointLight position={[frameOuterW * 0.28, -frameOuterH * 0.28, 0.7]} intensity={0.5} distance={4} color="#fffaf0" />
+        </>
       )}
 
       {/* Hover label — museum-style plaque above the frame */}

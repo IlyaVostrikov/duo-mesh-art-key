@@ -56,14 +56,12 @@ export function PedestalSculpture({
         />
       )}
 
-      {/* Hover label */}
+      {/* Hover glow — two offset lights, wide soft wash */}
       {hovered && (
-        <pointLight
-          position={[0, PEDESTAL_H + 0.6, 0.3]}
-          intensity={1}
-          distance={3}
-          color="#fffaf0"
-        />
+        <>
+          <pointLight position={[-0.25, PEDESTAL_H + 0.75, 0.5]} intensity={0.45} distance={4} color="#fffaf0" />
+          <pointLight position={[0.25, PEDESTAL_H + 0.75, 0.5]} intensity={0.45} distance={4} color="#fffaf0" />
+        </>
       )}
       {hovered && (
         <Html
@@ -126,11 +124,11 @@ function SculptureModel({
 
   if (!cloned) return null
 
-  // Center and scale the model to fit ~0.4m tall
+  // Center and scale the model to fit ~1.3m tall (target 1.2–1.5m)
   const box = new THREE.Box3().setFromObject(cloned)
   const size = box.getSize(new THREE.Vector3())
   const maxDim = Math.max(size.x, size.y, size.z)
-  const scale = 0.4 / maxDim
+  const scale = 1.3 / maxDim
 
   return (
     <primitive
