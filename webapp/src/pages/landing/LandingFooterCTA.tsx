@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
-import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
+import { MagneticButton, RevealOnScroll } from '@/components/motion'
 import { Typography } from '@/components/ui/typography'
 import { FooterBar } from '@/components/ui/footer-bar'
 
@@ -29,12 +29,16 @@ export function LandingFooterCTA({ lang: _ }: { lang: 'ru' | 'en'; onToggleLang:
                 и участвуйте в экосистеме верифицированного цифрового искусства.
               </Typography>
               <div className="flex flex-wrap gap-3 mt-2">
-                <Button asChild size="lg">
-                  <Link to="/onboarding/artist">Для художников</Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link to="/login">Войти</Link>
-                </Button>
+                <MagneticButton strength={6}>
+                  <Button asChild size="lg">
+                    <Link to="/onboarding/artist">Для художников</Link>
+                  </Button>
+                </MagneticButton>
+                <MagneticButton strength={4}>
+                  <Button asChild variant="outline" size="lg">
+                    <Link to="/login">Войти</Link>
+                  </Button>
+                </MagneticButton>
               </div>
             </div>
           </RevealOnScroll>

@@ -1,4 +1,7 @@
+import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
+import { parseBilingualTitle, formatPrice } from '@/lib/utils'
+import { ImageHoverZoom } from '@/components/motion/ImageHoverZoom'
 
 interface ArtworkCardProps {
   id: string
@@ -18,7 +21,7 @@ const STATUS_LABELS: Record<string, string> = {
   IN_EXHIBITION: 'На выставке',
 }
 
-export function ArtworkCard({
+export const ArtworkCard = memo(function ArtworkCard({
   id,
   title,
   artistName,
@@ -31,13 +34,9 @@ export function ArtworkCard({
 }: ArtworkCardProps) {
   const is3D = mediaType === 'MODEL_3D'
   const statusLabel = status ? STATUS_LABELS[status] : null
-  const russianTitle = title.split(' / ')[0]
+  const russianTitle = parseBilingualTitle(title)[0]
 
-  const priceDisplay = price
-    ? currency === 'RUB'
-      ? `${Number(price).toLocaleString('ru-RU')} ₽`
-      : `$${Number(price).toLocaleString('en-US')}`
-    : null
+  const priceDisplay = formatPrice(price, currency)
 
   return (
     <Link
@@ -63,21 +62,22 @@ export function ArtworkCard({
           e.currentTarget.style.boxShadow = '0 0 0 1px var(--border)'
         }}
       >
-        <img
-          src={posterUrl}
-          alt={russianTitle}
-          loading="lazy"
-          className="group-hover:scale-[1.025]"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-            opacity: 0,
-            transition: 'opacity 400ms cubic-bezier(0.2,0,0,1), transform 400ms cubic-bezier(0.2,0,0,1)',
-          }}
-          onLoad={(e) => { e.currentTarget.style.opacity = '1' }}
-        />
+        <ImageHoverZoom scale={1.06} speed={0.12}>
+          <img
+            src={posterUrl}
+            alt={russianTitle}
+            loading="lazy"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              opacity: 0,
+              transition: 'opacity 400ms cubic-bezier(0.2,0,0,1)',
+            }}
+            onLoad={(e) => { e.currentTarget.style.opacity = '1' }}
+          />
+        </ImageHoverZoom>
 
         {is3D && (
           <span
@@ -168,7 +168,7 @@ export function ArtworkCard({
       </div>
     </Link>
   )
-}
+})
 
 export function ArtworkCardSkeleton() {
   return (

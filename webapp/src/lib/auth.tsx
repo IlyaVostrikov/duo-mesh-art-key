@@ -88,6 +88,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [api, queryClient, setAccessToken],
   )
 
+  const refreshToken = useCallback(async () => {
+    const refreshed = await api.refresh()
+    setAccessToken(refreshed.accessToken)
+  }, [api, setAccessToken])
+
   const logout = useCallback(async () => {
     await api.logout().catch(() => undefined)
     setAccessToken(null)
@@ -103,8 +108,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       register,
       login,
       logout,
+      refreshToken,
     }),
-    [accessToken, isBootstrapping, login, logout, meQuery.data?.user, register],
+    [accessToken, isBootstrapping, login, logout, meQuery.data?.user, refreshToken, register],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

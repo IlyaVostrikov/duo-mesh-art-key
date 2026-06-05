@@ -10,9 +10,10 @@ export interface AuthUser {
   sessionId: string
 }
 
+type AuthServiceDep = { verifyAccessToken: (token: string) => Promise<AuthUser | null> }
+
 export function getAuthUser(c: Context): AuthUser | null {
-  const raw = c.get('authUser') as AuthUser | undefined
-  return raw ?? null
+  return (c.get('authUser') as AuthUser) ?? null
 }
 
 export function requireAuth(c: Context): AuthUser {
@@ -32,11 +33,14 @@ export function optionalAuth(): MiddlewareHandler {
     if (!match?.[1]) return await next()
 
     try {
-      const { authService } = c.var as { authService: { verifyAccessToken: (t: string) => Promise<AuthUser> } }
+      const authService = c.get('authService') as AuthServiceDep
       const user = await authService.verifyAccessToken(match[1])
       if (user) c.set('authUser', user)
-    } catch {
-      // Invalid token, continue as guest
+    } catch (err) {
+      // Log unexpected errors (DB down, etc.) but continue as guest for invalid tokens
+      if (!(err instanceof Error) || !err.message.includes('token')) {
+        console.error('[optionalAuth] token verification error:', err)
+      }
     }
 
     await next()
@@ -55,8 +59,7 @@ export function authGuard(): MiddlewareHandler {
       return c.json(errorResponse('UNAUTHORIZED', 'Invalid Authorization header format'), 401)
     }
 
-    const { authService } = c.var as { authService: { verifyAccessToken: (t: string) => Promise<AuthUser> } }
-
+    const authService = c.get('authService') as AuthServiceDep
     const user = await authService.verifyAccessToken(match[1])
     if (!user) {
       return c.json(errorResponse('UNAUTHORIZED', 'Invalid or expired access token'), 401)

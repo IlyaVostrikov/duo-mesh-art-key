@@ -108,6 +108,7 @@ const artworkFieldsSchema = z.object({
   polyCount: z.number().int().positive().optional(),
   isDigitalOriginal: z.boolean().default(false),
   isPhysicalDigitized: z.boolean().default(false),
+  status: artworkStatusSchema.default('LISTED'),
   price: z.number().positive().optional(),
   currency: z.string().default('RUB'),
   editionType: editionTypeSchema.default('UNIQUE'),

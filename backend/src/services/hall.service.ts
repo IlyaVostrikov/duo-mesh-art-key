@@ -20,7 +20,7 @@ export class HallService {
       orderBy: { createdAt: 'desc' },
     })
 
-    return toHallPublicDto({ ...hall, artworks } as any)
+    return toHallPublicDto({ ...hall, artworks })
   }
 
   async getByArtistId(artistId: string) {
@@ -53,19 +53,50 @@ export class HallService {
     description?: string
     coverImageUrl?: string
     layoutConfig?: Record<string, unknown>
+    customization?: Record<string, unknown>
     theme?: string
     isPublished?: boolean
   }) {
     const hall = await this.prisma.exhibitionHall.update({
       where: { artistId },
-      data: { ...data, layoutConfig: data.layoutConfig as Prisma.InputJsonValue },
+      data: {
+        ...data,
+        layoutConfig: data.layoutConfig as Prisma.InputJsonValue | undefined,
+        customization: data.customization as Prisma.InputJsonValue | undefined,
+      },
       include: { artist: { include: { user: true } } },
     })
     const artworks = await this.prisma.artwork.findMany({
       where: { artistId, status: { in: ['LISTED', 'IN_EXHIBITION'] } },
       orderBy: { createdAt: 'desc' },
     })
-    return toHallPublicDto({ ...hall, artworks } as any)
+    return toHallPublicDto({ ...hall, artworks })
+  }
+
+  async getAllPublished() {
+    const halls = await this.prisma.exhibitionHall.findMany({
+      where: { isPublished: true },
+      include: { artist: { include: { user: true } } },
+      orderBy: { slug: 'asc' },
+    })
+
+    // Batch-load artworks for all halls in a single query
+    const artistIds = [...new Set(halls.map((h) => h.artistId))]
+    const allArtworks = await this.prisma.artwork.findMany({
+      where: { artistId: { in: artistIds }, status: { in: ['LISTED', 'IN_EXHIBITION'] } },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    const artworksByArtist = new Map<string, typeof allArtworks>()
+    for (const aw of allArtworks) {
+      const list = artworksByArtist.get(aw.artistId)
+      if (list) list.push(aw)
+      else artworksByArtist.set(aw.artistId, [aw])
+    }
+
+    return halls.map((hall) =>
+      toHallPublicDto({ ...hall, artworks: artworksByArtist.get(hall.artistId) ?? [] }),
+    )
   }
 
   async incrementViewCount(slug: string) {

@@ -107,9 +107,9 @@ export class FeaturedService {
     )
 
     return {
-      hero: hero ? toArtworkPublicDto(hero as any) : null,
-      works: featuredArtworks.map((aw) => toArtworkPublicDto(aw as any)),
-      artists: featuredArtists.map((a) => toArtistPublicDto(a as any)),
+      hero: hero ? toArtworkPublicDto(hero) : null,
+      works: featuredArtworks.map((aw) => toArtworkPublicDto(aw)),
+      artists: featuredArtists.map((a) => toArtistPublicDto(a)),
       halls: halls.map((h) => ({
         slug: h.slug,
         title: h.title,

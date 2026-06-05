@@ -55,9 +55,15 @@ export function DashboardHallLayout() {
         if (!hallRes.ok) throw new Error('Failed to load hall')
         const hallData = await hallRes.json()
 
+        // Fetch artist's artworks (all statuses — includes DRAFT for layout)
+        const artworksRes = await fetch(`${apiBaseUrl}/api/artworks?my=true&pageSize=100`, {
+          headers: { Authorization: `Bearer ${auth.accessToken}` },
+        })
+        const artworksData = artworksRes.ok ? await artworksRes.json() : { artworks: [] }
+
         if (cancelled) return
         setHall({ slug: hallData.slug, title: hallData.title, layoutConfig: hallData.layoutConfig as LayoutConfig | null })
-        setArtworks(hallData.artworks ?? [])
+        setArtworks(artworksData.artworks ?? [])
 
         // Initialize layout from saved config or pick template
         if (hallData.layoutConfig?.slots?.length) {

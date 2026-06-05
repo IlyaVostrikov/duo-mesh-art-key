@@ -5,6 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export type HallTheme = 'default' | 'dark' | 'light' | 'warm' | 'cool'
+
+const VALID_THEMES = new Set<string>(['default', 'dark', 'light', 'warm', 'cool'])
+
+/** Coerce a raw theme string into the HallTheme union. Returns null for invalid/missing values. */
+export function coerceTheme(theme: string | null | undefined): HallTheme | null {
+  if (!theme) return null
+  return VALID_THEMES.has(theme) ? (theme as HallTheme) : null
+}
+
 /** Parse seed bilingual format: RU text \n\n---\n\n EN text */
 export function parseBilingual(text: string | null): [string, string] {
   if (!text) return ['', '']
@@ -36,4 +46,14 @@ export function joinBilingualTitle(ru: string, en: string): string {
   if (!en.trim()) return ru.trim()
   if (!ru.trim()) return en.trim()
   return `${ru.trim()} / ${en.trim()}`
+}
+
+/** Format price for display: "1 234 ₽" or "$567". Returns null if price is falsy. */
+export function formatPrice(price: string | number | null | undefined, currency = 'RUB'): string | null {
+  if (price == null || price === '') return null
+  const n = Number(price)
+  if (isNaN(n)) return null
+  return currency === 'RUB'
+    ? `${n.toLocaleString('ru-RU')} ₽`
+    : `$${n.toLocaleString('en-US')}`
 }

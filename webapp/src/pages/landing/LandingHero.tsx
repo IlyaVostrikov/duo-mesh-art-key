@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ModelViewer3D } from '@/components/artwork/ModelViewer3D'
 import { ParticleField } from '@/components/motion/ParticleField'
+import { SplitText } from '@/components/motion/SplitText'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Typography } from '@/components/ui/typography'
@@ -85,9 +86,16 @@ export function LandingHero({ heroWork, lang: _lang }: HeroProps) {
             DUO MESH
           </Badge>
 
-          <h1 className="text-display max-w-[600px]" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 4.5vw, 4rem)' }}>
-            {MISSION}
-          </h1>
+          <SplitText
+            text={MISSION}
+            as="h1"
+            mode="words"
+            stagger={0.04}
+            duration={0.5}
+            direction="up"
+            className="text-display max-w-[600px]"
+            style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 4.5vw, 4rem)' }}
+          />
 
           <Typography
             variant="body"

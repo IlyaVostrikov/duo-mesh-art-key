@@ -51,6 +51,10 @@ export function GalleryPage() {
     debounce.current = setTimeout(() => setSearch(value.trim()), 350)
   }
 
+  useEffect(() => {
+    return () => clearTimeout(debounce.current)
+  }, [])
+
   const fetchArtworks = useCallback(async (media: string, sortBy: string, q: string) => {
     setLoading(true)
     setError(null)

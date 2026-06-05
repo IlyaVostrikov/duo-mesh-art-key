@@ -11,6 +11,7 @@
   - 3D badge: Figtree font-brand
 */
 import { Link } from '@tanstack/react-router'
+import { parseBilingualTitle, formatPrice } from '@/lib/utils'
 
 interface ArtworkCardProps {
   id: string
@@ -43,13 +44,9 @@ export function ArtworkCard({
 }: ArtworkCardProps) {
   const is3D = mediaType === 'MODEL_3D'
   const statusLabel = status ? STATUS_LABELS[status] : null
-  const russianTitle = title.split(' / ')[0]
+  const russianTitle = parseBilingualTitle(title)[0]
 
-  const priceDisplay = price
-    ? currency === 'RUB'
-      ? `${Number(price).toLocaleString('ru-RU')} ₽`
-      : `$${Number(price).toLocaleString('en-US')}`
-    : null
+  const priceDisplay = formatPrice(price, currency)
 
   return (
     <Link

@@ -3,6 +3,7 @@ import { HallCard } from '@/components/hall/HallCard'
 import Container from '@/components/layout/Container'
 import Section from '@/components/layout/Section'
 import Stack from '@/components/layout/Stack'
+import { coerceTheme } from '@/lib/utils'
 
 interface FeaturedHallsProps {
   halls: Array<{
@@ -42,7 +43,7 @@ export function LandingFeaturedHalls({ halls, lang }: FeaturedHallsProps) {
                   coverImageUrl={h.coverImageUrl}
                   viewCount={h.viewCount}
                   artworkCount={h.artworkCount}
-                  theme={h.theme}
+                  theme={coerceTheme(h.theme)}
                   artist={h.artist}
                   lang={lang}
                 />

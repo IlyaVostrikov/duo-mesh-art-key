@@ -248,7 +248,7 @@ export function toUserDto(user: UserRecord & { role?: string }): UserDto {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
-    role: (user as any).role ?? 'GUEST',
+    role: user.role ?? 'GUEST',
     createdAt: user.createdAt.toISOString(),
   }
 }

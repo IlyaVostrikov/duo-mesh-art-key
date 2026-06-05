@@ -5,8 +5,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { FileUpload } from '@/components/ui/file-upload'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { apiBaseUrl } from '@/lib/api'
+
+const THEMES: { value: string; label: string }[] = [
+  { value: 'default', label: 'Светлый / Light' },
+  { value: 'dark', label: 'Тёмный / Dark' },
+  { value: 'warm', label: 'Тёплый / Warm' },
+  { value: 'cool', label: 'Холодный / Cool' },
+]
 
 interface HallData {
   id: string
@@ -15,6 +23,7 @@ interface HallData {
   title: string
   description: string | null
   coverImageUrl: string | null
+  theme: string | null
   isPublished: boolean
   viewCount: number
 }
@@ -32,6 +41,8 @@ export function DashboardHallSettings() {
   const [desc, setDesc] = useState('')
   const [descEn, setDescEn] = useState('')
   const [lang, setLang] = useState<'ru' | 'en'>('ru')
+  const [theme, setTheme] = useState('default')
+  const [coverFile, setCoverFile] = useState<File | null>(null)
 
   // Find artist → get hall
   useEffect(() => {
@@ -51,7 +62,14 @@ export function DashboardHallSettings() {
         const h = artist.hall
         if (!h) { setError('NO_HALL'); return }
 
-        setHall({ id: h.id, artistId: artist.id, slug: h.slug, title: h.title, description: h.description ?? null, coverImageUrl: h.coverImageUrl ?? null, isPublished: h.isPublished, viewCount: h.viewCount ?? 0 })
+        setHall({
+          id: h.id, artistId: artist.id, slug: h.slug,
+          title: h.title, description: h.description ?? null,
+          coverImageUrl: h.coverImageUrl ?? null,
+          theme: h.theme ?? 'default',
+          isPublished: h.isPublished, viewCount: h.viewCount ?? 0,
+        })
+        setTheme(h.theme ?? 'default')
 
         // Parse bilingual title
         const sep = h.title.lastIndexOf(' / ')
@@ -80,6 +98,22 @@ export function DashboardHallSettings() {
     return () => { cancelled = true }
   }, [auth.accessToken])
 
+  const uploadCover = async (file: File): Promise<string | null> => {
+    const formData = new FormData()
+    formData.append('files', file)
+    const res = await fetch(`${apiBaseUrl}/api/uploads`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${auth.accessToken!}` },
+      body: formData,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message ?? 'Upload failed')
+    }
+    const data = await res.json()
+    return data.files?.[0]?.url ?? null
+  }
+
   const handleSave = async (e: FormEvent) => {
     e.preventDefault()
     if (!hall) return
@@ -91,19 +125,31 @@ export function DashboardHallSettings() {
     const fullDesc = descEn.trim() ? `${desc.trim()}\n\n---\n\n${descEn.trim()}` : desc.trim()
 
     try {
+      let coverImageUrl = hall.coverImageUrl
+      if (coverFile) {
+        coverImageUrl = await uploadCover(coverFile)
+      }
+
+      const body: Record<string, unknown> = {}
+      if (fullTitle) body.title = fullTitle
+      if (fullDesc) body.description = fullDesc
+      if (coverImageUrl !== undefined) body.coverImageUrl = coverImageUrl
+      body.theme = theme
+      body.isPublished = hall.isPublished
+
       const res = await fetch(`${apiBaseUrl}/api/halls/${hall.slug}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.accessToken!}` },
-        body: JSON.stringify({
-          title: fullTitle || undefined,
-          description: fullDesc || undefined,
-          isPublished: hall.isPublished,
-        }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.message ?? `HTTP ${res.status}`)
       }
+
+      // Update local state
+      setHall({ ...hall, coverImageUrl, theme })
+      setCoverFile(null)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
@@ -154,6 +200,25 @@ export function DashboardHallSettings() {
       </RevealOnScroll>
 
       <form onSubmit={handleSave} className="space-y-6" style={{ maxWidth: '640px' }}>
+        {/* Cover image */}
+        <FileUpload
+          accept=".jpg,.jpeg,.png,.webp"
+          maxSize={10 * 1024 * 1024}
+          onFileSelect={setCoverFile}
+          label="Обложка зала / Hall Cover"
+          imagePreview
+        />
+        {hall?.coverImageUrl && !coverFile && (
+          <div className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <img
+              src={hall.coverImageUrl.startsWith('/uploads/') ? `${apiBaseUrl}${hall.coverImageUrl}` : hall.coverImageUrl}
+              alt="Cover"
+              style={{ width: 80, height: 56, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }}
+            />
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Текущая обложка / Current cover</span>
+          </div>
+        )}
+
         {/* Title */}
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>Название / Title</label>
@@ -184,6 +249,29 @@ export function DashboardHallSettings() {
           ) : (
             <Textarea value={descEn} onChange={(e) => setDescEn(e.target.value)} rows={4} placeholder="Welcome to my virtual gallery..." />
           )}
+        </div>
+
+        {/* Theme */}
+        <div>
+          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>Тема стен / Wall Theme</label>
+          <div className="flex gap-2 flex-wrap">
+            {THEMES.map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setTheme(t.value)}
+                className="px-4 py-2 text-sm rounded-4xl border transition-colors"
+                style={{
+                  backgroundColor: theme === t.value ? 'var(--accent)' : 'var(--surface)',
+                  color: theme === t.value ? 'var(--accent-ink)' : 'var(--text)',
+                  borderColor: theme === t.value ? 'var(--accent)' : 'var(--border)',
+                  cursor: 'pointer',
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Publish toggle */}

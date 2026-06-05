@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArtKey — доказуемая подлинность искусства</title>
+<link rel="stylesheet" href="artkey.css?v=9">
+</head>
+<body>
+
+<canvas id="ambient"></canvas>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <a href="#top" class="wordmark"><span class="glyph"></span>ArtKey</a>
+  <nav class="nav-meta">
+    <span>PROVENANCE&nbsp;SYSTEM</span>
+    <span>SHA·256</span>
+  </nav>
+</header>
+
+<!-- ============ SCENE 1 — HERO ============ -->
+<main id="top" class="hero" data-screen-label="Hero">
+  <div class="hero-stage">
+    <p class="hero-kicker kicker reveal">Цифровая галерея&nbsp;·&nbsp;<span class="num">№0001</span></p>
+
+    <div class="artframe reveal blur" style="--d:120ms">
+      <canvas id="hero-canvas" class="art-slot"
+              style="width:clamp(240px,28vw,360px);height:clamp(316px,37vw,475px)"></canvas>
+      <span class="frame-corner tl"></span><span class="frame-corner tr"></span>
+      <span class="frame-corner bl"></span><span class="frame-corner br"></span>
+    </div>
+
+    <div class="hero-plate reveal" style="--d:220ms">
+      <span class="hp-dot"></span>
+      <span class="hp-name">Untitled · 2026</span>
+      <span class="hp-sep">·</span>
+      <span class="hp-fp">ArtKey №0001 · <b id="hero-fp">a3f9c27e</b></span>
+    </div>
+
+    <h1 class="hero-head reveal" style="--d:240ms">Каждая работа заслуживает доказуемой подлинности.</h1>
+    <p class="hero-sub body reveal" style="--d:340ms">
+      <b>ArtKey</b> — не блокчейн. Криптографическая provenance-система,
+      которая даёт каждому произведению неподделываемую историю.
+    </p>
+  </div>
+
+  <div class="scrollcue reveal" style="--d:520ms">
+    <span>Пройдите путь работы</span>
+    <span class="rail"></span>
+  </div>
+</main>
+
+<!-- ============ MANIFESTO / WHAT IS ARTKEY ============ -->
+<section class="manifesto" data-screen-label="What is ArtKey">
+  <div class="manifesto-grid">
+    <h2 class="manifesto-head reveal">
+      Подлинность нельзя имитировать. <em>Её можно доказать — математикой, а не доверием.</em>
+    </h2>
+    <div class="def-row">
+      <div class="def reveal" style="--d:0ms">
+        <h4>01 — Отпечаток</h4>
+        <p>Каждая работа превращается в один криптографический отпечаток SHA-256. Изменить его незаметно невозможно.</p>
+      </div>
+      <div class="def reveal" style="--d:120ms">
+        <h4>02 — Цепочка</h4>
+        <p>Каждая передача владения фиксируется и математически связывается с предыдущей. История не переписывается.</p>
+      </div>
+      <div class="def reveal" style="--d:240ms">
+        <h4>03 — Контроль</h4>
+        <p>Художник выпускает ArtKey сам. Ни одна третья сторона не может вмешаться в историю произведения.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCENE 2 — SHA-256 BIRTH ============ -->
+<section class="sha" id="sha" data-theme="dark" data-screen-label="SHA-256 birth">
+  <div class="stage">
+    <canvas id="sha-canvas"></canvas>
+    <div class="sha-ui">
+      <div class="sha-top">
+        <p class="kicker"><span class="num">02</span> — Рождение подписи</p>
+      </div>
+      <div class="sha-lower">
+        <div class="sha-hash">
+          <span class="lbl">SHA-256 FINGERPRINT</span>
+          <b>················································</b>
+        </div>
+        <div class="sha-beats">
+          <div class="sha-beat">
+            <h3>Произведение.</h3>
+            <p>Тишина галереи. Одна работа в музейном свете.</p>
+          </div>
+          <div class="sha-beat">
+            <h3>Невидимая сетка координат.</h3>
+            <p>Изображение раскладывается на точные числовые координаты.</p>
+          </div>
+          <div class="sha-beat">
+            <h3>Каждая работа — это числа.</h3>
+            <p>Точки, линии, структура. Элегантная математика, а не код хакера.</p>
+          </div>
+          <div class="sha-beat">
+            <h3>Один отпечаток. Невозможно подделать.</h3>
+            <p>Из миллионов координат рождается единственная подпись.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCENE 3 — OWNERSHIP CHAIN ============ -->
+<section class="chain" id="chain" data-screen-label="Ownership chain">
+  <div class="stage">
+    <div class="chain-head">
+      <p class="kicker reveal"><span class="num">03</span> — Цепочка владения</p>
+      <h2 class="reveal" style="--d:100ms">Каждая передача владения фиксируется математически.</h2>
+    </div>
+    <div class="chain-stage-inner">
+      <div class="chain-track">
+        <div class="chain-fill"></div>
+        <div class="chain-pulse"></div>
+        <div class="chain-nodes">
+          <div class="node">
+            <span class="n-hash">0x1a · genesis</span>
+            <span class="n-ico"><span class="ring"></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path pathLength="1" d="M12 4v16"></path><path pathLength="1" d="M5 7.6l14 8.8"></path><path pathLength="1" d="M19 7.6l-14 8.8"></path>
+              </svg></span>
+            <span class="dot"></span>
+            <span class="role">Художник</span>
+          </div>
+          <div class="node">
+            <span class="n-hash">0x7c · 2026</span>
+            <span class="n-ico"><span class="ring"></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <circle pathLength="1" cx="12" cy="9" r="3.1"></circle><path pathLength="1" d="M5.5 19c0-3.6 2.9-6.3 6.5-6.3s6.5 2.7 6.5 6.3"></path>
+              </svg></span>
+            <span class="dot"></span>
+            <span class="role">Коллекционер</span>
+          </div>
+          <div class="node">
+            <span class="n-hash">0x3f · 2027</span>
+            <span class="n-ico"><span class="ring"></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path pathLength="1" d="M4 9l8-4 8 4"></path><path pathLength="1" d="M6.5 9.5v8M10 9.5v8M14 9.5v8M17.5 9.5v8"></path><path pathLength="1" d="M4.5 19h15"></path>
+              </svg></span>
+            <span class="dot"></span>
+            <span class="role">Галерея</span>
+          </div>
+          <div class="node">
+            <span class="n-hash">0xb2 · 2029</span>
+            <span class="n-ico"><span class="ring"></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path pathLength="1" d="M13.5 4.5l6 6-2.6 2.6-6-6z"></path><path pathLength="1" d="M10.4 7.6L4 14"></path><path pathLength="1" d="M3.5 20h9"></path>
+              </svg></span>
+            <span class="dot"></span>
+            <span class="role">Аукцион</span>
+          </div>
+          <div class="node">
+            <span class="n-hash">0xe0 · 2031</span>
+            <span class="n-ico"><span class="ring"></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <circle pathLength="1" cx="12" cy="9" r="3.1"></circle><path pathLength="1" d="M5.5 19c0-3.6 2.9-6.3 6.5-6.3s6.5 2.7 6.5 6.3"></path>
+              </svg></span>
+            <span class="dot"></span>
+            <span class="role">Коллекционер</span>
+          </div>
+        </div>
+      </div>
+      <p class="chain-foot reveal">От мастерской до коллекции — неразрывная цепь подлинности</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCENE 4 — QR VERIFICATION ============ -->
+<section class="verify" data-screen-label="QR verification">
+  <div class="verify-inner">
+    <div class="verify-left reveal blur">
+      <div class="specimen scan">
+        <image-slot id="spec-art" class="spec-slot"
+                    style="width:clamp(260px,32vw,420px);height:clamp(330px,40vw,520px)"
+                    shape="rect" placeholder="физическая работа"></image-slot>
+        <span class="scanline"></span>
+        <div class="qr-badge"><canvas id="qr-canvas"></canvas></div>
+      </div>
+    </div>
+    <div class="verify-right">
+      <p class="kicker reveal"><span class="num">04</span> — Верификация</p>
+      <h2 class="reveal" style="--d:80ms">Наведите телефон. Узнайте всю историю.</h2>
+      <p class="body reveal" style="--d:160ms">Слева — физическая работа. Справа — её provenance в реальном времени. Один скан — и вся история перед вами.</p>
+      <div class="checks">
+        <div class="check" style="--d:0ms">
+          <span class="tick"><svg viewBox="0 0 16 16"><path d="M3 8.5 L6.5 12 L13 4"/></svg></span>
+          <span class="ctext"><strong>Оригинальная работа</strong><span>отпечаток совпадает с реестром</span></span>
+          <span class="cstat">verified</span>
+        </div>
+        <div class="check" style="--d:160ms">
+          <span class="tick"><svg viewBox="0 0 16 16"><path d="M3 8.5 L6.5 12 L13 4"/></svg></span>
+          <span class="ctext"><strong>Подтверждённый художник</strong><span>подпись автора · genesis-ключ</span></span>
+          <span class="cstat">verified</span>
+        </div>
+        <div class="check" style="--d:320ms">
+          <span class="tick"><svg viewBox="0 0 16 16"><path d="M3 8.5 L6.5 12 L13 4"/></svg></span>
+          <span class="ctext"><strong>История владения</strong><span>5 передач · цепочка не прервана</span></span>
+          <span class="cstat">verified</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCENE 5 — FINALE ============ -->
+<section class="finale" data-theme="dark" data-screen-label="Finale">
+  <canvas id="constellation"></canvas>
+  <div class="finale-inner">
+    <p class="kicker reveal">Десятки работ. Одна память.</p>
+    <h2 class="finale-head reveal" style="--d:120ms">Искусство должно иметь память.</h2>
+    <div class="reveal" style="--d:240ms">
+      <span class="finale-mark"><span class="glyph"></span>ArtKey</span>
+    </div>
+    <div class="cta-row reveal" style="--d:360ms">
+      <a href="#" class="btn solid">Explore Gallery <span class="ar">→</span></a>
+      <a href="#" class="btn">Verify Artwork <span class="ar">→</span></a>
+      <a href="#" class="btn">Issue ArtKey <span class="ar">→</span></a>
+    </div>
+  </div>
+</section>
+
+<footer class="foot" data-theme="dark">
+  <span>© 2026 ArtKey</span>
+  <div class="links">
+    <a href="#top">Наверх</a>
+    <a href="#">Manifesto</a>
+    <a href="#">Contact</a>
+  </div>
+</footer>
+
+<script src="image-slot.js"></script>
+<script src="artkey.js?v=12"></script>
+</body>
+</html>

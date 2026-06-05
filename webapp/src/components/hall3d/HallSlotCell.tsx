@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { assetUrl } from '@/lib/asset-url'
+import { parseBilingualTitle } from '@/lib/utils'
 import type { HallArtwork } from './types'
 
 export function HallSlotCell({
@@ -58,7 +59,7 @@ export function HallSlotCell({
             backdropFilter: 'blur(4px)',
           }}>
             <p style={{ fontSize: '0.65rem', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
-              {assigned.title.split(' / ')[0]}
+              {parseBilingualTitle(assigned.title)[0]}
             </p>
             <p style={{ fontSize: '0.6rem', color: 'var(--accent)', margin: 0 }}>
               {assigned.mediaType === 'MODEL_3D' ? '3D' : '2D'}

@@ -1,10 +1,12 @@
 import type { DbClient } from '../db'
+import type { Prisma } from '../generated/prisma/client'
+import type { UserRole, ArtworkStatus } from '../generated/prisma/enums'
 import { ValidationError, NotFoundError, ForbiddenError } from '../http/errors'
 
-const VALID_ROLES = ['GUEST', 'ARTIST', 'COLLECTOR', 'ADMIN'] as const
+const VALID_ROLES: readonly UserRole[] = ['GUEST', 'ARTIST', 'COLLECTOR', 'ADMIN'] as const
 
 /** Statuses that admin is allowed to set. SOLD is excluded — only the sales flow may set it. */
-const ALLOWED_ADMIN_STATUSES = ['DRAFT', 'LISTED', 'IN_EXHIBITION', 'RESERVED', 'ARCHIVED'] as const
+const ALLOWED_ADMIN_STATUSES: readonly ArtworkStatus[] = ['DRAFT', 'LISTED', 'IN_EXHIBITION', 'RESERVED', 'ARCHIVED'] as const
 
 export class AdminService {
   constructor(private prisma: DbClient) {}
@@ -23,14 +25,14 @@ export class AdminService {
 
   async listUsers(params: { page?: number; pageSize?: number; search?: string; role?: string }) {
     const { page = 1, pageSize = 20, search, role } = params
-    const where: any = {}
+    const where: Prisma.UserWhereInput = {}
     if (search) {
       where.OR = [
         { email: { contains: search, mode: 'insensitive' } },
         { displayName: { contains: search, mode: 'insensitive' } },
       ]
     }
-    if (role) where.role = role
+    if (role) where.role = role as UserRole
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -53,7 +55,7 @@ export class AdminService {
   }
 
   async setUserRole(userId: string, role: string, changedBy: string) {
-    if (!VALID_ROLES.includes(role as any)) {
+    if (!VALID_ROLES.includes(role as UserRole)) {
       throw new ValidationError('Invalid role')
     }
 
@@ -76,7 +78,7 @@ export class AdminService {
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: { role: role as any },
+      data: { role: role as UserRole },
     })
 
     // Auto-create profile when role changes to ARTIST or COLLECTOR
@@ -104,8 +106,8 @@ export class AdminService {
 
   async listArtworks(params: { page?: number; pageSize?: number; status?: string }) {
     const { page = 1, pageSize = 20, status } = params
-    const where: any = {}
-    if (status) where.status = status
+    const where: Prisma.ArtworkWhereInput = {}
+    if (status) where.status = status as ArtworkStatus
 
     const [artworks, total] = await Promise.all([
       this.prisma.artwork.findMany({
@@ -122,13 +124,13 @@ export class AdminService {
   }
 
   async setArtworkStatus(artworkId: string, status: string) {
-    if (!ALLOWED_ADMIN_STATUSES.includes(status as any)) {
+    if (!ALLOWED_ADMIN_STATUSES.includes(status as ArtworkStatus)) {
       throw new ValidationError(
         `Admin cannot set status '${status}'. Allowed: ${ALLOWED_ADMIN_STATUSES.join(', ')}. SOLD is set by the sales flow.`
       )
     }
 
-    return this.prisma.artwork.update({ where: { id: artworkId }, data: { status: status as any } })
+    return this.prisma.artwork.update({ where: { id: artworkId }, data: { status: status as ArtworkStatus } })
   }
 
   /** Soft-delete: archive the artwork. Hard deletion is forbidden via admin API. */

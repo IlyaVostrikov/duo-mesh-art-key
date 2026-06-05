@@ -1,5 +1,5 @@
-const CDN_BASE = (import.meta as any).env?.VITE_CDN_BASE_URL as string | undefined
-const API_BASE = (import.meta as any).env?.VITE_API_URL as string | undefined
+const CDN_BASE: string | undefined = import.meta.env.VITE_CDN_BASE_URL
+const API_BASE: string | undefined = import.meta.env.VITE_API_URL
 
 export function assetUrl(path: string): string {
   if (!path) return ''

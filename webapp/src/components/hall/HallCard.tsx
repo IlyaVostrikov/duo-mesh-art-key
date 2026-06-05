@@ -1,8 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import { cva } from 'class-variance-authority'
 import { assetUrl } from '@/lib/asset-url'
-import { parseBilingualTitle } from '@/lib/utils'
+import { parseBilingualTitle, type HallTheme } from '@/lib/utils'
 import { UserAvatar } from '@/components/ui/user-avatar'
+
+export { type HallTheme }
 
 interface HallCardProps {
   slug: string
@@ -10,8 +12,8 @@ interface HallCardProps {
   coverImageUrl: string | null
   viewCount: number
   artworkCount: number
-  theme: string | null
-  artist: { id: string; displayName: string; avatarUrl: string | null }
+  theme: HallTheme | null
+  artist: { id: string; displayName: string | null; avatarUrl: string | null }
   lang: 'ru' | 'en'
 }
 
@@ -25,21 +27,22 @@ const themeBadgeVariants = cva(
         light: 'text-gray-800',
         warm: 'text-amber-700',
         cool: 'text-blue-700',
-      } as Record<string, string>,
+      },
     },
     defaultVariants: { theme: 'default' },
   },
 )
 
-function themeDot(theme: string | null): string {
-  const map: Record<string, string> = {
-    default: 'var(--text-muted)',
-    dark: '#1a1a1a',
-    light: '#f5f5f0',
-    warm: '#d4a574',
-    cool: '#8ab4d8',
-  }
-  return map[theme ?? 'default'] ?? map.default
+const THEME_DOT_COLORS: Record<HallTheme, string> = {
+  default: 'var(--text-muted)',
+  dark: '#1a1a1a',
+  light: '#f5f5f0',
+  warm: '#d4a574',
+  cool: '#8ab4d8',
+}
+
+function themeDot(theme: HallTheme | null): string {
+  return THEME_DOT_COLORS[theme ?? 'default']
 }
 
 export function HallCard({ slug, title, coverImageUrl, viewCount, artworkCount, theme, artist, lang }: HallCardProps) {
@@ -72,7 +75,7 @@ export function HallCard({ slug, title, coverImageUrl, viewCount, artworkCount, 
 
         {/* Theme badge — top-left */}
         <span
-          className={themeBadgeVariants({ theme: resolvedTheme as any })}
+          className={themeBadgeVariants({ theme: resolvedTheme })}
           style={{ position: 'absolute', top: 8, left: 8, backgroundColor: `${themeDot(resolvedTheme)}22`, backdropFilter: 'blur(4px)' }}
         >
           <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: themeDot(resolvedTheme) }} />
@@ -91,7 +94,7 @@ export function HallCard({ slug, title, coverImageUrl, viewCount, artworkCount, 
           {artist.avatarUrl ? (
             <img
               src={artist.avatarUrl}
-              alt={artist.displayName}
+              alt={artist.displayName ?? ''}
               className="w-5 h-5 rounded-full object-cover flex-shrink-0"
             />
           ) : (

@@ -7,6 +7,8 @@ import { DashboardHome } from './pages/dashboard/DashboardHome'
 import { ModelViewer3D } from './components/artwork/ModelViewer3D'
 import { GalleryPage } from './pages/gallery/GalleryPage'
 import { HallPage } from './pages/hall/HallPage'
+import { HallsIndexPage } from './pages/hall/HallsIndexPage'
+import { ArtistsIndexPage } from './pages/artist/ArtistsIndexPage'
 import { ArtworkDetailPage } from './pages/artwork/ArtworkDetailPage'
 import { ArtistOnboarding } from './pages/onboarding/ArtistOnboarding'
 import { VerifyIndexPage } from './pages/verify/VerifyIndexPage'
@@ -16,6 +18,8 @@ import { DashboardHallSettings } from './pages/dashboard/DashboardHallSettings'
 import { DashboardHallLayout } from './pages/dashboard/DashboardHallLayout'
 import { DashboardProfileSettings } from './pages/dashboard/DashboardProfileSettings'
 import { DashboardSales } from './pages/dashboard/DashboardSales'
+import { DashboardMedia } from './pages/dashboard/DashboardMedia'
+import { DashboardHallCustomization } from './pages/dashboard/DashboardHallCustomization'
 import { CollectionPage } from './pages/collection/CollectionPage'
 import { SavedPage } from './pages/collection/SavedPage'
 import { FollowingPage } from './pages/collection/FollowingPage'
@@ -51,6 +55,18 @@ const hallRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/hall/$hallSlug',
   component: HallPage,
+})
+
+const hallsIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/halls',
+  component: HallsIndexPage,
+})
+
+const artistsIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/artists',
+  component: ArtistsIndexPage,
 })
 
 const artworkRoute = createRoute({
@@ -122,6 +138,18 @@ const dashboardSalesRoute = createRoute({
   component: DashboardSales,
 })
 
+const dashboardMediaRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard/media',
+  component: DashboardMedia,
+})
+
+const dashboardHallCustomizationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard/hall/customization',
+  component: DashboardHallCustomization,
+})
+
 // Collection routes
 const collectionRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -189,6 +217,8 @@ const routeTree = rootRoute.addChildren([
   appRoute,
   galleryRoute,
   hallRoute,
+  hallsIndexRoute,
+  artistsIndexRoute,
   artworkRoute,
   viewer3dRoute,
   onboardingRoute,
@@ -198,6 +228,8 @@ const routeTree = rootRoute.addChildren([
   dashboardHallLayoutRoute,
   dashboardSettingsRoute,
   dashboardSalesRoute,
+  dashboardMediaRoute,
+  dashboardHallCustomizationRoute,
   collectionRoute,
   savedRoute,
   followingRoute,

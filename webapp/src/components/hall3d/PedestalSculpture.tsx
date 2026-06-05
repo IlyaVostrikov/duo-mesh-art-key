@@ -1,8 +1,9 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, memo } from 'react'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Hall3DArtwork } from './Hall3DScene'
+import { PEDESTAL_PRESETS } from './customization'
 
 interface PedestalSculptureProps {
   artwork: Hall3DArtwork
@@ -10,6 +11,7 @@ interface PedestalSculptureProps {
   hovered: boolean
   onHover: (hovered: boolean) => void
   onClick: () => void
+  pedestalStyle?: string
 }
 
 const PEDESTAL_W = 0.45
@@ -17,14 +19,16 @@ const PEDESTAL_H = 0.12
 const PEDESTAL_D = 0.45
 
 /** A 3D sculpture on a minimalist pedestal, placed on the floor. */
-export function PedestalSculpture({
+export const PedestalSculpture = memo(function PedestalSculpture({
   artwork,
   position,
   hovered,
   onHover,
   onClick,
+  pedestalStyle = 'marble',
 }: PedestalSculptureProps) {
   const groupRef = useRef<THREE.Group>(null!)
+  const preset = PEDESTAL_PRESETS[pedestalStyle] ?? PEDESTAL_PRESETS.marble
 
   return (
     <group
@@ -34,7 +38,7 @@ export function PedestalSculpture({
       onPointerLeave={() => onHover(false)}
       onClick={onClick}
     >
-      {/* Pedestal — dark box */}
+      {/* Pedestal — style-driven */}
       <mesh
         position={[0, PEDESTAL_H / 2, 0]}
         receiveShadow
@@ -42,9 +46,11 @@ export function PedestalSculpture({
       >
         <boxGeometry args={[PEDESTAL_W, PEDESTAL_H, PEDESTAL_D]} />
         <meshStandardMaterial
-          color={hovered ? '#e8e8e2' : '#f0f0eb'}
-          roughness={0.5}
-          metalness={0.1}
+          color={preset.color}
+          roughness={preset.roughness}
+          metalness={preset.metalness}
+          emissive={hovered ? '#111110' : '#000000'}
+          emissiveIntensity={hovered ? 0.08 : 0}
         />
       </mesh>
 
@@ -87,7 +93,7 @@ export function PedestalSculpture({
       )}
     </group>
   )
-}
+})
 
 // Simple shared cache — survives remounts within the same Canvas
 const gltfCache = new Map<string, THREE.Group>()

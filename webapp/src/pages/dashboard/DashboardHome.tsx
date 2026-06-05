@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/lib/use-auth'
+import { parseBilingualTitle } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { DashboardLayout } from './DashboardLayout'
 import { apiBaseUrl } from '@/lib/api'
+
+interface InquiryItem {
+  id: string
+  fromName: string
+  fromEmail: string
+  message: string | null
+  createdAt: string
+  artwork: { id: string; title: string } | null
+}
 
 export function DashboardHome() {
   const auth = useAuth()
@@ -27,7 +37,7 @@ export function DashboardHome() {
 
 function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
   const [hallSlug, setHallSlug] = useState<string | null>(null)
-  const [inquiries, setInquiries] = useState<any[]>([])
+  const [inquiries, setInquiries] = useState<InquiryItem[]>([])
 
   useEffect(() => {
     if (!accessToken) return
@@ -122,7 +132,7 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
           </CardHeader>
           <CardContent>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {inquiries.slice(0, 10).map((inq: any) => (
+              {inquiries.slice(0, 10).map((inq) => (
                 <div key={inq.id} style={{
                   padding: '10px 14px', borderRadius: 'var(--radius-sm)',
                   backgroundColor: 'var(--surface)', border: '1px solid var(--border)',
@@ -142,7 +152,7 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
                   )}
                   {inq.artwork && (
                     <div style={{ marginTop: '4px', color: 'var(--accent)', fontSize: '0.75rem' }}>
-                      Re: {inq.artwork.title?.split(' / ')[0] || inq.artwork.title}
+                      Re: {parseBilingualTitle(inq.artwork.title)[0] || inq.artwork.title}
                     </div>
                   )}
                 </div>

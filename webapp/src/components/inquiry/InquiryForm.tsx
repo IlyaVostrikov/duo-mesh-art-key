@@ -57,9 +57,9 @@ export function InquiryForm({
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       setToast('success')
       setTimeout(() => setOpen(false), 1200)
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast('error')
-      setErrorText(err.message)
+      setErrorText(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setSubmitting(false)
     }

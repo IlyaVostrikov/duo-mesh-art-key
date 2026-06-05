@@ -8,6 +8,7 @@ import type { AppEnv } from './env'
 import { createAuthRoutes } from './auth/routes'
 import { AuthService } from './auth/service'
 import { errorResponse, handleError, validationErrorHook } from './http/errors'
+import { rateLimiter } from './http/rate-limiter'
 import { createStorageServiceFromEnv, type StorageService } from './storage/service'
 import { ArtistService } from './services/artist.service'
 import { ArtworkService } from './services/artwork.service'
@@ -66,8 +67,12 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   const saleService = new SaleService(prisma)
   const followService = new FollowService(prisma)
   const inquiryService = new InquiryService(prisma)
-  const uploadService = new UploadService()
   const storageService = createStorageServiceFromEnv(env)
+  const uploadService = new UploadService({
+    maxImageBytes: env.UPLOAD_MAX_IMAGE_BYTES,
+    max3DBytes: env.UPLOAD_MAX_3D_BYTES,
+    storage: storageService,
+  })
 
   const app = new OpenAPIHono<AppBindings>({
     defaultHook: validationErrorHook,
@@ -114,6 +119,20 @@ export function createApp({ env, prisma }: CreateAppOptions) {
     await next()
   })
   app.use('/uploads/*', serveStatic({ root: './' }))
+
+  // Rate limit auth endpoints against brute-force (production only)
+  app.use(
+    '/api/auth/login',
+    rateLimiter({ windowMs: 60_000, max: 10, message: 'Too many login attempts. Please try again later.', enabled: env.NODE_ENV === 'production' }),
+  )
+  app.use(
+    '/api/auth/register',
+    rateLimiter({ windowMs: 60_000, max: 5, message: 'Too many registration attempts. Please try again later.', enabled: env.NODE_ENV === 'production' }),
+  )
+  app.use(
+    '/api/auth/refresh',
+    rateLimiter({ windowMs: 60_000, max: 20, message: 'Too many refresh attempts.', enabled: env.NODE_ENV === 'production' }),
+  )
 
   // Mount routes
   app.route('/api/auth', createAuthRoutes())

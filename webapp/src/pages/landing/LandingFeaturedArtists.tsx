@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Badge } from '@/components/ui/badge'
 import { Typography } from '@/components/ui/typography'
-import { parseBilingual } from '@/lib/utils'
+import { parseBilingual, parseBilingualTitle } from '@/lib/utils'
 import { assetUrl } from '@/lib/asset-url'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import Container from '@/components/layout/Container'
@@ -39,9 +39,7 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
           <div className="grid gap-6 md:grid-cols-2">
         {artists.map((a) => {
           const [statementRu, statementEn] = parseBilingual(a.artistStatement)
-          const [hallTitleRu, hallTitleEn] = a.hall
-            ? [a.hall.title.split(' / ')[0] ?? a.hall.title, a.hall.title.split(' / ')[1] ?? a.hall.title]
-            : ['', '']
+          const [hallTitleRu, hallTitleEn] = parseBilingualTitle(a.hall?.title ?? null)
           const statement = lang === 'ru' ? statementRu : statementEn
           const hallTitle = lang === 'ru' ? hallTitleRu : hallTitleEn
 
@@ -49,7 +47,6 @@ export function LandingFeaturedArtists({ artists, lang }: FeaturedArtistsProps) 
             <RevealOnScroll key={a.id} direction="up" delay={0}>
               {a.hall?.slug ? (
               <Link
-              key={a.id}
               to="/hall/$hallSlug"
               params={{ hallSlug: a.hall.slug }}
               className="group flex flex-col gap-4 rounded-lg border bg-surface p-6 transition-all hover:border-accent/40 hover:shadow-lg"

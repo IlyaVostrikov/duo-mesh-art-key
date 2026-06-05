@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/lib/use-auth'
 import { assetUrl } from '@/lib/asset-url'
+import { parseBilingualTitle } from '@/lib/utils'
 import { AdminLayout } from './AdminLayout'
 import { apiBaseUrl } from '@/lib/api'
 
@@ -76,7 +77,7 @@ export function AdminArtworks() {
 
   const deleteArtwork = async (artworkId: string, title: string, status: string) => {
     if (!auth.accessToken) return
-    const shortTitle = title.split(' / ')[0]
+    const shortTitle = parseBilingualTitle(title)[0]
 
     // Already archived — nothing to do
     if (status === 'ARCHIVED') {
@@ -189,7 +190,7 @@ export function AdminArtworks() {
                       style={{ color: 'var(--text)', textDecoration: 'none' }}
                       className="hover:text-accent"
                     >
-                      {aw.title.split(' / ')[0]}
+                      {parseBilingualTitle(aw.title)[0]}
                     </Link>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                       {aw.category} · {aw.mediaType}

@@ -46,6 +46,7 @@ export const createArtistSchema = z.object({
   location: z.string().trim().max(200).optional(),
   hallTitle: z.string().trim().min(2).max(100),
   hallDescription: z.string().trim().max(2000).optional(),
+  avatarUrl: z.string().trim().optional(),
 })
 
 export const updateArtistSchema = z.object({

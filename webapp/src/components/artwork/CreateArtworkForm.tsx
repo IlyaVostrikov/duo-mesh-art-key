@@ -3,29 +3,34 @@ import { useAuth } from '@/lib/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FileUpload } from '@/components/ui/file-upload'
 import { apiBaseUrl } from '@/lib/api'
 
 const CATEGORIES = ['DIGITAL', 'PAINTING', 'SCULPTURE', 'PHOTOGRAPHY', 'DRAWING', 'MIXED_MEDIA', 'PRINT', 'NFT', 'OTHER']
 
-export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
+interface CreatedArtwork {
+  id: string
+  title: string
+}
+
+export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: (artwork?: CreatedArtwork) => void; onCancel: () => void }) {
   const auth = useAuth()
 
   const [title, setTitle] = useState('')
   const [titleEn, setTitleEn] = useState('')
+  const [posterFile, setPosterFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [done, setDone] = useState<CreatedArtwork | null>(null)
+
+  // Optional advanced fields — hidden by default
+  const [showMore, setShowMore] = useState(false)
   const [description, setDescription] = useState('')
   const [descriptionEn, setDescriptionEn] = useState('')
   const [category, setCategory] = useState('DIGITAL')
-  const [mediaType, setMediaType] = useState<'IMAGE_2D' | 'MODEL_3D'>('IMAGE_2D')
   const [price, setPrice] = useState('')
   const [currency, setCurrency] = useState('RUB')
-  const [modelUrl, setModelUrl] = useState('')
-  const [posterFile, setPosterFile] = useState<File | null>(null)
-  const [modelFile, setModelFile] = useState<File | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [uploadingFiles, setUploadingFiles] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [status, setStatus] = useState<'LISTED' | 'DRAFT'>('LISTED')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -43,13 +48,10 @@ export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: () => vo
     setSubmitting(true)
     try {
       let posterUrl = 'seed/placeholder-poster.svg'
-      let finalModelUrl = modelUrl || undefined
 
-      if (posterFile || modelFile) {
-        setUploadingFiles(true)
+      if (posterFile) {
         const formData = new FormData()
-        if (posterFile) formData.append('files', posterFile)
-        if (modelFile) formData.append('files', modelFile)
+        formData.append('files', posterFile)
 
         const uploadRes = await fetch(`${apiBaseUrl}/api/uploads`, {
           method: 'POST',
@@ -58,30 +60,22 @@ export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: () => vo
         })
         if (!uploadRes.ok) {
           const err = await uploadRes.json().catch(() => ({}))
-          throw new Error(err.message ?? err.error?.message ?? 'Upload failed')
+          throw new Error(err.message ?? 'Upload failed')
         }
         const uploadData = await uploadRes.json()
-        for (const f of uploadData.files) {
-          const ext = f.name.split('.').pop()?.toLowerCase()
-          if (['glb', 'gltf', 'blend', 'obj', 'fbx', 'stl', 'usdz'].includes(ext ?? '')) {
-            finalModelUrl = f.url
-          } else {
-            posterUrl = f.url
-          }
-        }
-        setUploadingFiles(false)
+        posterUrl = uploadData.files?.[0]?.url ?? posterUrl
       }
 
       const body: Record<string, unknown> = {
         title: fullTitle,
         description: fullDesc || undefined,
         category,
-        mediaType,
+        mediaType: 'IMAGE_2D',
         posterUrl,
+        status,
         price: price ? Number(price) : undefined,
         currency,
       }
-      if (mediaType === 'MODEL_3D' && finalModelUrl) body.modelUrl = finalModelUrl
 
       const res = await fetch(`${apiBaseUrl}/api/artworks`, {
         method: 'POST',
@@ -92,24 +86,60 @@ export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: () => vo
         const err = await res.json().catch(() => ({}))
         throw new Error(err.message ?? `HTTP ${res.status}`)
       }
-      onCreated()
+      const created = await res.json()
+      setDone(created)
+      onCreated(created)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Create failed')
     } finally {
       setSubmitting(false)
-      setUploadingFiles(false)
     }
   }
 
+  // ─── Done state: artwork created ───
+  if (done) {
+    return (
+      <div
+        className="p-8 mb-8 text-center space-y-4"
+        style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+      >
+        <div className="w-14 h-14 mx-auto rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-ink)' }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <p className="text-lg font-semibold font-display">
+          {status === 'LISTED' ? 'Работа в зале! / In your hall!' : 'Сохранено в черновики / Saved as draft'}
+        </p>
+        <Button onClick={() => { setDone(null); setTitle(''); setTitleEn(''); setPosterFile(null); setDescription(''); setDescriptionEn(''); setPrice('') }}>
+          + Ещё работу / Add another
+        </Button>
+      </div>
+    )
+  }
+
+  // ─── Form ───
   return (
     <form
       onSubmit={handleSubmit}
-      className="p-6 mb-8 space-y-4"
+      className="p-6 mb-8 space-y-5"
       style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* ── Image upload — the main action ── */}
+      <FileUpload
+        accept=".jpg,.jpeg,.png,.webp,.svg"
+        maxSize={10 * 1024 * 1024}
+        onFileSelect={setPosterFile}
+        label={posterFile ? 'Изображение выбрано / Image selected' : 'Загрузите изображение / Upload artwork image'}
+        imagePreview
+      />
+
+      {/* ── Title — the only required text ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Название (RU)</label>
+          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
+            Название (RU) <span style={{ color: 'var(--accent)' }}>*</span>
+          </label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Цифровой пейзаж" />
         </div>
         <div>
@@ -118,89 +148,103 @@ export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: () => vo
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Описание (RU)</label>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Описание работы..." />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Description (EN)</label>
-          <Textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={3} placeholder="Artwork description..." />
-        </div>
-      </div>
-
-      <FileUpload
-        accept=".jpg,.jpeg,.png,.webp,.svg"
-        maxSize={10 * 1024 * 1024}
-        onFileSelect={setPosterFile}
-        label="Обложка / Poster Image"
-        imagePreview
-      />
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Тип / Media</label>
-          <Tabs value={mediaType} onValueChange={(v) => setMediaType(v as 'IMAGE_2D' | 'MODEL_3D')}>
-            <TabsList className="h-8">
-              <TabsTrigger value="IMAGE_2D" className="text-xs px-3">2D</TabsTrigger>
-              <TabsTrigger value="MODEL_3D" className="text-xs px-3">3D</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Категория</label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full h-9 px-3 text-sm rounded-4xl border"
-            style={{ backgroundColor: 'var(--surface)', color: 'var(--text)', borderColor: 'var(--border)' }}
-          >
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Цена</label>
-          <Input value={price} onChange={(e) => setPrice(e.target.value)} type="number" placeholder="15000" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Валюта</label>
-          <Tabs value={currency} onValueChange={(v) => setCurrency(v)}>
-            <TabsList className="h-8">
-              <TabsTrigger value="RUB" className="text-xs px-3">₽ RUB</TabsTrigger>
-              <TabsTrigger value="USD" className="text-xs px-3">$ USD</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </div>
-
-      {mediaType === 'MODEL_3D' && (
-        <>
-          <FileUpload
-            accept=".glb,.gltf,.blend,.obj,.fbx,.stl,.usdz"
-            maxSize={100 * 1024 * 1024}
-            onFileSelect={setModelFile}
-            label="3D Модель / 3D Model"
+      {/* ── Status toggle — LISTED (in hall) or DRAFT ── */}
+      <div className="flex items-center gap-4">
+        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Статус / Status:</span>
+        <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: status === 'LISTED' ? 'var(--accent)' : 'var(--text-muted)' }}>
+          <input
+            type="radio"
+            name="status"
+            checked={status === 'LISTED'}
+            onChange={() => setStatus('LISTED')}
+            style={{ accentColor: 'var(--accent)', cursor: 'pointer' }}
           />
-          {!modelFile && (
+          В зале / In Hall
+        </label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: status === 'DRAFT' ? 'var(--accent)' : 'var(--text-muted)' }}>
+          <input
+            type="radio"
+            name="status"
+            checked={status === 'DRAFT'}
+            onChange={() => setStatus('DRAFT')}
+            style={{ accentColor: 'var(--accent)', cursor: 'pointer' }}
+          />
+          Черновик / Draft
+        </label>
+      </div>
+
+      {/* ── More options toggle ── */}
+      <button
+        type="button"
+        onClick={() => setShowMore(!showMore)}
+        className="text-sm font-medium flex items-center gap-1"
+        style={{ color: 'var(--text-muted)', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+      >
+        <svg
+          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          style={{ transform: showMore ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+        {showMore ? 'Скрыть детали / Hide details' : 'Детали / Details (категория, цена, описание)'}
+      </button>
+
+      {showMore && (
+        <div className="space-y-4 pt-2 pl-1" style={{ borderLeft: '2px solid var(--border)' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Или укажите URL / Or paste URL</label>
-              <Input value={modelUrl} onChange={(e) => setModelUrl(e.target.value)} placeholder="https://example.com/model.glb" />
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Описание (RU)</label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Описание работы..." />
             </div>
-          )}
-        </>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Description (EN)</label>
+              <Textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={2} placeholder="Artwork description..." />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Категория</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full h-9 px-3 text-sm rounded-4xl border"
+                style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--border)' }}
+              >
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Цена</label>
+              <Input value={price} onChange={(e) => setPrice(e.target.value)} type="number" placeholder="15000" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Валюта</label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full h-9 px-3 text-sm rounded-4xl border"
+                style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--border)' }}
+              >
+                <option value="RUB">₽ RUB</option>
+                <option value="USD">$ USD</option>
+              </select>
+            </div>
+          </div>
+        </div>
       )}
 
       {formError && (
-        <p className="text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--surface)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>
+        <p className="text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--bg)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>
           {formError}
         </p>
       )}
 
       <div style={{ display: 'flex', gap: '12px' }}>
-        <Button type="submit" disabled={submitting}>
-          {uploadingFiles ? 'Загрузка файлов... / Uploading...' : submitting ? 'Создание... / Creating...' : 'Создать / Create'}
+        <Button type="submit" disabled={submitting} size="lg">
+          {submitting ? 'Создание... / Creating...' : status === 'LISTED' ? 'Опубликовать в зал / Publish to Hall' : 'Сохранить черновик / Save Draft'}
         </Button>
-        <Button type="button" onClick={onCancel} variant="outline" size="sm" disabled={submitting}>
+        <Button type="button" onClick={onCancel} variant="outline" disabled={submitting}>
           Отмена / Cancel
         </Button>
       </div>

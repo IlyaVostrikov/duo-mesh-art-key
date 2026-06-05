@@ -9,6 +9,7 @@ export type AuthContextValue = {
   register: (input: RegisterRequest) => Promise<void>
   login: (input: LoginRequest) => Promise<void>
   logout: () => Promise<void>
+  refreshToken: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

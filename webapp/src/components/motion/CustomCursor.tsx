@@ -155,22 +155,24 @@ export function CustomCursor() {
       clearTimeout(showTimeout)
     }
 
+    const onEnter = () => {
+      clearTimeout(showTimeout)
+      setVisible(true)
+    }
+
     const onLeave = () => {
       showTimeout = setTimeout(() => setVisible(false), 300)
     }
 
     window.addEventListener('mousemove', onMove, { passive: true })
     document.addEventListener('mouseleave', onLeave)
-    document.addEventListener('mouseenter', () => {
-      clearTimeout(showTimeout)
-      setVisible(true)
-    })
+    document.addEventListener('mouseenter', onEnter)
 
     return () => {
       clearTimeout(showTimeout)
       window.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseleave', onLeave)
-      document.removeEventListener('mouseenter', () => {})
+      document.removeEventListener('mouseenter', onEnter)
     }
   }, [isTouch, reduced])
 

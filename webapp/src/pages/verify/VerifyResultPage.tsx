@@ -4,7 +4,7 @@ import { ArtKeyQR } from '@/components/artwork/ArtKeyQR'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { StatusBadge } from '@/components/verification/StatusBadge'
 import { apiBaseUrl } from '@/lib/api'
-import { parseBilingual, parseBilingualTitle } from '@/lib/utils'
+import { parseBilingual, parseBilingualTitle, formatPrice } from '@/lib/utils'
 import { TRANSFER_LABELS } from '@/lib/labels'
 
 interface VerifyResult {
@@ -62,8 +62,8 @@ export function VerifyResultPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
       setData(json)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
@@ -228,7 +228,7 @@ export function VerifyResultPage() {
         <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginBottom: '24px', maxWidth: '540px' }}>
           {lang === 'ru' ? 'Выдан' : 'Issued'}: {new Date(data.artKey.issuedAt).toLocaleDateString('ru-RU')}
           {data.artwork.status && ` · ${data.artwork.status}`}
-          {data.artwork.price && ` · ${data.artwork.currency === 'RUB' ? `${Number(data.artwork.price).toLocaleString('ru-RU')} ₽` : `$${Number(data.artwork.price).toLocaleString('en-US')}`}`}
+          {formatPrice(data.artwork.price, data.artwork.currency) && ` · ${formatPrice(data.artwork.price, data.artwork.currency)}`}
         </p>
       </RevealOnScroll>
 

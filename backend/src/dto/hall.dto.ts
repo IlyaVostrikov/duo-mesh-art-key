@@ -17,6 +17,7 @@ export function toHallDto(hall: ExhibitionHall) {
     coverImageUrl: hall.coverImageUrl,
     layoutConfig: hall.layoutConfig as unknown,
     theme: hall.theme,
+    customization: hall.customization as unknown,
     isPublished: hall.isPublished,
     viewCount: hall.viewCount,
     createdAt: hall.createdAt.toISOString(),
@@ -25,8 +26,21 @@ export function toHallDto(hall: ExhibitionHall) {
 }
 
 export function toHallPublicDto(hall: HallWithArtworks) {
+  const artworks = (hall.artworks ?? []).map((aw: Artwork) => ({
+    id: aw.id,
+    title: aw.title,
+    posterUrl: aw.posterUrl,
+    modelUrl: aw.modelUrl,
+    mediaType: aw.mediaType,
+    category: aw.category,
+    price: aw.price?.toString() ?? null,
+    currency: aw.currency,
+    status: aw.status,
+  }))
+
   return {
     ...toHallDto(hall),
+    artworkCount: artworks.length,
     artist: {
       id: hall.artist.id,
       displayName: hall.artist.user.displayName,
@@ -34,16 +48,6 @@ export function toHallPublicDto(hall: HallWithArtworks) {
       verified: hall.artist.verified,
       location: hall.artist.location,
     },
-    artworks: (hall.artworks ?? []).map((aw: Artwork) => ({
-      id: aw.id,
-      title: aw.title,
-      posterUrl: aw.posterUrl,
-      modelUrl: aw.modelUrl,
-      mediaType: aw.mediaType,
-      category: aw.category,
-      price: aw.price?.toString() ?? null,
-      currency: aw.currency,
-      status: aw.status,
-    })),
+    artworks,
   }
 }

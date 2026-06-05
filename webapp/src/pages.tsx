@@ -9,6 +9,7 @@ import { HubGrid } from '@/components/layout/hub-grid'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { LogoLockup } from '@/components/ui/duo-mesh-logo'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useAuth } from '@/lib/use-auth'
 import { useCallback, useEffect, useState } from 'react'
 import { apiBaseUrl } from '@/lib/api'
@@ -37,6 +38,8 @@ export function RootLayout() {
 
           <nav className="flex items-center gap-6">
             <NavPill to="/gallery" label="Галерея" />
+            <NavPill to="/halls" label="Залы" />
+            <NavPill to="/artists" label="Художники" />
             <NavPill to="/verify" label="ArtKey" />
           </nav>
 
@@ -63,7 +66,9 @@ export function RootLayout() {
       </header>
 
       <PageTransition>
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </PageTransition>
     </main>
   )

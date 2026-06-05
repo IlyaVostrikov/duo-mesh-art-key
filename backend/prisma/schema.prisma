@@ -205,6 +205,7 @@ model ExhibitionHall {
   coverImageUrl String?  @map("cover_image_url")
   layoutConfig  Json?    @map("layout_config") @db.JsonB
   theme         String?  @default("default")
+  customization Json?    @map("customization") @db.JsonB
   isPublished   Boolean  @default(false) @map("is_published")
   viewCount     Int      @default(0) @map("view_count")
   createdAt     DateTime @default(now()) @map("created_at")
@@ -386,6 +387,7 @@ model Collection {
   collector Collector          @relation(fields: [collectorId], references: [id], onDelete: Cascade, map: "collections_collector_id_fkey")
   items     CollectionArtwork[]
 
+  @@index([collectorId], map: "collections_collector_id_idx")
   @@map("collections")
 }
 

@@ -1,5 +1,6 @@
 import type { DbClient } from '../db'
 import type { Prisma } from '../generated/prisma/client'
+import type { ArtworkStatus, ArtworkCategory, MediaType, EditionType } from '../generated/prisma/enums'
 import { toArtworkDto, toArtworkPublicDto, toArtworkPublicDtoFull, type ArtworkDto, type ArtworkPublicDto, type ArtworkPublicFullDto } from '../dto/artwork.dto'
 import { ArtKeyService } from './art-key.service'
 
@@ -25,7 +26,7 @@ export class ArtworkService {
     artistId?: string
   }): Promise<{ artworks: ArtworkPublicDto[]; total: number; page: number; pageSize: number }> {
     const { page = 1, pageSize = 20, category, mediaType, status, style, priceMin, priceMax, editionType, sort = 'newest', q, artistId } = params
-    const where: Prisma.ArtworkWhereInput = { status: status ? (status as any) : (artistId ? undefined : { not: 'DRAFT' }) }
+    const where: Prisma.ArtworkWhereInput = { status: status ? (status as ArtworkStatus) : (artistId ? undefined : { not: 'DRAFT' }) }
 
     if (artistId) where.artistId = artistId
     if (q) {
@@ -34,10 +35,10 @@ export class ArtworkService {
         { description: { contains: q, mode: 'insensitive' } },
       ]
     }
-    if (category) where.category = category as any
-    if (mediaType) where.mediaType = mediaType as any
+    if (category) where.category = category as ArtworkCategory
+    if (mediaType) where.mediaType = mediaType as MediaType
     if (style) where.styleTags = { has: style }
-    if (editionType) where.editionType = editionType as any
+    if (editionType) where.editionType = editionType as EditionType
     if (priceMin !== undefined || priceMax !== undefined) {
       where.price = {}
       if (priceMin !== undefined) where.price.gte = priceMin
@@ -65,7 +66,7 @@ export class ArtworkService {
     ])
 
     return {
-      artworks: artworks.map((a) => toArtworkPublicDto(a as any)),
+      artworks: artworks.map((a) => toArtworkPublicDto(a)),
       total,
       page,
       pageSize,
@@ -82,7 +83,7 @@ export class ArtworkService {
     // Increment view count
     await this.prisma.artwork.update({ where: { id: artworkId }, data: { viewCount: { increment: 1 } } })
 
-    return toArtworkPublicDtoFull(artwork as any)
+    return toArtworkPublicDtoFull(artwork)
   }
 
   async create(artistId: string, userId: string, data: {
@@ -108,7 +109,7 @@ export class ArtworkService {
     allowOffers?: boolean
   }) {
     const artwork = await this.prisma.artwork.create({
-      data: { ...data, artistId } as any,
+      data: { ...data, artistId } as Prisma.ArtworkUncheckedCreateInput,
     })
 
     // Generate ArtKey for the artwork — userId is needed for provenance record
@@ -117,13 +118,13 @@ export class ArtworkService {
     return toArtworkDto(artwork)
   }
 
-  async update(artworkId: string, data: any): Promise<ArtworkPublicFullDto> {
+  async update(artworkId: string, data: Prisma.ArtworkUncheckedUpdateInput): Promise<ArtworkPublicFullDto> {
     const artwork = await this.prisma.artwork.update({
       where: { id: artworkId },
       data,
       include: { artist: { include: { user: true, hall: true } }, artKeys: true, provenanceRecords: { include: { toOwner: true, fromOwner: true }, orderBy: { sequence: 'desc' }, take: 1 } },
     })
-    return toArtworkPublicDtoFull(artwork as any)
+    return toArtworkPublicDtoFull(artwork)
   }
 
   async updateImages(artworkId: string, imageUrls: string[]) {

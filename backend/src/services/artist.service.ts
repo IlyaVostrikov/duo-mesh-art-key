@@ -1,5 +1,6 @@
 import type { DbClient } from '../db'
 import type { Prisma } from '../generated/prisma/client'
+import { UserRole } from '../generated/prisma/enums'
 import { toArtistDto, toArtistPublicDto } from '../dto/artist.dto'
 import { generateUniqueSlug } from '../lib/slug'
 
@@ -35,7 +36,7 @@ export class ArtistService {
     ])
 
     return {
-      artists: artists.map((a) => toArtistPublicDto(a as any)),
+      artists: artists.map((a) => toArtistPublicDto(a)),
       total,
       page,
       pageSize,
@@ -61,10 +62,10 @@ export class ArtistService {
       isFollowed = !!follow
     }
 
-    return toArtistPublicDto(artist as any, isFollowed)
+    return toArtistPublicDto(artist, isFollowed)
   }
 
-  async create(userId: string, data: { artistStatement?: string; websiteUrl?: string; location?: string; hallTitle: string; hallDescription?: string }) {
+  async create(userId: string, data: { artistStatement?: string; websiteUrl?: string; location?: string; hallTitle: string; hallDescription?: string; avatarUrl?: string }) {
     const artist = await this.prisma.artist.create({
       data: {
         userId,
@@ -89,10 +90,12 @@ export class ArtistService {
       },
     })
 
-    // Upgrade user role
+    // Upgrade user role + optionally set avatar
+    const userUpdate: { role: typeof UserRole.ARTIST; avatarUrl?: string } = { role: UserRole.ARTIST }
+    if (data.avatarUrl) userUpdate.avatarUrl = data.avatarUrl
     await this.prisma.user.update({
       where: { id: userId },
-      data: { role: 'ARTIST' },
+      data: userUpdate,
     })
 
     return this.prisma.artist.findUnique({
@@ -108,13 +111,34 @@ export class ArtistService {
     })
   }
 
-  async update(artistId: string, data: { artistStatement?: string; websiteUrl?: string; location?: string }) {
+  async update(artistId: string, data: { artistStatement?: string; websiteUrl?: string; location?: string; displayName?: string; bio?: string; avatarUrl?: string; socialLinks?: Record<string, string> }) {
     const artist = await this.prisma.artist.update({
       where: { id: artistId },
-      data,
+      data: {
+        ...(data.artistStatement !== undefined ? { artistStatement: data.artistStatement || null } : {}),
+        ...(data.websiteUrl !== undefined ? { websiteUrl: data.websiteUrl || null } : {}),
+        ...(data.location !== undefined ? { location: data.location || null } : {}),
+      },
       include: { user: true, hall: true, _count: { select: { followers: true } } },
     })
-    return toArtistPublicDto(artist as any)
+
+    // Update user-level fields if provided
+    const userUpdate: Record<string, unknown> = {}
+    if (data.displayName !== undefined) userUpdate.displayName = data.displayName || null
+    if (data.bio !== undefined) userUpdate.bio = data.bio || null
+    if (data.avatarUrl !== undefined) userUpdate.avatarUrl = data.avatarUrl || null
+    if (data.socialLinks !== undefined) userUpdate.socialLinks = data.socialLinks || null
+    if (Object.keys(userUpdate).length > 0) {
+      await this.prisma.user.update({ where: { id: artist.userId }, data: userUpdate })
+      // Re-fetch to include updated user fields
+      const refreshed = await this.prisma.artist.findUnique({
+        where: { id: artistId },
+        include: { user: true, hall: true, _count: { select: { followers: true } } },
+      })
+      if (refreshed) return toArtistPublicDto(refreshed)
+    }
+
+    return toArtistPublicDto(artist)
   }
 
   async getFollowing(userId: string) {
@@ -132,7 +156,7 @@ export class ArtistService {
       orderBy: { createdAt: 'desc' },
     })
     return follows.map((f) => ({
-      ...toArtistPublicDto(f.artist as any),
+      ...toArtistPublicDto(f.artist),
       isFollowing: true,
       followedAt: f.createdAt.toISOString(),
     }))

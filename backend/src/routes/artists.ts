@@ -1,8 +1,17 @@
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { createArtistSchema, updateArtistSchema } from '@duo-mesh/contracts'
 import { authGuard, requireRole, optionalAuth, getAuthUser } from '../guards/auth'
 import { ArtistService } from '../services/artist.service'
 import { HallService } from '../services/hall.service'
+import { toHallDto } from '../dto/hall.dto'
+import type { User, Artist, ExhibitionHall } from '../generated/prisma/client'
+
+/** Strip sensitive fields from the raw Prisma object before sending to client. */
+function sanitizeMe(raw: Artist & { user: User; hall: ExhibitionHall | null; _count: { followers: number } }) {
+  const { passwordHash: _, ...safeUser } = raw.user
+  return { ...raw, user: safeUser }
+}
 
 type ArtistRouteEnv = {
   Variables: {
@@ -10,6 +19,17 @@ type ArtistRouteEnv = {
     hallService: HallService
   }
 }
+
+const listQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().optional(),
+})
+
+const artworksQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+})
 
 export function createArtistRoutes() {
   const routes = new Hono<ArtistRouteEnv>()
@@ -32,24 +52,31 @@ export function createArtistRoutes() {
     }
 
     const artist = await svc.create(authUser!.userId, parsed.data)
-    return c.json(artist, 201)
+    if (!artist) return c.json({ error: 'INTERNAL', message: 'Failed to create artist profile' }, 500)
+    return c.json(sanitizeMe(artist), 201)
   })
 
   // Get current user's artist profile
   routes.get('/me', authGuard(), async (c) => {
-    const svc = c.get('artistService')
+    const artistSvc = c.get('artistService')
+    const hallSvc = c.get('hallService')
     const authUser = getAuthUser(c)
-    const raw = await svc.getByUserId(authUser!.userId)
+    const raw = await artistSvc.getByUserId(authUser!.userId)
     if (!raw) return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
-    return c.json(raw)
+
+    // Auto-create hall if missing (e.g. artist created before hall auto-creation was added)
+    if (!raw.hall) {
+      const hall = await hallSvc.getOrCreate(raw.id, raw.user.displayName ?? 'Artist')
+      return c.json(sanitizeMe({ ...raw, hall }))
+    }
+
+    return c.json(sanitizeMe(raw))
   })
 
   routes.get('/', async (c) => {
     const svc = c.get('artistService')
-    const page = Number(c.req.query('page') ?? '1')
-    const pageSize = Number(c.req.query('pageSize') ?? '20')
-    const search = c.req.query('search') ?? undefined
-    const result = await svc.list({ page, pageSize, search })
+    const q = listQuerySchema.parse(c.req.query())
+    const result = await svc.list(q)
     return c.json(result)
   })
 
@@ -76,17 +103,12 @@ export function createArtistRoutes() {
     if (!parsed.success) {
       return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
     }
-    const data: Record<string, unknown> = {}
-    if (parsed.data.artistStatement !== undefined) data.artistStatement = parsed.data.artistStatement
-    if (parsed.data.websiteUrl !== undefined) data.websiteUrl = parsed.data.websiteUrl || null
-    if (parsed.data.location !== undefined) data.location = parsed.data.location || null
-    return c.json(await svc.update(artistId, data))
+    return c.json(await svc.update(artistId, parsed.data))
   })
 
   routes.get('/:id/artworks', async (c) => {
     const svc = c.get('artistService')
-    const page = Number(c.req.query('page') ?? '1')
-    const pageSize = Number(c.req.query('pageSize') ?? '20')
+    const { page, pageSize } = artworksQuerySchema.parse(c.req.query())
     return c.json(await svc.getArtworks(c.req.param('id'), page, pageSize))
   })
 
@@ -94,7 +116,7 @@ export function createArtistRoutes() {
     const hallSvc = c.get('hallService')
     const hall = await hallSvc.getByArtistId(c.req.param('id'))
     if (!hall) return c.json({ error: 'NOT_FOUND', message: 'Hall not found' }, 404)
-    return c.json(hall)
+    return c.json(toHallDto(hall))
   })
 
   return routes

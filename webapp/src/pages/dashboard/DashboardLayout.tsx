@@ -14,6 +14,8 @@ const ARTIST_NAV = [
   { to: '/dashboard/hall/layout', label: 'Раскладка 3D / Layout' },
   { to: '/dashboard/settings', label: 'Профиль / Settings' },
   { to: '/dashboard/sales', label: 'Продажи / Sales' },
+  { to: '/dashboard/media', label: 'Медиа / Media' },
+  { to: '/dashboard/hall/customization', label: 'Кастомизация / Customize' },
 ]
 
 const COLLECTOR_NAV = [

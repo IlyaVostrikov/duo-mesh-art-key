@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/lib/use-auth'
 import { assetUrl } from '@/lib/asset-url'
+import { parseBilingualTitle, formatPrice } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DashboardLayout } from './DashboardLayout'
 import { CreateArtworkForm } from '@/components/artwork/CreateArtworkForm'
@@ -131,11 +132,11 @@ export function DashboardArtworks() {
                 </div>
                 <div className="p-3">
                   <p className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>
-                    {aw.title.split(' / ')[0]}
+                    {parseBilingualTitle(aw.title)[0]}
                   </p>
                   <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                     {aw.category} · {aw.status === 'DRAFT' ? 'Черновик / Draft' : aw.status}
-                    {aw.price && ` · ${aw.currency === 'RUB' ? `${Number(aw.price).toLocaleString('ru-RU')} ₽` : `$${Number(aw.price).toLocaleString('en-US')}`}`}
+                    {formatPrice(aw.price, aw.currency) && ` · ${formatPrice(aw.price, aw.currency)}`}
                   </p>
                 </div>
               </Link>

@@ -9,11 +9,44 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Typography } from '@/components/ui/typography'
 import { apiBaseUrl } from '@/lib/api'
 
+interface FeaturedWork {
+  id: string
+  title: string
+  artist: { displayName: string; hallSlug: string | null }
+  posterUrl: string
+  modelUrl: string | null
+  mediaType: 'IMAGE_2D' | 'MODEL_3D'
+  medium: string | null
+  price: string | null
+  currency: string
+  status: string
+}
+
+interface FeaturedArtist {
+  id: string
+  displayName: string
+  location: string | null
+  verified: boolean
+  artistStatement: string | null
+  avatarUrl: string | null
+  hall: { slug: string; title: string; coverImageUrl: string | null } | null
+}
+
+interface FeaturedHall {
+  slug: string
+  title: string
+  coverImageUrl: string | null
+  viewCount: number
+  artworkCount: number
+  theme: string | null
+  artist: { id: string; displayName: string; avatarUrl: string | null }
+}
+
 interface FeaturedResponse {
-  hero: any
-  works: any[]
-  artists: any[]
-  halls: any[]
+  hero: FeaturedWork | null
+  works: FeaturedWork[]
+  artists: FeaturedArtist[]
+  halls: FeaturedHall[]
 }
 
 // Fallback hero — local 3D model always shown on main screen
@@ -78,7 +111,7 @@ export function LandingPage() {
         return res.json()
       })
       .then((d) => { if (!cancelled) { setData(d); setLoading(false) } })
-      .catch((err) => { if (!cancelled) { setError(err.message); setLoading(false) } })
+      .catch((err: unknown) => { if (!cancelled) { setError(err instanceof Error ? err.message : 'Unknown error'); setLoading(false) } })
     return () => { cancelled = true }
   }, [])
 

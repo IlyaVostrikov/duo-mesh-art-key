@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { createArtworkSchema, updateArtworkSchema } from '@duo-mesh/contracts'
 import { authGuard, requireRole, optionalAuth, getAuthUser } from '../guards/auth'
 import { ArtworkService } from '../services/artwork.service'
@@ -10,6 +11,22 @@ type ArtworkRouteEnv = {
     artistService: ArtistService
   }
 }
+
+const addImagesSchema = z.object({ urls: z.array(z.string().url()).min(1) })
+
+const listQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  category: z.string().optional(),
+  mediaType: z.string().optional(),
+  status: z.string().optional(),
+  style: z.string().optional(),
+  priceMin: z.coerce.number().optional(),
+  priceMax: z.coerce.number().optional(),
+  editionType: z.string().optional(),
+  sort: z.string().default('newest'),
+  q: z.string().optional(),
+})
 
 function isOwnerOrAdmin(artwork: { artistId: string }, artistId: string, role: string): boolean {
   return artwork.artistId === artistId || role === 'ADMIN'
@@ -30,20 +47,8 @@ export function createArtworkRoutes() {
       artistId = artist?.id
     }
 
-    const result = await svc.list({
-      page: Number(c.req.query('page') ?? '1'),
-      pageSize: Number(c.req.query('pageSize') ?? '20'),
-      category: c.req.query('category') ?? undefined,
-      mediaType: c.req.query('mediaType') ?? undefined,
-      status: c.req.query('status') ?? undefined,
-      style: c.req.query('style') ?? undefined,
-      priceMin: c.req.query('priceMin') ? Number(c.req.query('priceMin')) : undefined,
-      priceMax: c.req.query('priceMax') ? Number(c.req.query('priceMax')) : undefined,
-      editionType: c.req.query('editionType') ?? undefined,
-      sort: c.req.query('sort') ?? 'newest',
-      q: c.req.query('q') ?? undefined,
-      artistId,
-    })
+    const q = listQuerySchema.parse(c.req.query())
+    const result = await svc.list({ ...q, artistId })
     return c.json(result)
   })
 
@@ -121,12 +126,9 @@ export function createArtworkRoutes() {
   // Artist: add images to artwork (presigned URL confirmation)
   routes.post('/:id/images', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
     const svc = c.get('artworkService')
-    const body = await c.req.json()
-    const { urls } = body as { urls: string[] }
-    if (!urls?.length) {
-      return c.json({ error: 'VALIDATION', message: 'urls array is required' }, 400)
-    }
-    const artwork = await svc.updateImages(c.req.param('id'), urls)
+    const body = addImagesSchema.safeParse(await c.req.json())
+    if (!body.success) return c.json({ error: 'VALIDATION', message: body.error.issues }, 400)
+    const artwork = await svc.updateImages(c.req.param('id'), body.data.urls)
     return c.json(artwork)
   })
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { assetUrl } from '@/lib/asset-url'
+import { parseBilingualTitle } from '@/lib/utils'
 import type { HallArtwork } from './types'
 
 export function HallArtworkChip({ artwork }: { artwork: HallArtwork }) {
@@ -34,7 +35,7 @@ export function HallArtworkChip({ artwork }: { artwork: HallArtwork }) {
       />
       <div style={{ minWidth: 0 }}>
         <p style={{ fontSize: '0.7rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {artwork.title.split(' / ')[0]}
+          {parseBilingualTitle(artwork.title)[0]}
         </p>
         <span style={{
           fontSize: '0.6rem',

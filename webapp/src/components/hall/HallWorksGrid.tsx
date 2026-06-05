@@ -3,8 +3,10 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { ArtworkCard } from '@/components/artwork/ArtworkCard'
 import { Hall3DCanvas } from '@/components/hall3d/Hall3DCanvas'
-import { singleRow, salonHang } from '@/components/hall3d/layoutTemplates'
+import { MultiHallScene } from '@/components/hall3d/MultiHallScene'
+import { computeSlots } from '@/components/hall3d/layoutTemplates'
 import type { Hall3DArtwork } from '@/components/hall3d/Hall3DScene'
+import type { HallData } from '@/components/hall3d/hallOrdering'
 import { parseBilingualTitle } from '@/lib/utils'
 import { assetUrl } from '@/lib/asset-url'
 
@@ -34,10 +36,12 @@ interface HallWorksGridProps {
   artistName: string
   layoutConfig: HallLayoutConfig | null
   isMobile: boolean
-  theme?: string | null
+  halls?: HallData[]
+  initialRoomIndex?: number
+  onRoomChange?: (slug: string) => void
 }
 
-export function HallWorksGrid({ artworks, artistName, layoutConfig, isMobile, theme }: HallWorksGridProps) {
+export function HallWorksGrid({ artworks, artistName, layoutConfig, isMobile, halls, initialRoomIndex, onRoomChange }: HallWorksGridProps) {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
   const show3D = !reduced && !isMobile
@@ -57,7 +61,7 @@ export function HallWorksGrid({ artworks, artistName, layoutConfig, isMobile, th
         capacity: layoutConfig.slots.length,
         slots: layoutConfig.slots.map((s) => ({ x: s.x, y: s.y, z: s.z, width: s.width, height: s.height })),
       }
-    : (artworks.length <= 4 ? singleRow : salonHang)
+    : { name: 'auto', capacity: artworks.length, slots: computeSlots(artworks.length) }
 
   // Sort artworks by layout slot order, then append unmatched
   const sorted3dArtworks = layoutConfig?.slots
@@ -80,7 +84,21 @@ export function HallWorksGrid({ artworks, artistName, layoutConfig, isMobile, th
     navigate({ to: '/artwork/$artworkId', params: { artworkId: id } })
   }
 
-  // 3D Gallery (desktop + no reduced motion)
+  // Multi-hall 3D Gallery (desktop + no reduced motion)
+  if (show3D && halls && halls.length > 0) {
+    return (
+      <section className="pb-0">
+        <MultiHallScene
+          halls={halls}
+          initialRoomIndex={initialRoomIndex ?? 0}
+          onRoomChange={onRoomChange ?? (() => {})}
+          onArtworkClick={handleArtworkClick}
+        />
+      </section>
+    )
+  }
+
+  // Single-hall 3D Gallery (desktop + no reduced motion)
   if (show3D && artworks.length > 0) {
     return (
       <section className="pb-0">
@@ -88,7 +106,6 @@ export function HallWorksGrid({ artworks, artistName, layoutConfig, isMobile, th
           artworks={sorted3dArtworks}
           layout={layout3d}
           onArtworkClick={handleArtworkClick}
-          theme={theme}
         />
       </section>
     )
