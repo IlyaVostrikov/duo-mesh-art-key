@@ -76,7 +76,8 @@ export function createArtworkRoutes() {
       return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
     }
 
-    const artwork = await svc.create(artist.id, authUser!.userId, parsed.data)
+    const fileHashes: Record<string, string> | undefined = body.fileHashes ?? undefined
+    const artwork = await svc.create(artist.id, authUser!.userId, { ...parsed.data, fileHashes })
     return c.json(artwork, 201)
   })
 
@@ -126,8 +127,20 @@ export function createArtworkRoutes() {
   // Artist: add images to artwork (presigned URL confirmation)
   routes.post('/:id/images', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
     const svc = c.get('artworkService')
+    const artistSvc = c.get('artistService')
+    const authUser = getAuthUser(c)
     const body = addImagesSchema.safeParse(await c.req.json())
     if (!body.success) return c.json({ error: 'VALIDATION', message: body.error.issues }, 400)
+
+    const artist = await artistSvc.getByUserId(authUser!.userId)
+    if (!artist) return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
+
+    const existing = await svc.getById(c.req.param('id'))
+    if (!existing) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
+    if (!isOwnerOrAdmin(existing, artist.id, authUser!.role)) {
+      return c.json({ error: 'FORBIDDEN', message: 'Not your artwork' }, 403)
+    }
+
     const artwork = await svc.updateImages(c.req.param('id'), body.data.urls)
     return c.json(artwork)
   })

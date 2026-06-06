@@ -203,7 +203,7 @@ export function DashboardHallLayout() {
               fontSize: '0.875rem',
               fontWeight: 600,
               backgroundColor: 'var(--accent)',
-              color: '#000',
+              color: 'var(--accent-ink)',
               border: 'none',
               borderRadius: 'var(--radius)',
               cursor: saving ? 'not-allowed' : 'pointer',
@@ -257,7 +257,7 @@ export function DashboardHallLayout() {
                 fontSize: '0.8rem',
                 fontWeight: 500,
                 backgroundColor: layout.template === tpl.name ? 'var(--accent)' : 'var(--surface)',
-                color: layout.template === tpl.name ? '#000' : 'var(--text-secondary)',
+                color: layout.template === tpl.name ? 'var(--accent-ink)' : 'var(--text-secondary)',
                 border: layout.template === tpl.name ? '1px solid var(--accent)' : '1px solid var(--border)',
                 borderRadius: 'var(--radius)',
                 cursor: 'pointer',
@@ -270,8 +270,30 @@ export function DashboardHallLayout() {
         </div>
       </div>
 
-      {/* Slot grid — visual wall */}
+      {/* Artwork bank — available artworks to drag into slots */}
       <div style={{ marginBottom: '32px' }}>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
+          Доступные работы / Available Artworks ({unassignedArtworks.length})
+        </h3>
+        {unassignedArtworks.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+            Все работы распределены / All artworks placed.
+          </p>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: '12px',
+          }}>
+            {unassignedArtworks.map((aw) => (
+              <HallArtworkChip key={aw.id} artwork={aw} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Slot grid — visual wall */}
+      <div>
         <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
           Слоты на стене / Wall Slots
         </h3>
@@ -319,27 +341,6 @@ export function DashboardHallLayout() {
         </div>
       </div>
 
-      {/* Artwork bank — unassigned artworks */}
-      <div>
-        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
-          Доступные работы / Available Artworks ({unassignedArtworks.length})
-        </h3>
-        {unassignedArtworks.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-            Все работы распределены / All artworks placed.
-          </p>
-        ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-            gap: '12px',
-          }}>
-            {unassignedArtworks.map((aw) => (
-              <HallArtworkChip key={aw.id} artwork={aw} />
-            ))}
-          </div>
-        )}
-      </div>
     </DashboardLayout>
   )
 }

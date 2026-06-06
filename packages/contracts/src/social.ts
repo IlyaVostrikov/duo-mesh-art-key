@@ -10,6 +10,7 @@ export const notificationTypeSchema = z.enum([
   'COLLECTION_UPDATED',
   'NEW_ARTWORK',
   'EXHIBITION_INVITE',
+  'INQUIRY_RECEIVED',
 ])
 
 export const inquirySchema = z.object({

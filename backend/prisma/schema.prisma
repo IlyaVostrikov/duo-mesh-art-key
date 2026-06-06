@@ -86,6 +86,7 @@ model Artist {
   exhibitions Exhibition[]
   followers   Follow[]         @relation("FollowedArtist")
   sales       Sale[]           @relation("Seller")
+  signingKeys SigningKey[]
 
   @@map("artists")
 }
@@ -175,6 +176,7 @@ model Artwork {
   allowOffers         Boolean        @default(true) @map("allow_offers")
   viewCount           Int            @default(0) @map("view_count")
   saveCount           Int            @default(0) @map("save_count")
+  contentHashes       Json?          @map("content_hashes") @db.JsonB
   createdAt           DateTime       @default(now()) @map("created_at")
   updatedAt           DateTime       @updatedAt @map("updated_at")
 
@@ -217,23 +219,58 @@ model ExhibitionHall {
   @@map("exhibition_halls")
 }
 
+// ─── Signing Keys (Ed25519 keypairs for artists + platform) ───
+
+enum SigningKeyOwnerType {
+  ARTIST
+  PLATFORM
+}
+
+model SigningKey {
+  id        String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  ownerType SigningKeyOwnerType  @map("owner_type")
+  ownerId   String?              @map("owner_id") @db.Uuid
+  publicKey String               @map("public_key")
+  keyAlias  String?              @map("key_alias")
+  isActive  Boolean              @default(true) @map("is_active")
+  revokedAt DateTime?            @map("revoked_at")
+  createdAt DateTime             @default(now()) @map("created_at")
+
+  artKeysSigned          ArtKey[]             @relation("ArtistSigningKey")
+  platformCoSignatures   ArtKey[]             @relation("PlatformSigningKey")
+  provenanceRecords      ProvenanceRecord[]
+  artist                 Artist?              @relation(fields: [ownerId], references: [id], onDelete: SetNull, map: "signing_keys_artist_id_fkey")
+
+  @@index([ownerType, ownerId], map: "signing_keys_owner_idx")
+  @@index([publicKey], map: "signing_keys_public_key_idx")
+  @@map("signing_keys")
+}
+
 // ─── Art Key (digital certificate of authenticity) ───
 
 model ArtKey {
-  id                String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  artworkId         String   @unique @db.Uuid @map("artwork_id")
-  keyCode           String   @unique @map("key_code")
-  ownerKey          String   @unique @map("owner_key")
-  certificateHash   String   @map("certificate_hash")
-  integrityHash     String   @map("integrity_hash")
-  certificatePdfUrl String?  @map("certificate_pdf_url")
-  qrCodeUrl        String?  @map("qr_code_url")
-  nfcId            String?  @map("nfc_id")
-  issuedAt         DateTime @default(now()) @map("issued_at")
-  revokedAt        DateTime? @map("revoked_at")
+  id                    String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  artworkId             String     @unique @db.Uuid @map("artwork_id")
+  keyCode               String     @unique @map("key_code")
+  ownerKey              String     @unique @map("owner_key")
+  certificateHash       String     @map("certificate_hash")
+  integrityHash         String     @map("integrity_hash")
+  certificatePdfUrl     String?    @map("certificate_pdf_url")
+  qrCodeUrl             String?    @map("qr_code_url")
+  nfcId                 String?    @map("nfc_id")
+  issuedAt              DateTime   @default(now()) @map("issued_at")
+  revokedAt             DateTime?  @map("revoked_at")
+  timestampToken        String?    @map("timestamp_token")
+  timestampVerifiedAt   DateTime?  @map("timestamp_verified_at")
+  platformSignature     String?    @map("platform_signature")
+  platformSigningKeyId  String?    @map("platform_signing_key_id") @db.Uuid
+  artistSigningKeyId    String?    @map("artist_signing_key_id") @db.Uuid
 
-  artwork           Artwork             @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "art_keys_artwork_id_fkey")
-  provenanceRecords ProvenanceRecord[]
+  artwork              Artwork                @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "art_keys_artwork_id_fkey")
+  provenanceRecords    ProvenanceRecord[]
+  transparencyLogEntries TransparencyLogEntry[]
+  artistSigningKey  SigningKey?         @relation("ArtistSigningKey", fields: [artistSigningKeyId], references: [id], onDelete: SetNull, map: "art_keys_artist_signing_key_id_fkey")
+  platformSigningKey SigningKey?        @relation("PlatformSigningKey", fields: [platformSigningKeyId], references: [id], onDelete: SetNull, map: "art_keys_platform_signing_key_id_fkey")
 
   @@index([keyCode], map: "art_keys_key_code_idx")
   @@map("art_keys")
@@ -264,13 +301,18 @@ model ProvenanceRecord {
   transactionHash String?      @map("transaction_hash")
   recordHash      String       @map("record_hash")
   prevRecordHash  String?      @map("prev_record_hash")
+  signature       String?      @map("signature")
+  signerPublicKey String?      @map("signer_public_key")
+  signerRole      String?      @map("signer_role")
+  signingKeyId    String?      @map("signing_key_id") @db.Uuid
   notes           String?      @db.Text
   createdAt       DateTime     @default(now()) @map("created_at")
 
-  artwork    Artwork @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "provenance_artwork_id_fkey")
-  artKey     ArtKey  @relation(fields: [artKeyId], references: [id], onDelete: Cascade, map: "provenance_art_key_id_fkey")
-  fromOwner  User?   @relation("FromOwner", fields: [fromUserId], references: [id], onDelete: SetNull, map: "provenance_from_user_id_fkey")
-  toOwner    User    @relation("ToOwner", fields: [toUserId], references: [id], onDelete: Cascade, map: "provenance_to_user_id_fkey")
+  artwork    Artwork     @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "provenance_artwork_id_fkey")
+  artKey     ArtKey      @relation(fields: [artKeyId], references: [id], onDelete: Cascade, map: "provenance_art_key_id_fkey")
+  fromOwner  User?       @relation("FromOwner", fields: [fromUserId], references: [id], onDelete: SetNull, map: "provenance_from_user_id_fkey")
+  toOwner    User        @relation("ToOwner", fields: [toUserId], references: [id], onDelete: Cascade, map: "provenance_to_user_id_fkey")
+  signingKey SigningKey? @relation(fields: [signingKeyId], references: [id], onDelete: SetNull, map: "provenance_signing_key_id_fkey")
 
   @@index([artworkId, createdAt], map: "provenance_artwork_id_created_at_idx")
   @@index([artworkId, sequence], map: "provenance_artwork_id_sequence_idx")
@@ -433,6 +475,7 @@ enum NotificationType {
   COLLECTION_UPDATED
   NEW_ARTWORK
   EXHIBITION_INVITE
+  INQUIRY_RECEIVED
 }
 
 model Notification {
@@ -466,4 +509,29 @@ model Inquiry {
 
   @@index([artworkId], map: "inquiries_artwork_id_idx")
   @@map("inquiries")
+}
+
+// ─── Transparency Log (public append-only audit trail) ───
+
+enum TransparencyEntryType {
+  ARTKEY_CREATED
+  PROVENANCE_RECORD
+  ARTKEY_REVOKED
+}
+
+model TransparencyLogEntry {
+  id            String                 @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  artKeyId      String                 @db.Uuid @map("art_key_id")
+  sequence      Int
+  entryType     TransparencyEntryType  @map("entry_type")
+  entryHash     String                 @map("entry_hash")
+  prevEntryHash String?                @map("prev_entry_hash")
+  payload       Json                   @db.JsonB
+  createdAt     DateTime               @default(now()) @map("created_at")
+
+  artKey ArtKey @relation(fields: [artKeyId], references: [id], onDelete: Cascade, map: "transparency_log_art_key_id_fkey")
+
+  @@unique([artKeyId, sequence])
+  @@index([createdAt])
+  @@map("transparency_log")
 }

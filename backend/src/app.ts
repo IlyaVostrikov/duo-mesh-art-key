@@ -1,3 +1,5 @@
+import { resolve } from 'node:path'
+import { mkdirSync } from 'node:fs'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/bun'
@@ -10,6 +12,8 @@ import { AuthService } from './auth/service'
 import { errorResponse, handleError, validationErrorHook } from './http/errors'
 import { rateLimiter } from './http/rate-limiter'
 import { createStorageServiceFromEnv, type StorageService } from './storage/service'
+import { KeyStore } from './crypto/keystore'
+import { SigningService } from './services/signing.service'
 import { ArtistService } from './services/artist.service'
 import { ArtworkService } from './services/artwork.service'
 import { HallService } from './services/hall.service'
@@ -20,6 +24,7 @@ import { SaleService } from './services/sale.service'
 import { FollowService } from './services/follow.service'
 import { InquiryService } from './services/inquiry.service'
 import { UploadService } from './services/upload.service'
+import { ProvenanceTransferService } from './services/provenance-transfer.service'
 import { createArtistRoutes } from './routes/artists'
 import { createArtworkRoutes } from './routes/artworks'
 import { createHallRoutes } from './routes/halls'
@@ -31,6 +36,11 @@ import { createUploadRoutes } from './routes/uploads'
 import { createFeaturedRoutes } from './routes/featured'
 import { createSalesRoutes } from './routes/sales'
 import { createAdminRoutes } from './routes/admin'
+import { createPublicKeyRoutes } from './routes/public-keys'
+import { createTransferRoutes } from './routes/transfers'
+import { createPurchaseRoutes } from './routes/purchase'
+import { TransparencyLogService } from './services/transparency-log.service'
+import { createTransparencyRoutes } from './routes/transparency'
 
 type AppBindings = {
   Variables: {
@@ -45,6 +55,9 @@ type AppBindings = {
     followService: FollowService
     inquiryService: InquiryService
     uploadService: UploadService
+    signingService: SigningService
+    provenanceTransferService: ProvenanceTransferService
+    transparencyLogService: TransparencyLogService
     env: AppEnv
     prisma: DbClient
     storageService: StorageService | null
@@ -57,21 +70,41 @@ type CreateAppOptions = {
 }
 
 export function createApp({ env, prisma }: CreateAppOptions) {
+  // ── Crypto infra ──
+  // Ensure data directory exists for keystore
+  const dataDir = resolve(import.meta.dir, '../data')
+  mkdirSync(dataDir, { recursive: true })
+
+  const keyStore = new KeyStore(
+    resolve(dataDir, 'keystore.json'),
+    env.SECRET_STORE_KEY,
+  )
+  const signingService = new SigningService(prisma, keyStore)
+
+  // ── Services ──
   const authService = new AuthService(prisma, env)
-  const artistService = new ArtistService(prisma)
-  const artworkService = new ArtworkService(prisma)
+  const artistService = new ArtistService(prisma, signingService)
+  const artworkService = new ArtworkService(prisma, signingService)
   const hallService = new HallService(prisma)
-  const artKeyService = new ArtKeyService(prisma)
+  const artKeyService = new ArtKeyService(prisma, signingService, env.TSA_URL)
   const featuredService = new FeaturedService(prisma)
   const adminService = new AdminService(prisma)
   const saleService = new SaleService(prisma)
   const followService = new FollowService(prisma)
   const inquiryService = new InquiryService(prisma)
+  const transparencyLogService = new TransparencyLogService(prisma)
   const storageService = createStorageServiceFromEnv(env)
   const uploadService = new UploadService({
     maxImageBytes: env.UPLOAD_MAX_IMAGE_BYTES,
     max3DBytes: env.UPLOAD_MAX_3D_BYTES,
     storage: storageService,
+  })
+  const provenanceTransferService = new ProvenanceTransferService(prisma, signingService)
+
+  // ── Bootstrap: ensure platform signing key exists ──
+  // Fire-and-forget; will be ready by the time genesis is signed
+  signingService.ensurePlatformKey().catch((err) => {
+    console.error('Failed to ensure platform signing key:', err)
   })
 
   const app = new OpenAPIHono<AppBindings>({
@@ -103,7 +136,10 @@ export function createApp({ env, prisma }: CreateAppOptions) {
     c.set('saleService', saleService)
     c.set('followService', followService)
     c.set('inquiryService', inquiryService)
+    c.set('transparencyLogService', transparencyLogService)
     c.set('uploadService', uploadService)
+    c.set('signingService', signingService)
+    c.set('provenanceTransferService', provenanceTransferService)
     c.set('env', env)
     c.set('prisma', prisma)
     c.set('storageService', storageService)
@@ -147,6 +183,10 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/api/featured', createFeaturedRoutes())
   app.route('/api/sales', createSalesRoutes())
   app.route('/api/admin', createAdminRoutes())
+  app.route('/api/public-keys', createPublicKeyRoutes())
+  app.route('/api', createTransferRoutes())
+  app.route('/api', createPurchaseRoutes())
+  app.route('/api', createTransparencyRoutes())
 
   app.doc('/openapi.json', {
     openapi: '3.0.0',

@@ -19,7 +19,7 @@ export class SaleService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { completedAt: 'desc' },
     })
 
     const artworks = sales.map((s) => ({
@@ -32,7 +32,7 @@ export class SaleService {
       price: s.artwork.price?.toString() ?? null,
       currency: s.artwork.currency,
       purchasePrice: s.price.toString(),
-      purchasedAt: s.createdAt.toISOString(),
+      purchasedAt: s.completedAt?.toISOString() ?? s.createdAt.toISOString(),
       artist: {
         id: s.artwork.artist.id,
         displayName: s.artwork.artist.user.displayName,

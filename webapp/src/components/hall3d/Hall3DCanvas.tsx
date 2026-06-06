@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { useTextureCache } from '@/hooks/useTextureCache'
 import { useKeyboardCamera } from '@/hooks/useKeyboardCamera'
+import { useEnvironmentMap } from '@/hooks/useEnvironmentMap'
 import { GalleryWall } from './GalleryWall'
 import { GalleryFloor } from './GalleryFloor'
 import { GalleryCeiling } from './GalleryCeiling'
@@ -31,8 +32,8 @@ interface SceneContentProps {
   hoveredId: string | null
   onHover: (id: string | null) => void
   onClick: (id: string) => void
-  dollyProgress: number
-  panProgress: number
+  dollyRef: React.MutableRefObject<number>
+  panRef: React.MutableRefObject<number>
   mouseNorm: { x: number; y: number }
   enableParallax: boolean
   wallWidth: number
@@ -41,7 +42,7 @@ interface SceneContentProps {
 
 function SceneContent({
   artworks, layout, textureCache, hoveredId, onHover, onClick,
-  dollyProgress, panProgress, mouseNorm, enableParallax, wallWidth, customization,
+  dollyRef, panRef, mouseNorm, enableParallax, wallWidth, customization,
 }: SceneContentProps) {
   const c = { ...DEFAULT_CUSTOMIZATION, ...(customization ?? {}) } as Required<Omit<HallCustomization, 'wallColor'>> & { wallColor?: string }
   const lighting = LIGHTING_PRESETS[c.lightingPreset] ?? LIGHTING_PRESETS.warm
@@ -54,6 +55,8 @@ function SceneContent({
   const currentZ = useRef(CAMERA_Z_FAR)
 
   const { camera } = useThree()
+  useEnvironmentMap()
+
   useEffect(() => {
     const pcam = camera as THREE.PerspectiveCamera
     pcam.position.set(0, EYE, CAMERA_Z_FAR)
@@ -70,7 +73,7 @@ function SceneContent({
     if (!camRef.current) return
     const pcam = camRef.current
 
-    const targetZ = THREE.MathUtils.lerp(CAMERA_Z_FAR, CAMERA_Z_NEAR, dollyProgress)
+    const targetZ = THREE.MathUtils.lerp(CAMERA_Z_FAR, CAMERA_Z_NEAR, dollyRef.current)
     currentZ.current = THREE.MathUtils.lerp(currentZ.current, targetZ, Math.min(1, LERP_SPEED * dt))
     const z = currentZ.current
 
@@ -78,6 +81,7 @@ function SceneContent({
     const targetPitch = enableParallax ? mouseNorm.y * toRad(MOUSE_PITCH_DEG) : 0
     currentYaw.current = THREE.MathUtils.lerp(currentYaw.current, targetYaw, Math.min(1, 3 * dt))
     currentPitch.current = THREE.MathUtils.lerp(currentPitch.current, targetPitch, Math.min(1, 3 * dt))
+
 
     const yaw = currentYaw.current
     const pitch = currentPitch.current
@@ -171,7 +175,7 @@ interface Hall3DCanvasProps {
 
 export function Hall3DCanvas({ artworks, layout, onArtworkClick, customization }: Hall3DCanvasProps) {
   const reduced = useReducedMotion()
-  const { dolly: dollyProgress, pan: panProgress } = useKeyboardCamera(!reduced)
+  const { dollyRef, panRef } = useKeyboardCamera(!reduced)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [mouseNorm, setMouseNorm] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -206,6 +210,22 @@ export function Hall3DCanvas({ artworks, layout, onArtworkClick, customization }
   const handleHover = useCallback((id: string | null) => setHoveredId(id), [])
   const handleClick = useCallback((id: string) => onArtworkClick?.(id), [onArtworkClick])
 
+  const handleCreated = useCallback((state: { gl: THREE.WebGLRenderer }) => {
+    const canvas = state.gl.domElement
+    const onLost = (e: Event) => {
+      e.preventDefault()
+      console.warn('[Hall3DCanvas] WebGL context lost — preserving for restore')
+    }
+    const onRestored = () => {
+      console.log('[Hall3DCanvas] WebGL context restored')
+    }
+    canvas.addEventListener('webglcontextlost', onLost)
+    canvas.addEventListener('webglcontextrestored', onRestored)
+    // Store for cleanup — returned cleanup isn't called by R3F on created,
+    // so we attach to canvas and clean up ourselves
+    ;(canvas as any).__ctxHandlers = { onLost, onRestored }
+  }, [])
+
   // Common canvas props — static frame when reduced motion
   const canvasContent = (
     <Canvas
@@ -217,6 +237,7 @@ export function Hall3DCanvas({ artworks, layout, onArtworkClick, customization }
         toneMappingExposure: 1.6,
         outputColorSpace: THREE.SRGBColorSpace,
       }}
+      onCreated={handleCreated}
       style={{ width: '100%', height: '100%' }}
     >
       <SceneContent
@@ -226,8 +247,8 @@ export function Hall3DCanvas({ artworks, layout, onArtworkClick, customization }
         hoveredId={reduced ? null : hoveredId}
         onHover={reduced ? () => {} : handleHover}
         onClick={reduced ? () => {} : handleClick}
-        dollyProgress={reduced ? 0 : dollyProgress}
-        panProgress={reduced ? 0 : panProgress}
+        dollyRef={dollyRef}
+        panRef={panRef}
         mouseNorm={reduced ? { x: 0, y: 0 } : mouseNorm}
         enableParallax={!reduced}
         wallWidth={wallWidth}

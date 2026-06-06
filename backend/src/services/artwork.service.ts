@@ -3,12 +3,16 @@ import type { Prisma } from '../generated/prisma/client'
 import type { ArtworkStatus, ArtworkCategory, MediaType, EditionType } from '../generated/prisma/enums'
 import { toArtworkDto, toArtworkPublicDto, toArtworkPublicDtoFull, type ArtworkDto, type ArtworkPublicDto, type ArtworkPublicFullDto } from '../dto/artwork.dto'
 import { ArtKeyService } from './art-key.service'
+import type { SigningService } from './signing.service'
 
 export class ArtworkService {
   private artKeyService: ArtKeyService
 
-  constructor(private prisma: DbClient) {
-    this.artKeyService = new ArtKeyService(prisma)
+  constructor(
+    private prisma: DbClient,
+    private signingService?: SigningService,
+  ) {
+    this.artKeyService = new ArtKeyService(prisma, signingService)
   }
 
   async list(params: {
@@ -107,13 +111,24 @@ export class ArtworkService {
     editionType?: string
     editionTotal?: number
     allowOffers?: boolean
+    fileHashes?: Record<string, string>
   }) {
+    const { fileHashes, ...rest } = data
     const artwork = await this.prisma.artwork.create({
-      data: { ...data, artistId } as Prisma.ArtworkUncheckedCreateInput,
+      data: {
+        ...rest,
+        artistId,
+        contentHashes: fileHashes ?? {},
+      } as Prisma.ArtworkUncheckedCreateInput,
     })
 
-    // Generate ArtKey for the artwork — userId is needed for provenance record
-    await this.artKeyService.generate(artwork.id, artistId, userId)
+    // Generate ArtKey for the artwork with file hashes and signing keys
+    await this.artKeyService.generate({
+      artworkId: artwork.id,
+      artistId,
+      userId,
+      fileHashes: data.fileHashes ?? {},
+    })
 
     return toArtworkDto(artwork)
   }

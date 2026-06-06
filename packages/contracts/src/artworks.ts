@@ -114,6 +114,7 @@ const artworkFieldsSchema = z.object({
   editionType: editionTypeSchema.default('UNIQUE'),
   editionTotal: z.number().int().positive().optional(),
   allowOffers: z.boolean().default(true),
+  fileHashes: z.record(z.string(), z.string()).optional(),
 })
 
 export const createArtworkSchema = artworkFieldsSchema

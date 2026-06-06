@@ -2,10 +2,15 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 import { WALL_HEIGHT, EYE } from './RoomGroup'
 
-/** Multi-source lighting for a single wall artwork:
- *  - Ceiling track light (top-front, wide beam aimed at artwork)
- *  - Top wall wash (wall-height, angled down)
- *  - Floor uplight (bottom-front, aimed up at artwork)
+/**
+ * Multi-source lighting for a single wall artwork.
+ *
+ * Ceiling lights stay tight to the wall (Z ≤ 0.3) for direct top-down illumination.
+ * Floor lights sit behind the camera (Z ≈ 2.5m into the room) and are spread ±0.5m
+ * in X so the light doesn't appear to come from a single point.
+ *
+ * Each spotLight target is explicitly added to the scene via <primitive>
+ * so the light aims at the artwork, not the origin.
  */
 export function ArtworkLighting({ slotX, slotZ, castShadow = true }: { slotX: number; slotZ: number; castShadow?: boolean }) {
   const target = useMemo(() => {
@@ -16,49 +21,41 @@ export function ArtworkLighting({ slotX, slotZ, castShadow = true }: { slotX: nu
 
   return (
     <>
-      {/* Ceiling track light — wide, soft, from above and in front */}
+      <primitive object={target} />
+
+      {/* Ceiling track — directly above the artwork */}
       <spotLight
-        position={[slotX, WALL_HEIGHT + 0.3, slotZ + 0.3]}
+        position={[slotX, WALL_HEIGHT, slotZ + 0.15]}
         target={target}
-        angle={0.75}
-        penumbra={1.0}
-        intensity={8}
-        distance={8}
+        angle={0.55}
+        penumbra={0.8}
+        intensity={12}
+        distance={5}
         color="#fffef8"
       />
 
-      {/* Top wall wash — from wall-top, medium spread */}
+      {/* Wall wash — from wall-top, tight to wall (only this one casts shadows) */}
       <spotLight
-        position={[slotX, WALL_HEIGHT - 0.15, slotZ + 1.5]}
+        position={[slotX, WALL_HEIGHT - 0.2, slotZ + 0.3]}
         target={target}
-        angle={0.6}
-        penumbra={0.9}
-        intensity={12}
-        distance={10}
+        angle={0.5}
+        penumbra={0.7}
+        intensity={16}
+        distance={5}
         color="#fffaf0"
         castShadow={castShadow}
-        shadow-mapSize-width={castShadow ? 256 : undefined}
-        shadow-mapSize-height={castShadow ? 256 : undefined}
+        shadow-mapSize-width={castShadow ? 128 : undefined}
+        shadow-mapSize-height={castShadow ? 128 : undefined}
+        shadow-bias={-0.0005}
       />
 
-      {/* Floor uplight — wide beam aimed up at artwork from below */}
-      <spotLight
-        position={[slotX, 0.1, slotZ + 1.0]}
-        target={target}
-        angle={0.7}
-        penumbra={1.0}
-        intensity={6}
-        distance={7}
-        color="#fef9f0"
-      />
-
-      {/* Floor fill point light — soft ambient wash from floor level */}
+      {/* Floor fill — single wide fill, no shadow */}
       <pointLight
-        position={[slotX, 0.15, slotZ + 2.0]}
-        intensity={2}
+        position={[slotX, 0.12, slotZ + 2.5]}
+        intensity={5}
         distance={6}
         decay={2.5}
-        color="#fff5ee"
+        color="#fef9f0"
       />
     </>
   )
@@ -74,34 +71,39 @@ export function PedestalSpot({ x, z, castShadow = true }: { x: number; z: number
 
   return (
     <>
-      {/* Ceiling track for pedestal */}
+      <primitive object={target} />
+
+      {/* Ceiling track */}
       <spotLight
-        position={[x, WALL_HEIGHT + 0.3, z - 0.3]}
+        position={[x, WALL_HEIGHT, z - 0.15]}
         target={target}
-        angle={0.6}
-        penumbra={0.9}
-        intensity={8}
-        distance={7}
+        angle={0.45}
+        penumbra={0.7}
+        intensity={10}
+        distance={5}
         color="#fffef8"
       />
-      {/* Main pedestal spot */}
+
+      {/* Main spot — from wall direction */}
       <spotLight
-        position={[x, WALL_HEIGHT - 0.3, z + 0.6]}
+        position={[x, WALL_HEIGHT - 0.3, z - 0.15]}
         target={target}
-        angle={0.5}
-        penumbra={0.85}
-        intensity={16}
-        distance={8}
+        angle={0.4}
+        penumbra={0.6}
+        intensity={20}
+        distance={5}
         color="#fffaf0"
         castShadow={castShadow}
-        shadow-mapSize-width={castShadow ? 256 : undefined}
-        shadow-mapSize-height={castShadow ? 256 : undefined}
+        shadow-mapSize-width={castShadow ? 128 : undefined}
+        shadow-mapSize-height={castShadow ? 128 : undefined}
+        shadow-bias={-0.0005}
       />
+
       {/* Floor fill */}
       <pointLight
-        position={[x, 0.3, z + 1.0]}
+        position={[x, 0.15, z + 0.2]}
         intensity={2}
-        distance={5}
+        distance={3}
         decay={2.5}
         color="#fff5ee"
       />

@@ -1,4 +1,4 @@
-import { useRef, memo } from 'react'
+import { useRef, useMemo, useEffect, memo } from 'react'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Hall3DArtwork } from './Hall3DScene'
@@ -20,6 +20,25 @@ const FRAME_DEPTH = 0.025
 const MAT_BORDER = 0.06
 const WALL_OFFSET = 0.015
 
+/**
+ * Compute artwork-plane dimensions that fit within [maxW, maxH]
+ * while preserving the texture's native aspect ratio.
+ * Falls back to maxW × maxH when the texture hasn't loaded yet.
+ */
+function fitAspect(
+  image: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap | undefined,
+  maxW: number,
+  maxH: number,
+): { w: number; h: number } {
+  if (!image || !image.width || !image.height) return { w: maxW, h: maxH }
+  const imgAspect = image.width / image.height
+  const frameAspect = maxW / maxH
+  if (imgAspect > frameAspect) {
+    return { w: maxW, h: maxW / imgAspect }
+  }
+  return { w: maxH * imgAspect, h: maxH }
+}
+
 /** A framed 2D artwork on the gallery wall — poster texture, mat, and wooden frame. */
 export const FramedArtwork = memo(function FramedArtwork({
   artwork,
@@ -34,6 +53,12 @@ export const FramedArtwork = memo(function FramedArtwork({
 }: FramedArtworkProps) {
   const groupRef = useRef<THREE.Group>(null!)
 
+  // Fit artwork inside the allocated space while preserving native aspect ratio
+  const { w: artW, h: artH } = useMemo(
+    () => fitAspect(texture?.image as HTMLImageElement | undefined, width, height),
+    [texture, width, height],
+  )
+
   // Frame dimensions: artwork + mat border on each side + frame thickness
   const frameOuterW = width + MAT_BORDER * 2
   const frameOuterH = height + MAT_BORDER * 2
@@ -46,15 +71,15 @@ export const FramedArtwork = memo(function FramedArtwork({
       onPointerLeave={() => onHover(false)}
       onClick={onClick}
     >
-      {/* Mat / passe-partout — dark rectangle behind the artwork */}
+      {/* Mat / passe-partout — extends to the frame, artwork sits inside */}
       <mesh position={[0, 0, WALL_OFFSET]} castShadow>
         <planeGeometry args={[frameOuterW, frameOuterH]} />
         <meshStandardMaterial color="#f5f0eb" roughness={0.6} />
       </mesh>
 
-      {/* Artwork poster plane */}
+      {/* Artwork poster plane — sized to native aspect ratio, centered in frame */}
       <mesh position={[0, 0, WALL_OFFSET + 0.001]} castShadow>
-        <planeGeometry args={[width, height]} />
+        <planeGeometry args={[artW, artH]} />
         <meshStandardMaterial
           map={texture}
           roughness={0.55}
@@ -107,7 +132,8 @@ export const FramedArtwork = memo(function FramedArtwork({
   )
 })
 
-/** Four frame strips forming a rectangular border, styled by frameStyle preset. */
+/** Single merged frame geometry — outer rectangle with inner hole, extruded.
+ *  Replaces 4 separate box meshes with 1 draw call per artwork frame. */
 function FrameBox({
   frameOuterW,
   frameOuterH,
@@ -123,45 +149,62 @@ function FrameBox({
 }) {
   const preset = FRAME_PRESETS[frameStyle] ?? FRAME_PRESETS.classic
   const thickness = preset.thickness
-  const halfW = frameOuterW / 2
-  const halfH = frameOuterH / 2
-  const halfT = thickness / 2
-  const stripColor = hovered ? preset.hoverColor : preset.color
+  const hw = frameOuterW / 2
+  const hh = frameOuterH / 2
+
+  const geometry = useMemo(() => {
+    const outer = new THREE.Shape()
+    outer.moveTo(-hw - thickness, -hh - thickness)
+    outer.lineTo( hw + thickness, -hh - thickness)
+    outer.lineTo( hw + thickness,  hh + thickness)
+    outer.lineTo(-hw - thickness,  hh + thickness)
+    outer.closePath()
+
+    const hole = new THREE.Path()
+    hole.moveTo(-hw, -hh)
+    hole.lineTo( hw, -hh)
+    hole.lineTo( hw,  hh)
+    hole.lineTo(-hw,  hh)
+    hole.closePath()
+    outer.holes.push(hole)
+
+    return new THREE.ExtrudeGeometry(outer, { depth: FRAME_DEPTH, bevelEnabled: false })
+  }, [hw, hh, thickness])
+
+  useEffect(() => {
+    return () => geometry.dispose()
+  }, [geometry])
+
+  const rosThickness = thickness * 0.7
+  const rosGeometry = useMemo(() => new THREE.SphereGeometry(rosThickness, 8, 4), [rosThickness])
 
   // Floating frame: just the mat, no visible frame
   if (frameStyle === 'floating') return null
 
+  const stripColor = hovered ? preset.hoverColor : preset.color
   const stripEmissive = hovered ? '#1a1a18' : '#000000'
 
   return (
     <group>
-      {/* Top */}
-      <mesh position={[0, halfH + halfT, zOffset]} castShadow>
-        <boxGeometry args={[frameOuterW + thickness * 2, thickness, FRAME_DEPTH]} />
-        <meshStandardMaterial color={stripColor} roughness={preset.roughness} metalness={preset.metalness} emissive={stripEmissive} emissiveIntensity={0.15} />
-      </mesh>
-      {/* Bottom */}
-      <mesh position={[0, -halfH - halfT, zOffset]} castShadow>
-        <boxGeometry args={[frameOuterW + thickness * 2, thickness, FRAME_DEPTH]} />
-        <meshStandardMaterial color={stripColor} roughness={preset.roughness} metalness={preset.metalness} emissive={stripEmissive} emissiveIntensity={0.15} />
-      </mesh>
-      {/* Left */}
-      <mesh position={[-halfW - halfT, 0, zOffset]} castShadow>
-        <boxGeometry args={[thickness, frameOuterH, FRAME_DEPTH]} />
-        <meshStandardMaterial color={stripColor} roughness={preset.roughness} metalness={preset.metalness} emissive={stripEmissive} emissiveIntensity={0.15} />
-      </mesh>
-      {/* Right */}
-      <mesh position={[halfW + halfT, 0, zOffset]} castShadow>
-        <boxGeometry args={[thickness, frameOuterH, FRAME_DEPTH]} />
-        <meshStandardMaterial color={stripColor} roughness={preset.roughness} metalness={preset.metalness} emissive={stripEmissive} emissiveIntensity={0.15} />
+      <mesh
+        position={[0, 0, zOffset - FRAME_DEPTH / 2]}
+        geometry={geometry}
+        castShadow
+      >
+        <meshStandardMaterial
+          color={stripColor}
+          roughness={preset.roughness}
+          metalness={preset.metalness}
+          emissive={stripEmissive}
+          emissiveIntensity={0.15}
+        />
       </mesh>
 
       {/* Ornate: corner rosettes */}
       {frameStyle === 'ornate' && (
         <>
           {[[-1,-1],[1,-1],[-1,1],[1,1]].map(([sx, sy], i) => (
-            <mesh key={i} position={[sx * (halfW + halfT), sy * (halfH + halfT), zOffset + 0.005]} castShadow>
-              <sphereGeometry args={[thickness * 0.7, 8, 4]} />
+            <mesh key={i} position={[sx * (hw + thickness / 2), sy * (hh + thickness / 2), zOffset + 0.005]} geometry={rosGeometry} castShadow>
               <meshStandardMaterial color={stripColor} roughness={0.3} metalness={0.7} />
             </mesh>
           ))}

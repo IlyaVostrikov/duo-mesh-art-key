@@ -30,8 +30,8 @@ export function createUploadRoutes() {
     const svc = c.get('uploadService')
 
     try {
-      const files = await svc.processUploads(authUser.userId, formData)
-      return c.json({ files }, 201)
+      const { files, hashes } = await svc.processUploads(authUser.userId, formData)
+      return c.json({ files, hashes }, 201)
     } catch (err) {
       if (err instanceof UploadValidationError) {
         return c.json({ error: err.code, message: err.message }, 400)
@@ -106,8 +106,8 @@ export function createUploadRoutes() {
     try {
       await svc.deleteFile(key)
       return c.json({ ok: true }, 200)
-    } catch (err) {
-      return c.json({ error: 'DELETE_FAILED', message: String(err) }, 500)
+    } catch {
+      return c.json({ error: 'DELETE_FAILED', message: 'Failed to delete file' }, 500)
     }
   })
 

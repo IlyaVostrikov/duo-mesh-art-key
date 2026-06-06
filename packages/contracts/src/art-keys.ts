@@ -10,6 +10,8 @@ export const artKeySchema = z.object({
   certificatePdfUrl: z.string().nullable(),
   qrCodeUrl: z.string().nullable(),
   nfcId: z.string().nullable(),
+  timestampToken: z.string().nullable(),
+  platformSignature: z.string().nullable(),
   issuedAt: z.string().datetime(),
   revokedAt: z.string().datetime().nullable(),
 })
@@ -36,6 +38,9 @@ export const provenanceRecordSchema = z.object({
   transactionHash: z.string().nullable(),
   recordHash: z.string(),
   prevRecordHash: z.string().nullable(),
+  signature: z.string().nullable(),
+  signerPublicKey: z.string().nullable(),
+  signerRole: z.string().nullable(),
   notes: z.string().nullable(),
   createdAt: z.string().datetime(),
   fromOwnerName: z.string().nullable(),
@@ -45,7 +50,7 @@ export const provenanceRecordSchema = z.object({
 export const artKeyVerificationSchema = z.object({
   artKey: artKeyPublicSchema,
   provenance: z.array(provenanceRecordSchema),
-  isValid: z.boolean(),
+  verified: z.boolean(),
   currentOwner: z.string().nullable(),
 })
 

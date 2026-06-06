@@ -32,5 +32,8 @@
     "test:webapp": "bun run --cwd webapp test",
     "smoke:backend:docker": "bun run --cwd backend smoke:docker",
     "e2e:webapp": "bun run --cwd webapp e2e"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
   }
 }

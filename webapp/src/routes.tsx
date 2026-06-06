@@ -26,6 +26,9 @@ import { FollowingPage } from './pages/collection/FollowingPage'
 import { AdminDashboard } from './pages/admin/AdminDashboard'
 import { AdminUsers } from './pages/admin/AdminUsers'
 import { AdminArtworks } from './pages/admin/AdminArtworks'
+import { TrustModel } from './pages/TrustModel'
+import { HowItWorks } from './pages/HowItWorks'
+import { DashboardKeys } from './pages/dashboard/DashboardKeys'
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -192,6 +195,27 @@ const followingRoute = createRoute({
   component: FollowingPage,
 })
 
+// Trust model page
+const trustRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/trust',
+  component: TrustModel,
+})
+
+// How it works page
+const howItWorksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/how-it-works',
+  component: HowItWorks,
+})
+
+// Dashboard keys
+const dashboardKeysRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard/keys',
+  component: DashboardKeys,
+})
+
 // Admin routes
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -233,9 +257,12 @@ const routeTree = rootRoute.addChildren([
   collectionRoute,
   savedRoute,
   followingRoute,
+  trustRoute,
+  howItWorksRoute,
   adminRoute,
   adminUsersRoute,
   adminArtworksRoute,
+  dashboardKeysRoute,
   verifyRoute,
   verifyKeyCodeRoute,
 ])

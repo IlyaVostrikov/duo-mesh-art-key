@@ -1,13 +1,11 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ModelViewer3D } from '@/components/artwork/ModelViewer3D'
 import { ParticleField } from '@/components/motion/ParticleField'
-import { SplitText } from '@/components/motion/SplitText'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Typography } from '@/components/ui/typography'
 import { LabelBar } from '@/components/ui/label-bar'
-import { MuseumLabel } from '@/components/ui/museum-label'
 import { parseBilingualTitle } from '@/lib/utils'
 import { assetUrl } from '@/lib/asset-url'
 
@@ -24,12 +22,33 @@ interface HeroProps {
   lang: 'ru' | 'en'
 }
 
-const MISSION = 'Цифровое искусство с доказуемой подлинностью'
-const SUB = 'Виртуальные 3D-галереи, SHA-256 ArtKey-сертификаты и provenance-цепочки — платформа для художников и коллекционеров нового поколения.'
+const MISSION_RU = 'Каждая работа заслуживает доказуемой подлинности.'
+const SUB_RU = 'ArtKey — не блокчейн. Криптографическая provenance-система, которая даёт каждому произведению неподделываемую историю.'
+
+const FP = 'a3f9c27e'
+const HEX = '0123456789abcdef'
 
 export function LandingHero({ heroWork, lang: _lang }: HeroProps) {
   const [artworkRu] = heroWork ? parseBilingualTitle(heroWork.title) : ['']
   const spotlightRef = useRef<HTMLDivElement>(null)
+  const fpRef = useRef<HTMLElement>(null)
+
+  // Live fingerprint scramble
+  useEffect(() => {
+    const fpEl = fpRef.current
+    if (!fpEl) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduced) { fpEl.textContent = FP; return }
+
+    const interval = setInterval(() => {
+      if (Math.random() < 0.05) {
+        const i = (Math.random() * FP.length) | 0
+        fpEl.textContent = FP.slice(0, i) + HEX[(Math.random() * 16) | 0] + FP.slice(i + 1)
+        setTimeout(() => { fpEl.textContent = FP }, 90)
+      }
+    }, 200)
+    return () => clearInterval(interval)
+  }, [])
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
     const el = spotlightRef.current
@@ -38,7 +57,7 @@ export function LandingHero({ heroWork, lang: _lang }: HeroProps) {
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
     requestAnimationFrame(() => {
-      el.style.background = `radial-gradient(500px circle at ${x}px ${y}px, rgba(198,255,58,0.035), transparent 65%)`
+      el.style.background = `radial-gradient(500px circle at ${x}px ${y}px, rgba(198,255,58,0.025), transparent 65%)`
       el.style.opacity = '1'
     })
   }, [])
@@ -50,7 +69,7 @@ export function LandingHero({ heroWork, lang: _lang }: HeroProps) {
 
   return (
     <section
-      className="relative mx-auto w-full max-w-6xl overflow-hidden px-5 py-12 lg:py-20"
+      className="ak-hero"
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
     >
@@ -62,163 +81,88 @@ export function LandingHero({ heroWork, lang: _lang }: HeroProps) {
         style={{ opacity: 0, transition: 'opacity 0.5s ease' }}
       />
 
-      <LabelBar
-        left="Платформа верифицированного цифрового искусства"
-        right="2026"
-      />
+      <div className="ak-hero-stage">
+        {/* Mono kicker */}
+        <p className="ak-kicker ak-hero-kicker">
+          Цифровая галерея&nbsp;·&nbsp;DUO MESH
+        </p>
 
-      {/* Main grid */}
-      <div className="relative z-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_1px_480px] lg:items-start">
-
-        {/* Left column — text */}
-        <div className="grid gap-6">
-
-          {/* Shimmer badge */}
-          <Badge
-            variant="outline"
-            className="w-fit border-accent/30 text-accent relative overflow-hidden"
+        {/* Artwork with frame corners */}
+        {heroWork ? (
+          <div
+            className="ak-artframe"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(198,255,58,0.08) 50%, transparent 100%)',
-              backgroundSize: '200% 100%',
-              animation: 'shimmer 3.5s ease-in-out infinite',
+              width: 'clamp(260px, 30vw, 380px)',
+              height: 'clamp(340px, 40vw, 500px)',
             }}
           >
-            DUO MESH
-          </Badge>
-
-          <SplitText
-            text={MISSION}
-            as="h1"
-            mode="words"
-            stagger={0.04}
-            duration={0.5}
-            direction="up"
-            className="text-display max-w-[600px]"
-            style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 4.5vw, 4rem)' }}
-          />
-
-          <Typography
-            variant="body"
-            font="sans"
-            tone="muted"
-            className="max-w-xl"
-          >
-            {SUB}
-          </Typography>
-
-          <div className="flex flex-wrap gap-3">
-            <Button asChild size="lg">
-              <Link to="/gallery">Смотреть галерею</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link to="/verify">Проверить сертификат</Link>
-            </Button>
-          </div>
-
-          {heroWork && artworkRu && (
-            <div
-              className="grid gap-1 pt-5"
-              style={{ borderTop: '1px solid var(--border)' }}
-            >
-              <span className="text-kicker" style={{ color: 'var(--text-muted)' }}>
-                Избранная работа
-              </span>
-              <div className="flex items-baseline gap-2 flex-wrap">
-                <Link
-                  to="/artwork/$artworkId"
-                  params={{ artworkId: heroWork.id }}
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '1.05rem',
-                    fontWeight: 500,
-                    color: 'var(--accent)',
-                    textDecoration: 'none',
-                  }}
-                >
-                  {artworkRu}
-                </Link>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>—</span>
-                {heroWork.artist.hallSlug ? (
-                  <Link
-                    to="/hall/$hallSlug"
-                    params={{ hallSlug: heroWork.artist.hallSlug }}
-                    style={{
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: '0.875rem',
-                      color: 'var(--text-secondary)',
-                      textDecoration: 'none',
-                    }}
-                  >
-                    {heroWork.artist.displayName}
-                  </Link>
-                ) : (
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                    {heroWork.artist.displayName}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Vertical divider */}
-        <div
-          className="hidden lg:block"
-          style={{ background: 'var(--border)', minHeight: '500px' }}
-        />
-
-        {/* Right column — 3D model or image */}
-        <div className="relative z-10">
-          {heroWork && heroWork.mediaType === 'MODEL_3D' && heroWork.modelUrl ? (
-            <div
-              className="overflow-hidden rounded-lg border relative"
-              style={{
-                height: '68vh',
-                minHeight: '480px',
-                animation: 'float 7s ease-in-out infinite, glow-pulse 4s ease-in-out infinite',
-                borderColor: 'var(--border)',
-              }}
-              data-lenis-prevent
-            >
+            {heroWork.mediaType === 'MODEL_3D' && heroWork.modelUrl ? (
               <ModelViewer3D
                 modelUrl={heroWork.modelUrl}
                 posterUrl={assetUrl(heroWork.posterUrl)}
                 iosSrc={heroWork.modelUrl.replace(/\.(glb|gltf)$/i, '.usdz')}
               />
-            </div>
-          ) : heroWork ? (
-            <div
-              className="overflow-hidden rounded-lg border"
-              style={{
-                height: '68vh',
-                minHeight: '480px',
-                animation: 'float 7s ease-in-out infinite, glow-pulse 4s ease-in-out infinite',
-                borderColor: 'var(--border)',
-              }}
-            >
+            ) : (
               <img
                 src={assetUrl(heroWork.posterUrl)}
                 alt={artworkRu}
-                className="h-full w-full object-cover"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', background: 'var(--ak-noir)' }}
               />
-            </div>
-          ) : (
-            <div
-              className="flex items-center justify-center rounded-lg border bg-surface-2"
-              style={{ height: '68vh', minHeight: '480px' }}
-            >
-              <Typography tone="muted">Загрузка...</Typography>
-            </div>
-          )}
+            )}
+            <span className="ak-frame-corner ak-tl" />
+            <span className="ak-frame-corner ak-tr" />
+            <span className="ak-frame-corner ak-bl" />
+            <span className="ak-frame-corner ak-br" />
+          </div>
+        ) : (
+          <div
+            style={{
+              width: 'clamp(260px, 30vw, 380px)',
+              height: 'clamp(340px, 40vw, 500px)',
+              background: 'var(--ak-noir)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <Typography tone="muted">Загрузка...</Typography>
+          </div>
+        )}
 
-          {heroWork && (
-            <MuseumLabel
-              artistName={heroWork.artist.displayName}
-              medium={heroWork.medium}
-              mediaType={heroWork.mediaType}
-            />
-          )}
+        {/* Provenance plate */}
+        {heroWork && (
+          <div className="ak-hero-plate">
+            <span className="ak-hp-dot" />
+            <span className="ak-hp-name">{artworkRu || heroWork.title} · 2026</span>
+            <span className="ak-hp-sep">·</span>
+            <span className="ak-hp-fp">
+              ArtKey №0001 · <b ref={fpRef}>{FP}</b>
+            </span>
+          </div>
+        )}
+
+        {/* Manifesto headline */}
+        <h1 className="ak-hero-head">
+          {MISSION_RU}
+        </h1>
+        <p className="ak-hero-sub body">
+          <b>ArtKey</b> — не блокчейн. Криптографическая provenance-система,
+          которая даёт каждому произведению неподделываемую историю.
+        </p>
+
+        {/* CTA buttons */}
+        <div className="flex flex-wrap gap-3" style={{ fontFamily: 'var(--ak-font)' }}>
+          <Button asChild size="lg">
+            <Link to="/gallery">Смотреть галерею</Link>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link to="/verify">Проверить сертификат</Link>
+          </Button>
         </div>
+      </div>
+
+      {/* Scroll cue */}
+      <div className="ak-scrollcue">
+        <span>Пройдите путь работы</span>
+        <span className="ak-rail" />
       </div>
     </section>
   )

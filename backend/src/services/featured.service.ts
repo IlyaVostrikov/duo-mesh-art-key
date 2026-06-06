@@ -44,11 +44,12 @@ export class FeaturedService {
     halls: Array<{ slug: string; title: string; coverImageUrl: string | null; viewCount: number; artworkCount: number; theme: string | null; artist: { id: string; displayName: string | null; avatarUrl: string | null } }>
   }> {
     const heroArtistSlug = ARTWORK_ARTIST[FEATURED_CONFIG.heroArtworkSlug]
+    if (!heroArtistSlug) return { hero: null, works: [], artists: [], halls: [] }
     const heroId = makeDeterministicId(heroArtistSlug, FEATURED_CONFIG.heroArtworkSlug)
 
-    const featuredIds = FEATURED_CONFIG.featuredArtworkSlugs.map((slug) =>
-      makeDeterministicId(ARTWORK_ARTIST[slug], slug),
-    )
+    const featuredIds = FEATURED_CONFIG.featuredArtworkSlugs
+      .filter((slug) => ARTWORK_ARTIST[slug] !== undefined)
+      .map((slug) => makeDeterministicId(ARTWORK_ARTIST[slug], slug))
 
     const featuredHallSlugs = FEATURED_CONFIG.featuredArtistSlugs.map((slug) => {
       // Map artist slugs → hall slugs (from seed: elena-volkova → volkova-gallery, etc.)

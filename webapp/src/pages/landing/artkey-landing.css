@@ -1,0 +1,337 @@
+/* ============================================================
+   ArtKey Landing — museum minimalism overrides
+   Scoped to .artkey-landing container
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --ak-paper:      #f4f3f1;
+  --ak-paper-2:    #ece9e4;
+  --ak-ink:        #16140f;
+  --ak-ink-2:      rgba(22,20,15,.62);
+  --ak-ink-3:      rgba(22,20,15,.40);
+  --ak-hair:       rgba(22,20,15,.14);
+  --ak-hair-soft:  rgba(22,20,15,.07);
+  --ak-noir:       #0c0b0a;
+  --ak-on-noir:    #efece6;
+  --ak-on-noir-2:  rgba(239,236,230,.58);
+  --ak-on-noir-3:  rgba(239,236,230,.30);
+  --ak-hair-noir:  rgba(239,236,230,.16);
+  --ak-font:       'Space Grotesk', system-ui, sans-serif;
+  --ak-mono:       'Space Mono', ui-monospace, monospace;
+  --ak-ease:       cubic-bezier(.22,.61,.16,1);
+}
+
+.artkey-landing {
+  font-family: var(--ak-font);
+  background: var(--ak-paper);
+  color: var(--ak-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Kicker (mono label) ─── */
+.ak-kicker {
+  font-family: var(--ak-mono);
+  font-size: clamp(10px, 1vw, 12.5px);
+  letter-spacing: .34em;
+  text-transform: uppercase;
+  color: var(--ak-ink-3);
+  font-weight: 400;
+}
+.ak-kicker .ak-num { color: var(--ak-ink); }
+
+/* ─── Reveal animation (JS drives via inline style) ─── */
+.ak-reveal { will-change: opacity, transform; }
+
+/* ─── Dot ping ─── */
+@keyframes akPing {
+  0% { transform: scale(1); opacity: .5; }
+  70%, 100% { transform: scale(3.4); opacity: 0; }
+}
+
+/* ─── Floating frame ─── */
+@keyframes akFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+
+/* ─── Rail scroll cue ─── */
+@keyframes akRailRun {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(300%); }
+}
+
+/* ─── Shimmer ─── */
+@keyframes akShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ═══════════════════════════════════════════
+   MANIFESTO
+   ═══════════════════════════════════════════ */
+.ak-manifesto {
+  position: relative; z-index: 2;
+  padding: clamp(120px, 18vh, 220px) clamp(20px, 4vw, 52px);
+  max-width: 1320px; margin: 0 auto;
+}
+.ak-manifesto-grid {
+  display: grid; grid-template-columns: 1fr; gap: clamp(40px, 6vw, 90px);
+}
+.ak-manifesto-head {
+  font-size: clamp(1.8rem, 4.4vw, 3.6rem);
+  font-weight: 300; letter-spacing: -.022em; line-height: 1.12; max-width: 24ch;
+}
+.ak-manifesto-head em { font-style: normal; color: var(--ak-ink-3); }
+.ak-def-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: clamp(24px, 3vw, 52px);
+  border-top: 1px solid var(--ak-hair); padding-top: 36px;
+}
+.ak-def h4 {
+  font-family: var(--ak-mono); font-size: 11px; letter-spacing: .24em;
+  text-transform: uppercase; color: var(--ak-ink-3); font-weight: 400; margin-bottom: 14px;
+}
+.ak-def p {
+  font-weight: 400; color: var(--ak-ink-2); line-height: 1.55;
+  font-size: clamp(14px, 1.1vw, 16px);
+}
+@media (max-width: 760px) { .ak-def-row { grid-template-columns: 1fr; gap: 28px; } }
+
+/* ═══════════════════════════════════════════
+   SHA-256 BIRTH (dark)
+   ═══════════════════════════════════════════ */
+.ak-sha {
+  position: relative; height: 380vh;
+  background: var(--ak-noir); color: var(--ak-on-noir);
+}
+.ak-sha .ak-stage {
+  position: sticky; top: 0; height: 100svh; overflow: hidden;
+  display: grid; place-items: center;
+}
+.ak-sha .ak-stage::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 46%;
+  background: linear-gradient(to top, rgba(12,11,10,.92), rgba(12,11,10,0));
+  pointer-events: none; z-index: 2;
+}
+.ak-sha canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+}
+.ak-sha-ui {
+  position: relative; z-index: 3; width: 100%; height: 100%;
+  display: grid; grid-template-rows: auto 1fr;
+  padding: clamp(90px, 12vh, 140px) clamp(20px, 4vw, 52px) clamp(50px, 8vh, 90px);
+  pointer-events: none;
+}
+.ak-sha-top { text-align: center; }
+.ak-sha-top .ak-kicker { color: var(--ak-on-noir-3); }
+.ak-sha-top .ak-kicker .ak-num { color: var(--ak-on-noir); }
+.ak-sha-lower {
+  align-self: end; display: flex; flex-direction: column; align-items: center;
+  gap: clamp(20px, 3.4vh, 38px);
+}
+.ak-sha-beats { position: relative; width: 100%; min-height: 118px; }
+.ak-sha-beat {
+  position: absolute; left: 0; right: 0; top: 0; text-align: center;
+  opacity: 0; transition: none;
+}
+.ak-sha-beat h3 {
+  font-size: clamp(1.5rem, 3.6vw, 3rem); font-weight: 300;
+  letter-spacing: -.02em; line-height: 1.08;
+}
+.ak-sha-beat p {
+  margin-top: 14px; color: var(--ak-on-noir-2);
+  font-size: clamp(14px, 1.1vw, 17px); line-height: 1.5;
+}
+.ak-sha-hash {
+  text-align: center; min-height: 46px; opacity: 0;
+  font-family: var(--ak-mono); font-size: clamp(11px, 1.25vw, 15px);
+  letter-spacing: .22em; color: var(--ak-on-noir-2);
+  word-break: break-all; line-height: 1.9;
+  max-width: min(720px, 86vw); margin: 0 auto;
+}
+.ak-sha-hash .ak-lbl {
+  display: block; color: var(--ak-on-noir-3); letter-spacing: .4em;
+  margin-bottom: 14px; font-size: 10px;
+}
+.ak-sha-hash b {
+  color: var(--ak-on-noir); font-weight: 400;
+  text-shadow: 0 0 18px rgba(239,236,230,.35);
+}
+
+/* ═══════════════════════════════════════════
+   OWNERSHIP CHAIN
+   ═══════════════════════════════════════════ */
+.ak-chain {
+  position: relative; height: 340vh; background: var(--ak-paper);
+}
+.ak-chain .ak-stage {
+  position: sticky; top: 0; height: 100svh; overflow: hidden;
+  display: grid; grid-template-rows: auto 1fr;
+  padding: clamp(96px, 12vh, 140px) clamp(20px, 4vw, 52px) clamp(60px, 8vh, 90px);
+}
+.ak-chain-head { max-width: 1320px; margin: 0 auto; width: 100%; text-align: center; }
+.ak-chain-head h2 {
+  font-size: clamp(1.6rem, 3.8vw, 3.2rem); font-weight: 300;
+  letter-spacing: -.022em; line-height: 1.1;
+  max-width: 24ch; margin: 18px auto 0;
+}
+.ak-chain-stage-inner {
+  position: relative; width: 100%; max-width: 1180px;
+  margin: auto; align-self: center;
+}
+.ak-chain-track {
+  position: relative; height: 1px;
+  background: var(--ak-hair);
+  width: auto; margin: 0 clamp(46px, 8vw, 110px);
+}
+.ak-chain-nodes {
+  position: absolute; inset: 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ak-chain-foot {
+  text-align: center; margin-top: clamp(80px, 12vh, 130px);
+  font-family: var(--ak-mono); font-size: 11px; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--ak-ink-3);
+}
+
+/* ─── Node ─── */
+.ak-node { position: relative; width: 0; display: flex; justify-content: center; }
+.ak-node-dot {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--ak-paper); border: 1.5px solid var(--ak-hair);
+  transition: background .5s var(--ak-ease), border-color .5s var(--ak-ease), box-shadow .5s var(--ak-ease);
+}
+.ak-node-role {
+  position: absolute; top: 30px; left: 50%;
+  transform: translateX(-50%) translateY(8px); white-space: nowrap;
+  font-weight: 500; font-size: clamp(13px, 1.15vw, 16px);
+  letter-spacing: -.01em; opacity: 0;
+  transition: opacity .4s var(--ak-ease), transform .4s var(--ak-ease);
+}
+.ak-node-ico {
+  position: absolute; bottom: 24px; left: 50%;
+  transform: translateX(-50%) scale(.7);
+  width: 46px; height: 46px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--ak-paper); border: 1px solid var(--ak-hair);
+  color: var(--ak-ink-3); opacity: 0;
+  transition: opacity .4s var(--ak-ease), transform .4s var(--ak-ease),
+              border-color .5s var(--ak-ease), color .5s var(--ak-ease);
+}
+.ak-node-ico svg { width: 23px; height: 23px; }
+.ak-node-hash {
+  position: absolute; bottom: 78px; left: 50%;
+  transform: translateX(-50%) translateY(6px); white-space: nowrap;
+  font-family: var(--ak-mono); font-size: 9.5px; letter-spacing: .08em;
+  color: var(--ak-ink-3);
+  padding: 3px 8px; border: 1px solid var(--ak-hair-soft);
+  border-radius: 2px; background: var(--ak-paper); opacity: 0;
+  transition: opacity .4s var(--ak-ease), transform .4s var(--ak-ease);
+}
+.ak-node-tick {
+  position: absolute; left: 50%; bottom: 50%;
+  width: 1px; background: var(--ak-hair);
+  transform: translateX(-50%);
+  transition: height .4s var(--ak-ease);
+}
+.ak-node-ring {
+  position: absolute; inset: -1px; border-radius: 50%;
+  border: 1px solid var(--ak-ink);
+  opacity: 0; transform: scale(.5); pointer-events: none;
+  transition: opacity .3s var(--ak-ease), transform .3s var(--ak-ease);
+}
+.ak-node-stroke {
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+  transition: stroke-dashoffset .6s var(--ak-ease);
+}
+
+@media (max-width: 1040px) { .ak-node-hash { display: none; } }
+@media (max-width: 760px) {
+  .ak-node-role { font-size: 12px; }
+  .ak-node-ico { width: 38px; height: 38px; bottom: 20px; }
+  .ak-node-ico svg { width: 19px; height: 19px; }
+}
+
+/* ═══════════════════════════════════════════
+   HERO (ArtKey style)
+   ═══════════════════════════════════════════ */
+.ak-hero {
+  position: relative; z-index: 2; min-height: 100svh;
+  display: grid; grid-template-rows: 1fr auto;
+  padding: 0 clamp(20px, 4vw, 52px);
+}
+.ak-hero-stage {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 38px; padding-top: 80px;
+}
+.ak-hero-kicker { text-align: center; }
+.ak-artframe {
+  position: relative;
+  filter: drop-shadow(0 42px 60px rgba(22,20,15,.20)) drop-shadow(0 8px 18px rgba(22,20,15,.10));
+  animation: akFloat 9s ease-in-out infinite;
+}
+.ak-artframe .ak-frame-corner {
+  position: absolute; width: 14px; height: 14px;
+  border-width: 1.5px; border-style: solid;
+  border-color: var(--ak-ink); opacity: .5;
+}
+.ak-artframe .ak-frame-corner.ak-tl { top: -7px; left: -7px; border-right: none; border-bottom: none; }
+.ak-artframe .ak-frame-corner.ak-tr { top: -7px; right: -7px; border-left: none; border-bottom: none; }
+.ak-artframe .ak-frame-corner.ak-bl { bottom: -7px; left: -7px; border-right: none; border-top: none; }
+.ak-artframe .ak-frame-corner.ak-br { bottom: -7px; right: -7px; border-left: none; border-top: none; }
+.ak-hero-plate {
+  display: inline-flex; align-items: center; gap: 11px;
+  font-family: var(--ak-mono); font-size: 11px; letter-spacing: .12em;
+  color: var(--ak-ink-3);
+  padding: 9px 16px; border: 1px solid var(--ak-hair);
+  border-radius: 2px; background: rgba(244,243,241,.7);
+  backdrop-filter: blur(4px);
+}
+.ak-hero-plate .ak-hp-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ak-ink); flex: none; position: relative;
+}
+.ak-hero-plate .ak-hp-dot::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: var(--ak-ink);
+  animation: akPing 2.2s var(--ak-ease) infinite;
+}
+.ak-hero-plate .ak-hp-name { color: var(--ak-ink-2); }
+.ak-hero-plate .ak-hp-sep { opacity: .4; }
+.ak-hero-plate .ak-hp-fp b {
+  color: var(--ak-ink); font-weight: 400; letter-spacing: .08em;
+}
+.ak-hero-head {
+  text-align: center; max-width: 18ch;
+  font-size: clamp(2.1rem, 5.6vw, 4.6rem);
+  font-weight: 300; letter-spacing: -.025em; line-height: 1.02;
+}
+.ak-hero-sub { text-align: center; max-width: 42ch; margin: 0 auto; }
+.ak-hero-sub b { color: var(--ak-ink); font-weight: 500; }
+.ak-scrollcue {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding-bottom: 30px;
+  font-family: var(--ak-mono); font-size: 10px; letter-spacing: .3em;
+  text-transform: uppercase; color: var(--ak-ink-3);
+}
+.ak-scrollcue .ak-rail {
+  width: 1px; height: 46px; background: var(--ak-hair);
+  position: relative; overflow: hidden;
+}
+.ak-scrollcue .ak-rail::after {
+  content: ""; position: absolute; left: 0; top: -50%;
+  width: 100%; height: 50%; background: var(--ak-ink);
+  animation: akRailRun 2.6s var(--ak-ease) infinite;
+}
+
+/* ═══════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .ak-artframe { animation: none; }
+  .ak-scrollcue .ak-rail::after { animation: none; }
+  .ak-hero-plate .ak-hp-dot::after { animation: none; }
+}

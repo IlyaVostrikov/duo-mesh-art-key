@@ -23,6 +23,7 @@ maybeDescribe('auth API integration', () => {
     SPACES_UPLOAD_URL_TTL_SECONDS: 900,
     SPACES_DOWNLOAD_URL_TTL_SECONDS: 300,
     SPACES_PUBLIC_CACHE_CONTROL: 'public, max-age=31536000, immutable',
+    SECRET_STORE_KEY: 'test-secret-store-key-32-chars-min!!!',
   }
   const prisma = createPrisma(databaseUrl!)
   const app = createApp({ env, prisma })

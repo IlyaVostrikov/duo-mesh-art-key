@@ -3,9 +3,17 @@ import { useAuth } from '@/lib/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { DashboardLayout } from './DashboardLayout'
+import { CreateArtworkForm } from '@/components/artwork/CreateArtworkForm'
 import { apiBaseUrl } from '@/lib/api'
 
 type UploadedFile = { name: string; url: string; size: number; type: string }
+
+const ACCEPT_3D = '.glb,.gltf,.blend,.obj,.fbx,.stl,.usdz'
+const ACCEPT_ZIP = '.zip'
+const ACCEPT_IMAGE = '.jpg,.jpeg,.png,.webp,.svg'
+const ALL_ACCEPT = [ACCEPT_IMAGE, ACCEPT_ZIP, ACCEPT_3D].join(',')
+
+const MODEL_EXTENSIONS = new Set(['glb', 'gltf', 'blend', 'obj', 'fbx', 'stl', 'usdz'])
 
 export function DashboardMedia() {
   const auth = useAuth()
@@ -13,6 +21,9 @@ export function DashboardMedia() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
+
+  // Artwork creation from uploaded file
+  const [creatingFrom, setCreatingFrom] = useState<UploadedFile | null>(null)
 
   const uploadFile = useCallback(async (file: File) => {
     const formData = new FormData()
@@ -66,121 +77,186 @@ export function DashboardMedia() {
     if (e.target) e.target.value = ''
   }, [uploadFile])
 
+  const handleArtworkCreated = useCallback(() => {
+    setCreatingFrom(null)
+  }, [])
+
   return (
     <DashboardLayout>
-      <Card>
-        <CardHeader>
-          <CardTitle>Медиа / Media</CardTitle>
-          <CardDescription>
-            Загружайте изображения для работ и профиля. Поддерживаются JPG, PNG, WebP, SVG.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Drop zone */}
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={onDrop}
-            className="flex flex-col items-center justify-center gap-2 py-10 cursor-pointer transition-colors mb-6"
-            style={{
-              borderRadius: 'var(--radius)',
-              border: `2px dashed ${dragOver ? 'var(--accent)' : 'var(--border)'}`,
-              backgroundColor: dragOver ? 'rgba(var(--accent-rgb), 0.04)' : 'var(--bg)',
-            }}
-          >
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-              style={{ color: 'var(--text-muted)' }}>
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Перетащите файлы или{' '}
-              <label style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }}>
-                выберите на компьютере
-                <input type="file" accept=".jpg,.jpeg,.png,.webp,.svg" multiple onChange={onFileChange} className="hidden" />
-              </label>
-            </p>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              JPG, PNG, WebP, SVG · макс. 10 MB
-            </p>
+      {/* Inline artwork creation form */}
+      {creatingFrom && (
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+            <button
+              onClick={() => setCreatingFrom(null)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text-muted)', fontSize: '0.875rem',
+                display: 'flex', alignItems: 'center', gap: '4px',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              Назад к файлам / Back to files
+            </button>
           </div>
+          <CreateArtworkForm
+            onCreated={handleArtworkCreated}
+            onCancel={() => setCreatingFrom(null)}
+            preselectedPosterUrl={creatingFrom.url}
+            preselectedPosterName={creatingFrom.name}
+          />
+        </div>
+      )}
 
-          {uploading && (
-            <div className="flex items-center gap-2 mb-4">
-              <Spinner /> <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Загрузка... / Uploading...</span>
+      {!creatingFrom && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Медиа / Media</CardTitle>
+            <CardDescription>
+              Загружайте изображения и 3D-модели для работ. После загрузки нажмите «Создать работу» на файле.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Drop zone */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              className="flex flex-col items-center justify-center gap-2 py-10 cursor-pointer transition-colors mb-6"
+              style={{
+                borderRadius: 'var(--radius)',
+                border: `2px dashed ${dragOver ? 'var(--accent)' : 'var(--border)'}`,
+                backgroundColor: dragOver ? 'rgba(var(--accent-rgb), 0.04)' : 'var(--bg)',
+              }}
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                style={{ color: 'var(--text-muted)' }}>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                Перетащите файлы или{' '}
+                <label style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }}>
+                  выберите на компьютере
+                  <input type="file" accept={ALL_ACCEPT} multiple onChange={onFileChange} className="hidden" />
+                </label>
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                JPG, PNG, WebP, SVG, GLB, GLTF, BLEND, ZIP · макс. 100 MB для 3D
+              </p>
             </div>
-          )}
 
-          {error && (
-            <p className="text-sm px-4 py-3 rounded-lg mb-4" style={{
-              backgroundColor: 'var(--surface)', color: 'var(--accent)',
-              border: '1px solid var(--accent)',
-            }}>
-              {error}
-            </p>
-          )}
+            {uploading && (
+              <div className="flex items-center gap-2 mb-4">
+                <Spinner /> <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Загрузка... / Uploading...</span>
+              </div>
+            )}
 
-          {/* File grid */}
-          {files.length === 0 && !uploading ? (
-            <p className="text-sm py-8 text-center" style={{ color: 'var(--text-muted)' }}>
-              Нет загруженных файлов. Перетащите изображения в зону выше.
-            </p>
-          ) : (
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-              {files.map((f) => {
-                const key = f.url.replace('/uploads/', '')
-                const fullUrl = f.url.startsWith('/uploads/')
-                  ? `${apiBaseUrl}${f.url}`
-                  : f.url
-                return (
-                  <div
-                    key={f.url}
-                    className="relative group rounded-lg overflow-hidden"
-                    style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}
-                  >
-                    <div className="aspect-square">
-                      <img
-                        src={fullUrl}
-                        alt={f.name}
-                        className="w-full h-full"
-                        style={{ objectFit: 'cover' }}
-                        loading="lazy"
-                      />
-                    </div>
+            {error && (
+              <p className="text-sm px-4 py-3 rounded-lg mb-4" style={{
+                backgroundColor: 'var(--surface)', color: 'var(--accent)',
+                border: '1px solid var(--accent)',
+              }}>
+                {error}
+              </p>
+            )}
+
+            {/* File grid */}
+            {files.length === 0 && !uploading ? (
+              <p className="text-sm py-8 text-center" style={{ color: 'var(--text-muted)' }}>
+                Нет загруженных файлов. Перетащите изображения в зону выше.
+              </p>
+            ) : (
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                {files.map((f) => {
+                  const key = f.url.replace('/uploads/', '')
+                  const fullUrl = `${apiBaseUrl}${f.url}`
+                  const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+                  const isImage = f.type.startsWith('image/') && !MODEL_EXTENSIONS.has(ext)
+                  return (
                     <div
-                      className="absolute inset-0 flex items-end p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ background: 'linear-gradient(transparent 50%, rgba(0,0,0,0.6))' }}
+                      key={f.url}
+                      className="relative group rounded-lg overflow-hidden"
+                      style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}
                     >
-                      <div className="w-full flex items-center justify-between">
-                        <span className="text-xs text-white truncate flex-1 pr-2" title={f.name}>
-                          {f.name}
-                        </span>
+                      <div className="aspect-square">
+                        {isImage ? (
+                          <img
+                            src={fullUrl}
+                            alt={f.name}
+                            className="w-full h-full"
+                            style={{ objectFit: 'cover' }}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-2" style={{ backgroundColor: 'var(--bg)' }}>
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+                              style={{ color: 'var(--accent)' }}>
+                              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                              <path d="M2 17l10 5 10-5" />
+                              <path d="M2 12l10 5 10-5" />
+                            </svg>
+                            <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>.{ext}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Hover overlay with actions */}
+                      <div
+                        className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ background: 'rgba(0,0,0,0.65)' }}
+                      >
+                        {/* Create artwork button — primary action */}
+                        {isImage && (
+                          <button
+                            type="button"
+                            onClick={() => setCreatingFrom(f)}
+                            style={{
+                              padding: '6px 16px',
+                              fontSize: '0.8rem',
+                              fontWeight: 600,
+                              backgroundColor: 'var(--accent)',
+                              color: 'var(--accent-ink)',
+                              border: 'none',
+                              borderRadius: 'var(--radius)',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            + Создать работу / Create artwork
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => deleteFile(key)}
-                          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-xs"
-                          style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', cursor: 'pointer' }}
+                          className="shrink-0 px-3 py-1 rounded text-xs"
+                          style={{
+                            backgroundColor: 'rgba(255,255,255,0.15)',
+                            color: '#fff',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
                           title="Удалить / Delete"
                         >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
+                          Удалить / Delete
                         </button>
                       </div>
+
+                      {/* File info footer */}
+                      <div className="p-2">
+                        <p className="text-xs truncate" style={{ color: 'var(--text)' }}>{f.name}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatSize(f.size)}</p>
+                      </div>
                     </div>
-                    <div className="p-2">
-                      <p className="text-xs truncate" style={{ color: 'var(--text)' }}>{f.name}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatSize(f.size)}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </DashboardLayout>
   )
 }

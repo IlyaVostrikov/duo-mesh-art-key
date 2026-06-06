@@ -1,20 +1,24 @@
 import crypto from 'node:crypto'
 import type { DbClient } from '../db'
-
-function canonicalJSON(obj: Record<string, unknown>): string {
-  const sorted = Object.keys(obj)
-    .sort()
-    .reduce<Record<string, unknown>>((acc, key) => {
-      acc[key] = obj[key]
-      return acc
-    }, {})
-  return JSON.stringify(sorted)
-}
+import { canonicalJSON, compositeFileHash, hashPayload } from '../crypto'
+import type { SigningService, ProvenancePayload } from './signing.service'
+import { requestTimestamp } from '../crypto/timestamp'
+import { TransparencyLogService } from './transparency-log.service'
 
 export class ArtKeyService {
-  constructor(private prisma: DbClient) {}
+  constructor(
+    private prisma: DbClient,
+    private signingService?: SigningService,
+    private tsaUrl?: string,
+  ) {}
 
-  async generate(artworkId: string, artistId: string, userId: string) {
+  async generate(params: {
+    artworkId: string
+    artistId: string
+    userId: string
+    fileHashes: Record<string, string>
+  }) {
+    const { artworkId, artistId, userId, fileHashes } = params
     const existing = await this.prisma.artKey.findUnique({ where: { artworkId } })
     if (existing) return existing
 
@@ -23,15 +27,65 @@ export class ArtKeyService {
     const ownerKey = `X${crypto.randomBytes(4).toString('hex').toUpperCase()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
     const issuedAt = new Date()
 
-    const integrityHash = crypto
-      .createHash('sha256')
-      .update(canonicalJSON({ artworkId, keyCode, artistId, issuedAt: issuedAt.toISOString() }))
-      .digest('hex')
+    // Integrity hash is now a composite hash of all artwork file hashes
+    const integrityHash = Object.keys(fileHashes).length > 0
+      ? compositeFileHash(fileHashes)
+      : crypto.createHash('sha256').update(canonicalJSON({ artworkId, keyCode, artistId, issuedAt: issuedAt.toISOString() })).digest('hex')
 
     const certificateHash = crypto
       .createHash('sha256')
       .update(`${artworkId}:${keyCode}:${ownerKey}:${Date.now()}`)
       .digest('hex')
+
+    // Build genesis provenance payload
+    const genesisPayload: ProvenancePayload = {
+      artworkId,
+      sequence: 0,
+      eventType: 'CREATION',
+      fromOwner: null,
+      toOwner: userId,
+      occurredAt: issuedAt.toISOString(),
+      prevRecordHash: integrityHash,
+    }
+    const genesisRecordHash = hashPayload(genesisPayload)
+
+    // Sign genesis with artist's key (if signing service is available)
+    let signature: string | null = null
+    let signerPublicKey: string | null = null
+    let signerRole: string | null = null
+    let artistSigningKeyId: string | null = null
+    let platformSignature: string | null = null
+    let platformSigningKeyId: string | null = null
+
+    if (this.signingService) {
+      const artistKey = await this.signingService.getArtistActivePublicKey(artistId)
+      if (artistKey) {
+        const signed = await this.signingService.signProvRecord(genesisPayload, artistKey.keyId, 'ARTIST')
+        signature = signed.signature
+        signerPublicKey = signed.signerPublicKey
+        signerRole = 'ARTIST'
+        artistSigningKeyId = artistKey.keyId
+      }
+
+      // Platform co-signature
+      const platformKey = await this.signingService.getPlatformActivePublicKey()
+      if (platformKey) {
+        const coSigned = await this.signingService.signProvRecord(genesisPayload, platformKey.keyId, 'PLATFORM')
+        platformSignature = coSigned.signature
+        platformSigningKeyId = platformKey.keyId
+      }
+    }
+
+    // RFC 3161 timestamp on integrityHash (if TSA_URL is configured)
+    let timestampToken: string | null = null
+    if (this.tsaUrl) {
+      try {
+        const tsResult = await requestTimestamp(integrityHash, this.tsaUrl)
+        timestampToken = tsResult.token
+      } catch (err) {
+        console.warn('RFC 3161 timestamp request failed (non-blocking):', err)
+      }
+    }
 
     const artKey = await this.prisma.artKey.create({
       data: {
@@ -41,24 +95,14 @@ export class ArtKeyService {
         certificateHash,
         integrityHash,
         issuedAt,
+        timestampToken,
+        platformSignature,
+        platformSigningKeyId,
+        artistSigningKeyId,
       },
     })
 
-    // Genesis provenance record — anchored to Art Key integrityHash
-    const genesisHash = crypto
-      .createHash('sha256')
-      .update(
-        canonicalJSON({
-          artworkId,
-          sequence: 0,
-          eventType: 'CREATION',
-          actor: artistId,
-          occurredAt: issuedAt.toISOString(),
-          prevRecordHash: integrityHash,
-        }),
-      )
-      .digest('hex')
-
+    // Genesis provenance record with signature fields
     await this.prisma.provenanceRecord.create({
       data: {
         artworkId,
@@ -66,8 +110,25 @@ export class ArtKeyService {
         sequence: 0,
         toUserId: userId,
         transferType: 'CREATION',
-        recordHash: genesisHash,
+        recordHash: genesisRecordHash,
         prevRecordHash: integrityHash,
+        signature,
+        signerPublicKey,
+        signerRole,
+        signingKeyId: artistSigningKeyId,
+      },
+    })
+
+    // Append to transparency log
+    const tls = new TransparencyLogService(this.prisma)
+    await tls.append({
+      artKeyId: artKey.id,
+      entryType: 'ARTKEY_CREATED',
+      payload: {
+        keyCode: artKey.keyCode,
+        integrityHash,
+        genesisRecordHash,
+        certificateHash: artKey.certificateHash,
       },
     })
 
@@ -91,108 +152,212 @@ export class ArtKeyService {
       orderBy: { sequence: 'asc' },
     })
 
-    // ── Recalculate integrityHash ──
-    const recalculatedIntegrity = crypto
-      .createHash('sha256')
-      .update(
-        canonicalJSON({
+    const checks: Array<{
+      label: string
+      pass: boolean
+      detail: string
+      category: 'INTEGRITY' | 'CHAIN' | 'SIGNATURE' | 'TIMESTAMP'
+    }> = []
+
+    // ── Layer A: Integrity ──
+    let integrityOk = false
+    if (artKey.artwork.contentHashes && Object.keys(artKey.artwork.contentHashes as Record<string, string>).length > 0) {
+      const fileHashes = artKey.artwork.contentHashes as Record<string, string>
+      const recalculatedIntegrity = compositeFileHash(fileHashes)
+      integrityOk = recalculatedIntegrity === artKey.integrityHash
+      checks.push({
+        label: 'integrityHash (file-based)',
+        pass: integrityOk,
+        detail: integrityOk
+          ? 'Composite file hash matches stored integrityHash'
+          : `Mismatch — stored ${artKey.integrityHash.slice(0, 16)}… vs recalculated ${recalculatedIntegrity.slice(0, 16)}…`,
+        category: 'INTEGRITY',
+      })
+    } else {
+      // Fallback: old-style metadata-based integrityHash
+      const recalculatedIntegrity = crypto
+        .createHash('sha256')
+        .update(canonicalJSON({
           artworkId: artKey.artworkId,
           keyCode: artKey.keyCode,
           artistId: artKey.artwork.artistId,
           issuedAt: artKey.issuedAt.toISOString(),
-        }),
-      )
-      .digest('hex')
-
-    const integrityOk = recalculatedIntegrity === artKey.integrityHash
-    const checks: Array<{ label: string; pass: boolean; detail: string }> = [
-      {
-        label: 'integrityHash',
+        }))
+        .digest('hex')
+      integrityOk = recalculatedIntegrity === artKey.integrityHash
+      checks.push({
+        label: 'integrityHash (metadata, pre-upgrade)',
         pass: integrityOk,
         detail: integrityOk
-          ? 'Пересчитан и совпадает / Recalculated and matches'
-          : `Не совпадает / Mismatch — stored ${artKey.integrityHash.slice(0, 16)}… vs recalculated ${recalculatedIntegrity.slice(0, 16)}…`,
-      },
-    ]
+          ? 'Metadata hash matches (legacy mode — no file hashes stored)'
+          : `Mismatch — stored ${artKey.integrityHash.slice(0, 16)}… vs recalculated ${recalculatedIntegrity.slice(0, 16)}…`,
+        category: 'INTEGRITY',
+      })
+    }
 
-    // ── Verify provenance chain ──
+    // ── Layer B: Provenance chain + signatures ──
     let chainOk = true
-    const sortedProv = [...provenance].sort((a, b) => a.sequence - b.sequence)
 
-    if (sortedProv.length === 0) {
+    if (provenance.length === 0) {
       chainOk = false
-      checks.push({ label: 'chain', pass: false, detail: 'Нет записей provenance / No provenance records' })
+      checks.push({ label: 'chain', pass: false, detail: 'No provenance records', category: 'CHAIN' })
     } else {
-      // Genesis: prevRecordHash + recordHash recalculation
+      const sortedProv = [...provenance].sort((a, b) => a.sequence - b.sequence)
+
+      // Genesis linking
       if (sortedProv[0].sequence === 0) {
-        const genesisLinkOk = sortedProv[0].prevRecordHash === recalculatedIntegrity
+        const genesisLinkOk = sortedProv[0].prevRecordHash === artKey.integrityHash
         if (!genesisLinkOk) {
           chainOk = false
           checks.push({
             label: 'genesis-link',
             pass: false,
-            detail: `seq=0 prevRecordHash ≠ recalculated integrityHash — got ${sortedProv[0].prevRecordHash?.slice(0, 16)}…`,
+            detail: `seq=0 prevRecordHash ≠ integrityHash`,
+            category: 'CHAIN',
           })
         } else {
-          checks.push({ label: 'genesis-link', pass: true, detail: 'seq=0 привязан к integrityHash / seq=0 anchored to integrityHash' })
-        }
-
-        // Recalculate genesis recordHash: occurredAt = artwork.createdAt (seed convention)
-        const genesisHash = crypto
-          .createHash('sha256')
-          .update(
-            canonicalJSON({
-              artworkId: artKey.artworkId,
-              sequence: 0,
-              eventType: 'CREATION',
-              actor: artKey.artwork.artistId,
-              occurredAt: artKey.issuedAt.toISOString(),
-              prevRecordHash: recalculatedIntegrity,
-            }),
-          )
-          .digest('hex')
-        const genesisRecordOk = genesisHash === sortedProv[0].recordHash
-        if (!genesisRecordOk) {
-          chainOk = false
-          checks.push({
-            label: 'genesis-record',
-            pass: false,
-            detail: `seq=0 recordHash tampered — stored ${sortedProv[0].recordHash.slice(0, 16)}… vs recalculated ${genesisHash.slice(0, 16)}…`,
-          })
-        } else {
-          checks.push({ label: 'genesis-record', pass: true, detail: 'seq=0 recordHash пересчитан и совпадает / recalculated and matches' })
+          checks.push({ label: 'genesis-link', pass: true, detail: 'seq=0 anchored to integrityHash', category: 'CHAIN' })
         }
       }
 
-      // Chain: каждый prevRecordHash ссылается на recordHash предыдущей записи
+      // Verify each record: hash + signature + chain
       let prevRecordHash = sortedProv[0].recordHash
-      for (let i = 1; i < sortedProv.length; i++) {
+      for (let i = 0; i < sortedProv.length; i++) {
         const rec = sortedProv[i]
-        if (rec.prevRecordHash !== prevRecordHash) {
+
+        // Recalculate recordHash
+        const payload: ProvenancePayload = {
+          artworkId: rec.artworkId,
+          sequence: rec.sequence,
+          eventType: rec.transferType,
+          fromOwner: rec.fromUserId ?? null,
+          toOwner: rec.toUserId,
+          occurredAt: rec.createdAt.toISOString(),
+          prevRecordHash: rec.prevRecordHash ?? '',
+        }
+        const recalculatedHash = hashPayload(payload)
+        const hashOk = recalculatedHash === rec.recordHash
+
+        if (!hashOk) {
           chainOk = false
           checks.push({
-            label: `chain-seq-${rec.sequence}`,
+            label: `seq-${rec.sequence}-hash`,
             pass: false,
-            detail: `seq=${rec.sequence} prevRecordHash broken — expected ${prevRecordHash.slice(0, 16)}…, got ${rec.prevRecordHash?.slice(0, 16)}…`,
+            detail: `recordHash tampered — stored ${rec.recordHash.slice(0, 16)}… vs recalculated ${recalculatedHash.slice(0, 16)}…`,
+            category: 'CHAIN',
           })
-        } else {
-          checks.push({ label: `chain-seq-${rec.sequence}`, pass: true, detail: `seq=${rec.sequence} linked` })
         }
+
+        // Verify signature (if present)
+        if (rec.signature && rec.signerPublicKey && this.signingService) {
+          const sigResult = await this.signingService.verifyProvRecordSignature(
+            payload,
+            rec.signature,
+            rec.signerPublicKey,
+          )
+          if (!sigResult.valid) {
+            chainOk = false
+            checks.push({
+              label: `seq-${rec.sequence}-signature`,
+              pass: false,
+              detail: `Ed25519 signature invalid for ${rec.signerRole ?? 'unknown'} signer`,
+              category: 'SIGNATURE',
+            })
+          } else {
+            checks.push({
+              label: `seq-${rec.sequence}-signature`,
+              pass: true,
+              detail: `Ed25519 signature verified (${rec.signerRole ?? 'unknown'})`,
+              category: 'SIGNATURE',
+            })
+          }
+        } else if (rec.signature) {
+          chainOk = false
+          checks.push({
+            label: `seq-${rec.sequence}-signature`,
+            pass: false,
+            detail: 'Signature present but verifier unavailable — check offline with export',
+            category: 'SIGNATURE',
+          })
+        }
+
+        // Chain linking (skip seq 0 which is checked above)
+        if (i > 0 && rec.prevRecordHash !== prevRecordHash) {
+          chainOk = false
+          checks.push({
+            label: `seq-${rec.sequence}-link`,
+            pass: false,
+            detail: `Chain broken — expected ${prevRecordHash.slice(0, 16)}…, got ${rec.prevRecordHash?.slice(0, 16)}…`,
+            category: 'CHAIN',
+          })
+        } else if (i > 0) {
+          checks.push({
+            label: `seq-${rec.sequence}-link`,
+            pass: true,
+            detail: `Chain linked to seq-${rec.sequence - 1}`,
+            category: 'CHAIN',
+          })
+        }
+
         prevRecordHash = rec.recordHash
       }
     }
 
+    // ── Layer C: Platform co-signature ──
+    if (artKey.platformSignature && this.signingService) {
+      const platformKey = await this.signingService.getPlatformActivePublicKey()
+      if (platformKey && provenance.length > 0) {
+        const genesisPayload = {
+          artworkId: provenance[0].artworkId,
+          sequence: 0,
+          eventType: 'CREATION',
+          fromOwner: provenance[0].fromUserId ?? null,
+          toOwner: provenance[0].toUserId,
+          occurredAt: provenance[0].createdAt.toISOString(),
+          prevRecordHash: artKey.integrityHash,
+        }
+        const platResult = await this.signingService.verifyProvRecordSignature(
+          genesisPayload,
+          artKey.platformSignature,
+          platformKey.publicKey,
+        )
+        checks.push({
+          label: 'platform-co-signature',
+          pass: platResult.valid,
+          detail: platResult.valid
+            ? 'Platform co-signature valid — issued through DUO MESH'
+            : 'Platform co-signature INVALID',
+          category: 'SIGNATURE',
+        })
+        if (!platResult.valid) chainOk = false
+      }
+    }
+
+    // ── Layer D: Timestamp ──
+    if (artKey.timestampToken) {
+      checks.push({
+        label: 'rfc3161-timestamp',
+        pass: true,
+        detail: 'RFC 3161 timestamp token present — full cryptographic verification requires offline verifier',
+        category: 'TIMESTAMP',
+      })
+    }
+
     const verified = integrityOk && chainOk && !artKey.revokedAt
+    const sortedProv = [...provenance].sort((a, b) => a.sequence - b.sequence)
     const currentOwner = sortedProv.at(-1)?.toOwner.displayName ?? null
 
     return {
       artKey: {
+        id: artKey.id,
         keyCode: artKey.keyCode,
         ownerKey: artKey.ownerKey,
         integrityHash: artKey.integrityHash,
         certificateHash: artKey.certificateHash,
         issuedAt: artKey.issuedAt.toISOString(),
         revokedAt: artKey.revokedAt?.toISOString() ?? null,
+        timestampToken: artKey.timestampToken,
+        platformSignature: artKey.platformSignature,
       },
       artwork: {
         id: artKey.artwork.id,
@@ -220,6 +385,9 @@ export class ArtKeyService {
         price: p.price?.toString() ?? null,
         recordHash: p.recordHash,
         prevRecordHash: p.prevRecordHash,
+        signature: p.signature,
+        signerPublicKey: p.signerPublicKey,
+        signerRole: p.signerRole,
         createdAt: p.createdAt.toISOString(),
       })),
       verified,

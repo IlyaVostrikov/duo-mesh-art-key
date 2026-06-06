@@ -3,9 +3,13 @@ import type { Prisma } from '../generated/prisma/client'
 import { UserRole } from '../generated/prisma/enums'
 import { toArtistDto, toArtistPublicDto } from '../dto/artist.dto'
 import { generateUniqueSlug } from '../lib/slug'
+import type { SigningService } from './signing.service'
 
 export class ArtistService {
-  constructor(private prisma: DbClient) {}
+  constructor(
+    private prisma: DbClient,
+    private signingService?: SigningService,
+  ) {}
 
   async list(params: { page?: number; pageSize?: number; search?: string }) {
     const { page = 1, pageSize = 20, search } = params
@@ -98,9 +102,14 @@ export class ArtistService {
       data: userUpdate,
     })
 
+    // Generate Ed25519 signing keypair for the artist (MVP: custodial)
+    if (this.signingService) {
+      await this.signingService.generateArtistKeyPair(artist.id)
+    }
+
     return this.prisma.artist.findUnique({
       where: { id: artist.id },
-      include: { user: true, hall: true, _count: { select: { followers: true } } },
+      include: { user: true, hall: true, signingKeys: { where: { isActive: true }, take: 1 }, _count: { select: { followers: true } } },
     })
   }
 

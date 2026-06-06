@@ -168,6 +168,33 @@ export function ModelViewer3D({
     )
   }
 
+  // ─── Diagnostic: log model-viewer events ───
+  useEffect(() => {
+    const el = viewerRef.current
+    if (!el) return
+
+    const onLoad = () => console.log('[ModelViewer3D] model loaded:', resolvedModelUrl)
+    const onError = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail ?? 'unknown'
+      console.error('[ModelViewer3D] model ERROR:', resolvedModelUrl, detail)
+    }
+    const onProgress = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail
+      if (detail?.totalProgress !== undefined) {
+        console.log(`[ModelViewer3D] progress: ${Math.round(detail.totalProgress * 100)}%`)
+      }
+    }
+
+    el.addEventListener('load', onLoad)
+    el.addEventListener('error', onError)
+    el.addEventListener('progress', onProgress)
+    return () => {
+      el.removeEventListener('load', onLoad)
+      el.removeEventListener('error', onError)
+      el.removeEventListener('progress', onProgress)
+    }
+  }, [resolvedModelUrl])
+
   // ─── Set attributes on mount/change ───
   useEffect(() => {
     const el = viewerRef.current

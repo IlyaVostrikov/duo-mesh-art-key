@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { LandingHero } from './LandingHero'
-import { LandingValueProp } from './LandingValueProp'
+import { LandingManifesto } from './LandingManifesto'
+import { LandingShaBirth } from './LandingShaBirth'
+import { LandingOwnershipChain } from './LandingOwnershipChain'
 import { LandingFeaturedWorks } from './LandingFeaturedWorks'
 import { LandingFeaturedArtists } from './LandingFeaturedArtists'
 import { LandingFeaturedHalls } from './LandingFeaturedHalls'
@@ -8,6 +10,7 @@ import { LandingFooterCTA } from './LandingFooterCTA'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Typography } from '@/components/ui/typography'
 import { apiBaseUrl } from '@/lib/api'
+import './artkey-landing.css'
 
 interface FeaturedWork {
   id: string
@@ -60,7 +63,7 @@ const OFFLINE_HERO = {
   medium: 'Street sculpture / Уличная скульптура',
 }
 
-// Offline featured works — local 3D models arranged in editorial grid order
+// Offline featured works
 const OFFLINE_WORKS = [
   {
     id: 'arte-yawi-skeleton',
@@ -127,35 +130,39 @@ export function LandingPage() {
     )
   }
 
+  // If backend is offline, show full offline experience
   if (error || !data) {
     return (
-      <>
+      <div className="artkey-landing">
         <LandingHero heroWork={OFFLINE_HERO} lang={lang} />
-        <LandingValueProp lang={lang} />
+        <LandingManifesto />
+        <LandingShaBirth />
+        <LandingOwnershipChain />
         <LandingFeaturedWorks works={OFFLINE_WORKS} lang={lang} />
         <section className="mx-auto flex w-full max-w-6xl flex-col items-center gap-3 px-5 py-16 text-center">
-          <Typography tone="muted">
+          <Typography tone="muted" style={{ fontFamily: 'var(--ak-mono)', fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase' }}>
             {error
-              ? `Backend offline — showing offline preview / Бэкенд недоступен — офлайн-превью`
+              ? 'Backend offline — showing offline preview / Бэкенд недоступен — офлайн-превью'
               : 'No featured data / Нет данных'}
           </Typography>
         </section>
         <LandingFooterCTA lang={lang} onToggleLang={() => setLang((l) => (l === 'ru' ? 'en' : 'ru'))} />
-      </>
+      </div>
     )
   }
 
-  // Merge: if backend has fewer than 4 works, fill with offline models
   const mergedWorks = data.works.length >= 4 ? data.works : [...data.works, ...OFFLINE_WORKS].slice(0, 8)
 
   return (
-    <>
+    <div className="artkey-landing">
       <LandingHero heroWork={OFFLINE_HERO} lang={lang} />
-      <LandingValueProp lang={lang} />
+      <LandingManifesto />
+      <LandingShaBirth />
+      <LandingOwnershipChain />
       <LandingFeaturedWorks works={mergedWorks} lang={lang} />
       <LandingFeaturedArtists artists={data.artists} lang={lang} />
       <LandingFeaturedHalls halls={data.halls} lang={lang} />
       <LandingFooterCTA lang={lang} onToggleLang={() => setLang((l) => (l === 'ru' ? 'en' : 'ru'))} />
-    </>
+    </div>
   )
 }

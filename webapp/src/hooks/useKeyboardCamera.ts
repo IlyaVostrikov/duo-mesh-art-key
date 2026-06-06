@@ -1,20 +1,25 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
 const DOLLY_SPEED = 0.25
 const PAN_SPEED = 0.35
 
 interface CameraInput {
-  dolly: number   // 0=far, 1=near
-  pan: number     // -1=left, +1=right
+  /** Ref to current dolly value (0=far, 1=near). Read in useFrame, NOT in render. */
+  dollyRef: React.MutableRefObject<number>
+  /** Ref to current pan value (-1=left, +1=right). Read in useFrame, NOT in render. */
+  panRef: React.MutableRefObject<number>
   ePressedRef: React.MutableRefObject<boolean>
 }
 
-/** Arrow-key camera control: ↑↓ dolly, ←→ pan. Optionally tracks E-key for door interaction. */
+/**
+ * Arrow-key camera control: ↑↓ dolly, ←→ pan.
+ * Uses refs (no React state) — read values in r3f useFrame, not in JSX.
+ */
 export function useKeyboardCamera(enabled: boolean, trackEKey = false): CameraInput {
-  const [dolly, setDolly] = useState(0)
-  const [pan, setPan] = useState(0)
-  const dirRef = useRef({ v: 0, h: 0 }) // v: +1 out, -1 in; h: -1 left, +1 right
+  const dollyRef = useRef(0)
+  const panRef = useRef(0)
+  const dirRef = useRef({ v: 0, h: 0 })
   const ePressedRef = useRef(false)
 
   useEffect(() => {
@@ -44,13 +49,13 @@ export function useKeyboardCamera(enabled: boolean, trackEKey = false): CameraIn
       const dt = Math.min(0.1, (now - last) / 1000)
       last = now
       const { v, h } = dirRef.current
-      if (v !== 0) setDolly((prev) => THREE.MathUtils.clamp(prev + v * DOLLY_SPEED * dt, 0, 1))
-      if (h !== 0) setPan((prev) => THREE.MathUtils.clamp(prev + h * PAN_SPEED * dt, -1, 1))
+      if (v !== 0) dollyRef.current = THREE.MathUtils.clamp(dollyRef.current + v * DOLLY_SPEED * dt, 0, 1)
+      if (h !== 0) panRef.current   = THREE.MathUtils.clamp(panRef.current   + h * PAN_SPEED   * dt, -1, 1)
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
   }, [enabled])
 
-  return { dolly, pan, ePressedRef }
+  return { dollyRef, panRef, ePressedRef }
 }

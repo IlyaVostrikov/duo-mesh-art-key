@@ -7,6 +7,8 @@ const app = createApp({ env: runtime.env, prisma: runtime.prisma })
 const server = Bun.serve({
   port: runtime.env.PORT,
   fetch: app.fetch,
+  maxRequestBodySize: 128 * 1024 * 1024, // 128 MB — above UPLOAD_MAX_3D_BYTES default (100 MB)
+  idleTimeout: 30, // seconds — drop slow-loris / idle connections
 })
 
 console.log(`Backend listening on ${server.url}`)

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useTextureCache } from '@/hooks/useTextureCache'
 import { useKeyboardCamera } from '@/hooks/useKeyboardCamera'
+import { useEnvironmentMap } from '@/hooks/useEnvironmentMap'
 import { RoomGroup, EYE } from './RoomGroup'
 import { type SlotLayout, computeSlots, computeWallWidth } from './layoutTemplates'
 import { roomCenterX, type HallData } from './hallOrdering'
@@ -51,7 +52,7 @@ function MultiHallContent({
   const transitionRef = useRef({ active: false, fromX: 0, toX: 0, elapsed: 0, toRoom: 0 })
   const mouseNorm = useRef({ x: 0, y: 0 })
 
-  const { dolly, pan, ePressedRef } = useKeyboardCamera(true, true)
+  const { dollyRef, panRef, ePressedRef } = useKeyboardCamera(true, true)
 
   // ─── Progressive texture loading: current + adjacent rooms only ───
   const visibleIndices = useMemo(() => {
@@ -73,6 +74,8 @@ function MultiHallContent({
     [halls, visibleIndices],
   )
   const textureCache = useTextureCache(posterUrls)
+
+  useEnvironmentMap()
 
   // ─── Camera init ───
   const { camera } = useThree()
@@ -158,12 +161,12 @@ function MultiHallContent({
     // ─── Idle ───
     const halfW = (wallWidths[currentRoom] ?? 14) / 2
 
-    const targetZ = THREE.MathUtils.lerp(CAMERA_Z_FAR, CAMERA_Z_NEAR, dolly)
+    const targetZ = THREE.MathUtils.lerp(CAMERA_Z_FAR, CAMERA_Z_NEAR, dollyRef.current)
     currentZ.current = THREE.MathUtils.lerp(currentZ.current, targetZ, Math.min(1, LERP_SPEED * dt))
     const z = currentZ.current
 
     const maxPanX = Math.max(0, halfW - 1.0)
-    const panOffset = pan * maxPanX
+    const panOffset = panRef.current * maxPanX
     const targetX = (centers[currentRoom] ?? 0) + panOffset
     currentX.current = THREE.MathUtils.lerp(currentX.current, targetX, Math.min(1, LERP_SPEED * dt))
 
@@ -265,6 +268,20 @@ export function MultiHallScene({ halls, initialRoomIndex, onRoomChange, onArtwor
   const wallWidths = useMemo(() => layouts.map((l) => computeWallWidth(l.slots)), [layouts])
   const centers = useMemo(() => wallWidths.map((_, i) => roomCenterX(i, wallWidths)), [wallWidths])
 
+  const handleCreated = useCallback((state: { gl: THREE.WebGLRenderer }) => {
+    const canvas = state.gl.domElement
+    const onLost = (e: Event) => {
+      e.preventDefault()
+      console.warn('[MultiHallScene] WebGL context lost — preserving for restore')
+    }
+    const onRestored = () => {
+      console.log('[MultiHallScene] WebGL context restored')
+    }
+    canvas.addEventListener('webglcontextlost', onLost)
+    canvas.addEventListener('webglcontextrestored', onRestored)
+    ;(canvas as any).__ctxHandlers = { onLost, onRestored }
+  }, [])
+
   return (
     <div className="w-full h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
       <Canvas
@@ -276,6 +293,7 @@ export function MultiHallScene({ halls, initialRoomIndex, onRoomChange, onArtwor
           toneMappingExposure: 1.6,
           outputColorSpace: THREE.SRGBColorSpace,
         }}
+        onCreated={handleCreated}
         style={{ width: '100%', height: '100%' }}
       >
         <MultiHallContent

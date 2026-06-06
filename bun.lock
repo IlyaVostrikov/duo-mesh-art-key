@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "web_app_demo",
+      "dependencies": {
+        "fflate": "^0.8.3",
+      },
     },
     "backend": {
       "name": "@duo-mesh/backend",
@@ -12,6 +15,7 @@
         "@aws-sdk/client-s3": "^3.1048.0",
         "@aws-sdk/s3-request-presigner": "^3.1048.0",
         "@duo-mesh/contracts": "workspace:*",
+        "@duo-mesh/verifier": "workspace:*",
         "@hono/zod-openapi": "^1.4.0",
         "@hono/zod-validator": "^0.8.0",
         "@pdf-lib/fontkit": "^1.1.1",
@@ -38,6 +42,14 @@
       "dependencies": {
         "zod": "^4.1.13",
       },
+      "devDependencies": {
+        "@types/bun": "^1.3.4",
+        "typescript": "~6.0.2",
+      },
+    },
+    "packages/verifier": {
+      "name": "@duo-mesh/verifier",
+      "version": "0.0.0",
       "devDependencies": {
         "@types/bun": "^1.3.4",
         "typescript": "~6.0.2",
@@ -279,6 +291,8 @@
     "@duo-mesh/backend": ["@duo-mesh/backend@workspace:backend"],
 
     "@duo-mesh/contracts": ["@duo-mesh/contracts@workspace:packages/contracts"],
+
+    "@duo-mesh/verifier": ["@duo-mesh/verifier@workspace:packages/verifier"],
 
     "@duo-mesh/webapp": ["@duo-mesh/webapp@workspace:webapp"],
 

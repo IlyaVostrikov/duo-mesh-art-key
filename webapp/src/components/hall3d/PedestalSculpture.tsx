@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, memo } from 'react'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import type { Hall3DArtwork } from './Hall3DScene'
 import { PEDESTAL_PRESETS } from './customization'
 
@@ -95,8 +96,58 @@ export const PedestalSculpture = memo(function PedestalSculpture({
   )
 })
 
-// Simple shared cache — survives remounts within the same Canvas
+// LRU cache — max 30 entries, evicts oldest on overflow.
+// Ref-counted: when all SculptureModel instances unmount, the entire cache
+// is flushed so GPU resources don't linger and fragment memory.
+
+const GLTF_MAX = 30
 const gltfCache = new Map<string, THREE.Group>()
+const gltfAccess = new Map<string, number>()
+let modelCount = 0
+
+function cacheGet(key: string): THREE.Group | undefined {
+  gltfAccess.set(key, Date.now())
+  return gltfCache.get(key)
+}
+
+function cacheSet(key: string, scene: THREE.Group) {
+  if (gltfCache.size >= GLTF_MAX) {
+    let oldestKey = ''
+    let oldestTime = Infinity
+    for (const [k, t] of gltfAccess) {
+      if (t < oldestTime) { oldestTime = t; oldestKey = k }
+    }
+    if (oldestKey) {
+      const evicted = gltfCache.get(oldestKey)
+      evicted?.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry?.dispose()
+          if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose())
+          else child.material?.dispose()
+        }
+      })
+      gltfCache.delete(oldestKey)
+      gltfAccess.delete(oldestKey)
+    }
+  }
+  gltfCache.set(key, scene)
+  gltfAccess.set(key, Date.now())
+}
+
+function cacheFlushAll() {
+  for (const [, group] of gltfCache) {
+    group.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry?.dispose()
+        if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose())
+        else child.material?.dispose()
+      }
+    })
+  }
+  gltfCache.clear()
+  gltfAccess.clear()
+  modelCount = 0
+}
 
 /** Loads and auto-scales the GLB model imperatively — no useGLTF / useLoader (no suspend). */
 function SculptureModel({
@@ -107,26 +158,85 @@ function SculptureModel({
   pedestalTop: number
 }) {
   const [cloned, setCloned] = useState<THREE.Group | null>(() => {
-    const cached = gltfCache.get(modelUrl)
+    const cached = cacheGet(modelUrl)
     return cached ? cached.clone() : null
   })
 
+  const [loadError, setLoadError] = useState(false)
+
   useEffect(() => {
-    if (cloned) return // already loaded (cache hit in useState init)
-    const loader = new GLTFLoader()
+    if (cloned || loadError) return
     let cancelled = false
+
+    modelCount++
+    console.log(`[PedestalSculpture] instances active: ${modelCount}`)
+
+    const loader = new GLTFLoader()
+
+    // Draco decoder (if models use compression)
+    const dracoLoader = new DRACOLoader()
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
+    loader.setDRACOLoader(dracoLoader)
+
+    console.log('[PedestalSculpture] loading:', modelUrl)
+
     loader.load(
       modelUrl,
       (gltf) => {
         if (cancelled) return
-        gltfCache.set(modelUrl, gltf.scene)
-        setCloned(gltf.scene.clone())
+        console.log('[PedestalSculpture] loaded:', modelUrl)
+        gltf.scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const mat = child.material as THREE.Material
+            console.log('[PedestalSculpture] mesh:', child.name || '(unnamed)',
+              'material:', mat.type,
+              'map:', (mat as THREE.MeshStandardMaterial).map ? 'YES' : 'null',
+              'vertexCount:', child.geometry?.attributes?.position?.count ?? '?')
+          }
+        })
+        cacheSet(modelUrl, gltf.scene)
+        if (!cancelled) setCloned(gltf.scene.clone())
       },
-      undefined,
-      () => { /* silently ignore load errors — pedestal renders fine */ },
+      (evt) => {
+        if (evt.total > 0) {
+          console.log(`[PedestalSculpture] progress: ${Math.round((evt.loaded / evt.total) * 100)}%`)
+        }
+      },
+      (err) => {
+        if (cancelled) return
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[PedestalSculpture] FAILED to load:', modelUrl, msg)
+        // Check for common issues
+        if (msg.includes('Draco') || msg.includes('draco')) {
+          console.error('[PedestalSculpture] Model uses Draco compression — need DRACOLoader')
+        } else if (msg.includes('404')) {
+          console.error('[PedestalSculpture] Model file not found:', modelUrl)
+        } else if (msg.includes('format') || msg.includes('parse')) {
+          console.error('[PedestalSculpture] Model format error — may need MeshoptDecoder or is corrupted')
+        }
+        setLoadError(true)
+      },
     )
-    return () => { cancelled = true }
-  }, [modelUrl, cloned])
+    return () => {
+      cancelled = true
+      modelCount--
+      console.log(`[PedestalSculpture] instances active: ${modelCount}`)
+      if (modelCount <= 0) {
+        console.log('[PedestalSculpture] last instance unmounted — flushing GPU cache')
+        cacheFlushAll()
+      }
+    }
+  }, [modelUrl, cloned, loadError])
+
+  if (loadError) {
+    // Diagnostic fallback: magenta cube signals loading failure
+    return (
+      <mesh position={[0, pedestalTop + 0.3, 0]}>
+        <boxGeometry args={[0.3, 0.3, 0.3]} />
+        <meshBasicMaterial color="magenta" />
+      </mesh>
+    )
+  }
 
   if (!cloned) return null
 

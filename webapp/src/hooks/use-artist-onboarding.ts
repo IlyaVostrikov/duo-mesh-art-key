@@ -68,8 +68,8 @@ export function useArtistOnboarding() {
           hallTitle,
           hallDescription: joinBilingual(values.hallDescRu, values.hallDescEn) || undefined,
           artistStatement: joinBilingual(values.statementRu, values.statementEn) || undefined,
-          location: values.location.trim() || undefined,
-          websiteUrl: values.websiteUrl.trim() || undefined,
+          location: values.location?.trim() || undefined,
+          websiteUrl: values.websiteUrl?.trim() || undefined,
           avatarUrl,
         }),
       })

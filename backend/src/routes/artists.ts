@@ -67,7 +67,7 @@ export function createArtistRoutes() {
     // Auto-create hall if missing (e.g. artist created before hall auto-creation was added)
     if (!raw.hall) {
       const hall = await hallSvc.getOrCreate(raw.id, raw.user.displayName ?? 'Artist')
-      return c.json(sanitizeMe({ ...raw, hall }))
+      return c.json(sanitizeMe({ ...raw, hall: hall as unknown as ExhibitionHall }))
     }
 
     return c.json(sanitizeMe(raw))

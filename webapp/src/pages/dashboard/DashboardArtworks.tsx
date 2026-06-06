@@ -6,6 +6,7 @@ import { parseBilingualTitle, formatPrice } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DashboardLayout } from './DashboardLayout'
 import { CreateArtworkForm } from '@/components/artwork/CreateArtworkForm'
+import { EditArtworkForm } from '@/components/artwork/EditArtworkForm'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { apiBaseUrl } from '@/lib/api'
 
@@ -26,6 +27,7 @@ export function DashboardArtworks() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
   const fetchMyWorks = useCallback(async () => {
@@ -48,8 +50,28 @@ export function DashboardArtworks() {
 
   useEffect(() => { fetchMyWorks() }, [fetchMyWorks])
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Удалить работу? / Delete artwork?')) return
+  const handleDelete = async (id: string, aw: ArtworkItem) => {
+    const consequences: string[] = []
+    if (aw.status === 'SOLD') {
+      consequences.push('Работа уже продана клиенту. Удаление нарушит цепочку провенанса и учёт продаж.')
+    } else if (aw.status === 'RESERVED') {
+      consequences.push('Работа зарезервирована. Бронь будет потеряна.')
+    } else if (aw.status === 'IN_EXHIBITION') {
+      consequences.push('Работа участвует в выставке.')
+    } else if (aw.status === 'LISTED') {
+      consequences.push('Работа опубликована в зале и доступна для покупки.')
+    }
+    if (aw.mediaType === 'MODEL_3D') {
+      consequences.push('3D-модель и все связанные текстуры будут удалены без возможности восстановления.')
+    }
+    consequences.push('ArtKey и записи провенанса будут удалены навсегда.')
+    consequences.push('Это действие нельзя отменить.')
+
+    const displayTitle = parseBilingualTitle(aw.title)[0]
+    const msg = `Удалить работу «${displayTitle}»?\n\n${consequences.map((c) => `• ${c}`).join('\n')}\n\nНапишите "удалить" для подтверждения:`
+    const input = prompt(msg)
+    if (input?.toLowerCase() !== 'удалить') return
+
     setDeleting(id)
     try {
       const res = await fetch(`${apiBaseUrl}/api/artworks/${id}`, {
@@ -73,7 +95,7 @@ export function DashboardArtworks() {
             Мои работы / My Artworks
           </h1>
         </RevealOnScroll>
-        <Button onClick={() => setShowForm(!showForm)} size="sm">
+        <Button onClick={() => { setShowForm(!showForm); setEditingId(null) }} size="sm">
           {showForm ? 'Отмена / Cancel' : '+ Новая работа / New Artwork'}
         </Button>
       </div>
@@ -82,6 +104,14 @@ export function DashboardArtworks() {
         <CreateArtworkForm
           onCreated={() => { setShowForm(false); fetchMyWorks() }}
           onCancel={() => setShowForm(false)}
+        />
+      )}
+
+      {editingId && (
+        <EditArtworkForm
+          artworkId={editingId}
+          onSaved={() => { setEditingId(null); fetchMyWorks() }}
+          onCancel={() => setEditingId(null)}
         />
       )}
 
@@ -140,21 +170,40 @@ export function DashboardArtworks() {
                   </p>
                 </div>
               </Link>
-              <button
-                onClick={() => handleDelete(aw.id)}
-                disabled={deleting === aw.id}
-                className="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{
-                  backgroundColor: 'var(--bg)',
-                  color: 'var(--text-muted)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-sm)',
-                  cursor: 'pointer',
-                }}
-                title="Удалить / Delete"
-              >
-                {deleting === aw.id ? '...' : '×'}
-              </button>
+              <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => { e.preventDefault(); setEditingId(aw.id); setShowForm(false) }}
+                  className="w-8 h-8 flex items-center justify-center text-xs"
+                  style={{
+                    backgroundColor: 'var(--bg)',
+                    color: 'var(--text-muted)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                  }}
+                  title="Редактировать / Edit"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => handleDelete(aw.id, aw)}
+                  disabled={deleting === aw.id}
+                  className="w-8 h-8 flex items-center justify-center text-xs"
+                  style={{
+                    backgroundColor: 'var(--bg)',
+                    color: 'var(--text-muted)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                  }}
+                  title="Удалить / Delete"
+                >
+                  {deleting === aw.id ? '...' : '×'}
+                </button>
+              </div>
             </div>
             </RevealOnScroll>
           ))}

@@ -41,9 +41,12 @@ interface VerifyResult {
     price: string | null
     recordHash: string
     prevRecordHash: string | null
+    signature?: string | null
+    signerPublicKey?: string | null
+    signerRole?: string | null
     createdAt: string
   }>
-  checks: Array<{ label: string; pass: boolean; detail: string }>
+  checks: Array<{ category?: string; label: string; pass: boolean; detail: string }>
 }
 
 export function VerifyResultPage() {
@@ -205,6 +208,19 @@ export function VerifyResultPage() {
             >
               ↓ PDF · Сертификат
             </a>
+            <a
+              href={`${apiBaseUrl}/api/art-keys/${encodeURIComponent(data.artKey.keyCode)}/export`}
+              download
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '8px 16px', fontSize: '0.8125rem', fontWeight: 600,
+                backgroundColor: 'var(--surface)', color: 'var(--text-secondary)',
+                border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                textDecoration: 'none', cursor: 'pointer',
+              }}
+            >
+              ↓ Export · JSON
+            </a>
           </div>
         </div>
       </RevealOnScroll>
@@ -244,7 +260,18 @@ export function VerifyResultPage() {
               color: c.pass ? '#155724' : '#721c24',
               fontSize: '0.8125rem',
             }}>
-              {c.pass ? '✓' : '✗'} {c.detail}
+              {c.pass ? '✓' : '✗'}{' '}
+              {c.category && (
+                <span style={{
+                  display: 'inline-block', padding: '1px 6px', marginRight: '6px',
+                  borderRadius: '3px', fontSize: '0.625rem', fontWeight: 700,
+                  backgroundColor: c.pass ? 'rgba(21,87,36,0.12)' : 'rgba(114,28,36,0.12)',
+                  textTransform: 'uppercase', letterSpacing: '0.03em',
+                }}>
+                  {c.category}
+                </span>
+              )}
+              {c.detail}
             </div>
           ))}
           {data.verified && (
@@ -288,9 +315,17 @@ export function VerifyResultPage() {
       )}
 
       <RevealOnScroll direction="up" delay={360}>
-        <Link to="/verify" style={{ color: 'var(--accent)', fontSize: '0.875rem' }}>
-          ← {lang === 'ru' ? 'Новая проверка' : 'New verification'}
-        </Link>
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          <Link to="/verify" style={{ color: 'var(--accent)', fontSize: '0.875rem' }}>
+            ← {lang === 'ru' ? 'Новая проверка' : 'New verification'}
+          </Link>
+          <Link to="/how-it-works" style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+            {lang === 'ru' ? 'Как это работает' : 'How It Works'} →
+          </Link>
+          <Link to="/trust" style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+            {lang === 'ru' ? 'Модель доверия' : 'Trust Model'} →
+          </Link>
+        </div>
       </RevealOnScroll>
     </VerificationShell>
   )

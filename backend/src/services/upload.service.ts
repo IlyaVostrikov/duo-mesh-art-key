@@ -1,9 +1,12 @@
 import { mkdir, unlink, readdir, stat, rmdir } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { join, relative, resolve, sep } from 'node:path'
+import { unzipSync, strFromU8 } from 'fflate'
 
 const ALLOWED_3D = new Set(['glb', 'gltf', 'blend', 'obj', 'fbx', 'stl', 'usdz'])
 const ALLOWED_IMAGE = new Set(['jpg', 'jpeg', 'png', 'webp', 'svg'])
-const MAX_FILES_PER_REQUEST = 10
+const ALLOWED_TEXTURE = new Set(['bin', 'hdr', 'exr', 'ktx2'])
+const MAX_FILES_PER_REQUEST = 50
+const MAX_ZIP_ENTRIES = 200
 
 function sanitizeFilename(name: string): string {
   return name
@@ -19,10 +22,11 @@ function extension(filename: string): string {
 function assertExt(ext: string, fileName: string) {
   const isImage = ALLOWED_IMAGE.has(ext)
   const is3D = ALLOWED_3D.has(ext)
-  if (!isImage && !is3D) {
+  const isZip = ext === 'zip'
+  if (!isImage && !is3D && !isZip) {
     throw new UploadValidationError(`Unsupported file type: .${ext}`)
   }
-  return { isImage, is3D }
+  return { isImage, is3D, isZip }
 }
 
 import type { StorageService } from '../storage/service'
@@ -52,10 +56,10 @@ export class UploadService {
 
     const files: Array<{ name: string; url: string; size: number; type: string }> = []
     const written: string[] = []
+    const hashes: Record<string, string> = {}
 
     try {
       for (const entry of formData.values()) {
-        // FormDataEntryValue = string | File; duck-type the File branch
         if (typeof entry === 'string' || !('name' in entry)) continue
         const file = entry as unknown as File
 
@@ -66,6 +70,20 @@ export class UploadService {
         const ext = extension(file.name)
         if (!ext) {
           throw new UploadValidationError(`Cannot determine file type: ${file.name}`)
+        }
+
+        // ── ZIP archive: extract and process each entry ──
+        if (ext === 'zip') {
+          const zipResult = await this.extractZip(userId, datePath, file)
+          for (const zf of zipResult.files) {
+            if (files.length >= MAX_FILES_PER_REQUEST) {
+              throw new UploadValidationError(`Too many files after extraction (max ${MAX_FILES_PER_REQUEST})`)
+            }
+            files.push(zf)
+          }
+          written.push(...zipResult.written)
+          Object.assign(hashes, zipResult.hashes)
+          continue
         }
 
         const { isImage } = assertExt(ext, file.name)
@@ -87,6 +105,11 @@ export class UploadService {
         await Bun.write(filePath, new Uint8Array(buffer))
         written.push(filePath)
 
+        // Compute SHA-256 hash of the file content for integrity verification
+        const hasher = new Bun.CryptoHasher('sha256')
+        hasher.update(new Uint8Array(buffer))
+        hashes[file.name] = hasher.digest('hex') as string
+
         files.push({ name: file.name, url: `/uploads/${key}`, size: file.size, type: file.type })
       }
     } catch (err) {
@@ -99,7 +122,91 @@ export class UploadService {
       throw new UploadValidationError('No files provided')
     }
 
-    return files
+    return { files, hashes }
+  }
+
+  // ── ZIP extraction ──
+  // Extracts files preserving directory structure under a single bundle UUID.
+  // This keeps relative references intact (e.g. glTF → .bin / textures/).
+
+  private async extractZip(
+    userId: string,
+    datePath: string,
+    zipFile: File,
+  ): Promise<{ files: Array<{ name: string; url: string; size: number; type: string }>; written: string[]; hashes: Record<string, string> }> {
+    const buffer = new Uint8Array(await zipFile.arrayBuffer())
+    const extracted = unzipSync(buffer)
+    const files: Array<{ name: string; url: string; size: number; type: string }> = []
+    const written: string[] = []
+    const hashes: Record<string, string> = {}
+
+    const entries = Object.entries(extracted)
+    if (entries.length > MAX_ZIP_ENTRIES) {
+      throw new UploadValidationError(`Too many files in zip (max ${MAX_ZIP_ENTRIES})`)
+    }
+
+    // Single bundle UUID so relative paths between extracted files resolve
+    const bundleUuid = crypto.randomUUID()
+    const bundleDir = join('uploads', userId, datePath, bundleUuid)
+    await mkdir(bundleDir, { recursive: true })
+
+    for (const [filename, data] of entries) {
+      // Skip directories (fflate includes them as zero-length entries)
+      if (data.length === 0 || filename.endsWith('/')) continue
+
+      const ext = extension(filename)
+      if (!ext) continue
+
+      // Only extract allowed 3D, image, and texture files
+      const is3D = ALLOWED_3D.has(ext)
+      const isImage = ALLOWED_IMAGE.has(ext)
+      const isTexture = ALLOWED_TEXTURE.has(ext)
+      if (!is3D && !isImage && !isTexture) continue
+
+      if (files.length >= MAX_FILES_PER_REQUEST) {
+        throw new UploadValidationError(`Too many valid files in zip (max ${MAX_FILES_PER_REQUEST})`)
+      }
+
+      const maxSize = isImage ? this.maxImageBytes : this.max3DBytes
+      if (data.length > maxSize) {
+        const maxMB = Math.round(maxSize / 1024 / 1024)
+        throw new UploadValidationError(`File too large in zip: ${filename} (max ${maxMB} MB)`)
+      }
+
+      // Sanitize each path component, preserving directory structure
+      const sanitizedPath = filename
+        .replace(/\\/g, '/')           // normalize Windows backslashes
+        .split('/')
+        .map((seg) => sanitizeFilename(seg))
+        .join('/')
+
+      const key = `${userId}/${datePath}/${bundleUuid}/${sanitizedPath}`
+      const filePath = join(bundleDir, ...sanitizedPath.split('/'))
+
+      await mkdir(join(bundleDir, ...sanitizedPath.split('/').slice(0, -1)), { recursive: true })
+      await Bun.write(filePath, data)
+      written.push(filePath)
+
+      const hasher = new Bun.CryptoHasher('sha256')
+      hasher.update(data)
+      hashes[sanitizedPath] = hasher.digest('hex') as string
+
+      const mimeType =
+        ext === 'glb' ? 'model/gltf-binary' :
+        ext === 'gltf' ? 'model/gltf+json' :
+        ext === 'bin' ? 'application/octet-stream' :
+        ext === 'hdr' ? 'image/vnd.radiance' :
+        isImage ? `image/${ext === 'jpg' ? 'jpeg' : ext}` :
+        'application/octet-stream'
+
+      files.push({ name: filename, url: `/uploads/${key}`, size: data.length, type: mimeType })
+    }
+
+    if (files.length === 0) {
+      throw new UploadValidationError('No valid 3D or image files found in zip. Supported: .glb, .gltf, .blend, .obj, .fbx, .stl, .usdz, .bin, .jpg, .png, .webp, .hdr')
+    }
+
+    return { files, written, hashes }
   }
 
   // ── Presigned upload (Spaces/S3) ──
@@ -192,10 +299,14 @@ export class UploadService {
     if (this.storage) {
       await this.storage.deleteObject(key)
     } else {
-      // Key format: uploads/<userId>/<year>/<month>/<day>/<uuid>-<filename>
-      const filePath = join('.', key)
+      // Prevent path traversal — ensure resolved path stays inside uploads/
+      const resolved = resolve(key)
+      const uploadsRoot = resolve('uploads')
+      if (!resolved.startsWith(uploadsRoot + sep)) {
+        throw new UploadValidationError('Invalid file path')
+      }
       try {
-        await unlink(filePath)
+        await unlink(resolved)
       } catch (err: unknown) {
         if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
       }

@@ -5,6 +5,7 @@ import { parseBilingualTitle } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Spinner } from '@/components/ui/spinner'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { DashboardLayout } from './DashboardLayout'
 import { apiBaseUrl } from '@/lib/api'
@@ -38,31 +39,55 @@ export function DashboardHome() {
 function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
   const [hallSlug, setHallSlug] = useState<string | null>(null)
   const [inquiries, setInquiries] = useState<InquiryItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!accessToken) return
     let cancelled = false
-    fetch(`${apiBaseUrl}/api/artists/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-      .then(async (r) => {
-        if (!r.ok) return
+    setLoading(true)
+    setError(null)
+
+    Promise.all([
+      fetch(`${apiBaseUrl}/api/artists/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }).then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
         const artist = await r.json()
-        if (!cancelled && artist.hall?.slug) setHallSlug(artist.hall.slug)
-      })
-      .catch(() => {})
-    // Fetch recent inquiries
-    fetch(`${apiBaseUrl}/api/inquiries`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-      .then(async (r) => {
-        if (!r.ok) return
+        if (!cancelled) setHallSlug(artist.hall?.slug ?? null)
+      }),
+      fetch(`${apiBaseUrl}/api/inquiries`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }).then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
         const data = await r.json()
         if (!cancelled) setInquiries(Array.isArray(data) ? data : [])
-      })
-      .catch(() => {})
+      }),
+    ])
+      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+
     return () => { cancelled = true }
   }, [accessToken])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <p className="text-sm px-4 py-3 rounded-lg mt-4" style={{
+        backgroundColor: 'var(--surface)', color: 'var(--text-secondary)',
+        border: '1px solid var(--border)',
+      }}>
+        Не удалось загрузить данные / Failed to load: {error}
+      </p>
+    )
+  }
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">

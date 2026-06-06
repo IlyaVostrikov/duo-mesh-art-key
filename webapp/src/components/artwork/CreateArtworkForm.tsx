@@ -13,12 +13,39 @@ interface CreatedArtwork {
   title: string
 }
 
-export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: (artwork?: CreatedArtwork) => void; onCancel: () => void }) {
+async function uploadFiles(files: File[], accessToken: string): Promise<{ files: Array<{ name: string; url: string; size: number; type: string }>; hashes: Record<string, string> }> {
+  const formData = new FormData()
+  for (const f of files) formData.append('files', f)
+
+  const res = await fetch(`${apiBaseUrl}/api/uploads`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: formData,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message ?? 'Upload failed')
+  }
+  return res.json()
+}
+
+export function CreateArtworkForm({
+  onCreated,
+  onCancel,
+  preselectedPosterUrl,
+  preselectedPosterName,
+}: {
+  onCreated: (artwork?: CreatedArtwork) => void
+  onCancel: () => void
+  preselectedPosterUrl?: string
+  preselectedPosterName?: string
+}) {
   const auth = useAuth()
 
   const [title, setTitle] = useState('')
   const [titleEn, setTitleEn] = useState('')
   const [posterFile, setPosterFile] = useState<File | null>(null)
+  const [modelFile, setModelFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [done, setDone] = useState<CreatedArtwork | null>(null)
@@ -31,6 +58,8 @@ export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: (artwork
   const [price, setPrice] = useState('')
   const [currency, setCurrency] = useState('RUB')
   const [status, setStatus] = useState<'LISTED' | 'DRAFT'>('LISTED')
+
+  const has3D = modelFile !== null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -47,34 +76,55 @@ export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: (artwork
 
     setSubmitting(true)
     try {
-      let posterUrl = 'seed/placeholder-poster.svg'
+      let posterUrl = preselectedPosterUrl ?? 'seed/placeholder-poster.svg'
+      let modelUrl: string | undefined
+      const fileHashes: Record<string, string> = {}
 
+      // Upload poster (skip if preselected from Media library)
       if (posterFile) {
-        const formData = new FormData()
-        formData.append('files', posterFile)
-
-        const uploadRes = await fetch(`${apiBaseUrl}/api/uploads`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${auth.accessToken!}` },
-          body: formData,
-        })
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json().catch(() => ({}))
-          throw new Error(err.message ?? 'Upload failed')
-        }
-        const uploadData = await uploadRes.json()
+        const uploadData = await uploadFiles([posterFile], auth.accessToken!)
         posterUrl = uploadData.files?.[0]?.url ?? posterUrl
+        Object.assign(fileHashes, uploadData.hashes)
+
+        // Also compute browser-side hash
+        const fileBuffer = await posterFile.arrayBuffer()
+        const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer)
+        const hashHex = Array.from(new Uint8Array(hashBuffer))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('')
+        fileHashes[posterFile.name] = hashHex
       }
+
+      // Upload 3D model (zip or individual file)
+      if (modelFile) {
+        const uploadData = await uploadFiles([modelFile], auth.accessToken!)
+        Object.assign(fileHashes, uploadData.hashes)
+
+        // Find the main 3D model file (.glb or .gltf) from the upload response
+        const modelEntry = uploadData.files?.find((f: { name: string; url: string }) => {
+          const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+          return ext === 'glb' || ext === 'gltf'
+        })
+        modelUrl = modelEntry?.url
+
+        if (!modelUrl) {
+          throw new Error('No .glb or .gltf model found in the uploaded 3D file. For zip files, ensure a glTF model is included.')
+        }
+      }
+
+      const mediaType = has3D ? 'MODEL_3D' : 'IMAGE_2D'
 
       const body: Record<string, unknown> = {
         title: fullTitle,
         description: fullDesc || undefined,
         category,
-        mediaType: 'IMAGE_2D',
+        mediaType,
         posterUrl,
+        modelUrl,
         status,
         price: price ? Number(price) : undefined,
         currency,
+        fileHashes,
       }
 
       const res = await fetch(`${apiBaseUrl}/api/artworks`, {
@@ -111,7 +161,7 @@ export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: (artwork
         <p className="text-lg font-semibold font-display">
           {status === 'LISTED' ? 'Работа в зале! / In your hall!' : 'Сохранено в черновики / Saved as draft'}
         </p>
-        <Button onClick={() => { setDone(null); setTitle(''); setTitleEn(''); setPosterFile(null); setDescription(''); setDescriptionEn(''); setPrice('') }}>
+        <Button onClick={() => { setDone(null); setTitle(''); setTitleEn(''); setPosterFile(null); setModelFile(null); setDescription(''); setDescriptionEn(''); setPrice('') }}>
           + Ещё работу / Add another
         </Button>
       </div>
@@ -125,14 +175,80 @@ export function CreateArtworkForm({ onCreated, onCancel }: { onCreated: (artwork
       className="p-6 mb-8 space-y-5"
       style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
     >
-      {/* ── Image upload — the main action ── */}
+      {/* ── 3D model upload (optional) — zip or individual 3D file ── */}
       <FileUpload
-        accept=".jpg,.jpeg,.png,.webp,.svg"
-        maxSize={10 * 1024 * 1024}
-        onFileSelect={setPosterFile}
-        label={posterFile ? 'Изображение выбрано / Image selected' : 'Загрузите изображение / Upload artwork image'}
-        imagePreview
+        accept=".zip,.glb,.gltf,.blend,.obj,.fbx,.stl,.usdz"
+        maxSize={100 * 1024 * 1024}
+        onFileSelect={setModelFile}
+        label={modelFile ? `3D модель: ${modelFile.name}` : '3D модель (опционально) — ZIP или .glb/.gltf'}
       />
+
+      {/* ── Poster / preview render ──
+           For 2D: shown as main image upload above title.
+           For 3D: shown as dedicated preview render section below 3D upload. ── */}
+      {preselectedPosterUrl ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img
+            src={`${apiBaseUrl}${preselectedPosterUrl}`}
+            alt={preselectedPosterName ?? 'Preselected poster'}
+            style={{
+              width: '80px', height: '80px', objectFit: 'cover',
+              borderRadius: 'var(--radius)', border: '1px solid var(--border)',
+            }}
+          />
+          <div>
+            <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Из Media-библиотеки / From Media</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{preselectedPosterName ?? 'Загруженный файл'}</p>
+          </div>
+        </div>
+      ) : has3D ? (
+        /* ── 3D preview render — dedicated block ── */
+        <div style={{
+          padding: '16px',
+          borderRadius: 'var(--radius)',
+          border: posterFile ? '1px solid var(--accent)' : '2px dashed var(--accent)',
+          backgroundColor: posterFile ? 'var(--surface)' : 'rgba(var(--accent-rgb), 0.03)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              style={{ color: 'var(--accent)', flexShrink: 0 }}>
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+              {posterFile ? 'Превью-рендер загружен / Preview ready' : 'Превью-рендер для галереи / Gallery Preview Render'}
+            </span>
+            {!posterFile && (
+              <span style={{
+                fontSize: '0.7rem', padding: '2px 8px', borderRadius: '99px',
+                backgroundColor: 'var(--accent)', color: 'var(--accent-ink)',
+              }}>
+                Рекомендуется / Recommended
+              </span>
+            )}
+          </div>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+            Это изображение будет показываться в карточках галереи, каталоге и поиске. Без него — силуэт-заглушка.
+          </p>
+          <FileUpload
+            accept=".jpg,.jpeg,.png,.webp,.svg"
+            maxSize={10 * 1024 * 1024}
+            onFileSelect={setPosterFile}
+            label={posterFile ? posterFile.name : 'Выбрать превью-рендер / Choose preview render'}
+            imagePreview
+          />
+        </div>
+      ) : (
+        /* ── 2D image upload — main content ── */
+        <FileUpload
+          accept=".jpg,.jpeg,.png,.webp,.svg"
+          maxSize={10 * 1024 * 1024}
+          onFileSelect={setPosterFile}
+          label={posterFile ? 'Изображение выбрано / Image selected' : 'Загрузите изображение / Upload artwork image'}
+          imagePreview
+        />
+      )}
 
       {/* ── Title — the only required text ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

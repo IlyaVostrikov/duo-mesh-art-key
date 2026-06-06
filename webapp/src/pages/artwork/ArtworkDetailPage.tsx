@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Link, useParams } from '@tanstack/react-router'
+import { useState, useEffect, useCallback } from 'react'
+import { Link, useParams, useRouter } from '@tanstack/react-router'
 import { ModelViewer3D } from '@/components/artwork/ModelViewer3D'
 import { ArtKeyQR } from '@/components/artwork/ArtKeyQR'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
@@ -8,6 +8,11 @@ import { FollowButton } from '@/components/FollowButton'
 import { VerifiedBadge } from '@/components/ui/verified-badge'
 import { assetUrl } from '@/lib/asset-url'
 import { apiBaseUrl } from '@/lib/api'
+import { useAuth } from '@/lib/use-auth'
+import { useReducedMotion } from '@/hooks/use-reduced-motion'
+import { PurchaseCeremony } from '@/components/ceremony/PurchaseCeremony'
+import { PurchaseCeremonyStatic } from '@/components/ceremony/PurchaseCeremonyStatic'
+import type { CeremonyData } from '@/components/ceremony/types'
 
 interface ProvenanceRecord {
   sequence: number
@@ -68,6 +73,43 @@ export function ArtworkDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lang, setLang] = useState<'ru' | 'en'>('ru')
+
+  // Purchase ceremony state
+  const { isAuthenticated, accessToken } = useAuth()
+  const reducedMotion = useReducedMotion()
+  const router = useRouter()
+  const [purchasing, setPurchasing] = useState(false)
+  const [ceremonyData, setCeremonyData] = useState<CeremonyData | null>(null)
+  const [purchaseError, setPurchaseError] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const handlePurchase = useCallback(async () => {
+    if (!aw?.artKey?.keyCode || !accessToken) return
+    setPurchasing(true)
+    setPurchaseError(null)
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/art-keys/${encodeURIComponent(aw.artKey.keyCode)}/purchase`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }))
+        throw new Error(err.message || `HTTP ${res.status}`)
+      }
+      const data: CeremonyData = await res.json()
+      setCeremonyData(data)
+      setConfirmOpen(false)
+    } catch (err: unknown) {
+      setPurchaseError(err instanceof Error ? err.message : 'Purchase failed')
+    } finally {
+      setPurchasing(false)
+    }
+  }, [aw?.artKey?.keyCode, accessToken])
+
+  const handleCeremonyComplete = useCallback(() => {
+    setCeremonyData(null)
+    router.navigate({ to: '/collection' })
+  }, [router])
 
   useEffect(() => {
     let cancelled = false
@@ -265,12 +307,132 @@ export function ArtworkDetailPage() {
 
           {/* CTA */}
           <RevealOnScroll direction="up" delay={280}>
+            {isAuthenticated && aw.artKey && aw.status !== 'SOLD' && (
+              <div style={{ marginBottom: '16px' }}>
+                <button
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={purchasing}
+                  className="w-full py-3 text-sm font-semibold mb-12"
+                  style={{
+                    backgroundColor: purchasing ? 'var(--text-muted)' : 'var(--accent)',
+                    color: purchasing ? 'var(--bg)' : 'var(--accent-ink)',
+                    border: 'none', borderRadius: 'var(--radius)',
+                    cursor: purchasing ? 'not-allowed' : 'pointer',
+                    transition: 'opacity var(--dur-fast) var(--ease)',
+                    opacity: purchasing ? 0.6 : 1,
+                  }}
+                >
+                  {purchasing ? 'Покупка... / Purchasing...' : 'Купить / Buy'}
+                  {aw.price && (
+                    <span style={{ marginLeft: '8px', fontWeight: 400 }}>
+                      · {aw.currency === 'RUB'
+                        ? `${Number(aw.price).toLocaleString('ru-RU')} ₽`
+                        : `$${Number(aw.price).toLocaleString('en-US')}`}
+                    </span>
+                  )}
+                </button>
+                {purchaseError && (
+                  <p style={{ color: '#e74c3c', fontSize: '0.8125rem', marginTop: '-36px', marginBottom: '16px' }}>
+                    {purchaseError}
+                  </p>
+                )}
+              </div>
+            )}
+            {!isAuthenticated && aw.artKey && aw.status !== 'SOLD' && (
+              <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+                <Link
+                  to="/login"
+                  className="inline-block w-full py-3 text-sm font-semibold"
+                  style={{
+                    backgroundColor: 'var(--accent)',
+                    color: 'var(--accent-ink)',
+                    border: 'none', borderRadius: 'var(--radius)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Войти чтобы купить / Sign in to Buy
+                  {aw.price && (
+                    <span style={{ marginLeft: '8px', fontWeight: 400 }}>
+                      · {aw.currency === 'RUB'
+                        ? `${Number(aw.price).toLocaleString('ru-RU')} ₽`
+                        : `$${Number(aw.price).toLocaleString('en-US')}`}
+                    </span>
+                  )}
+                </Link>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                  Только владельцы ArtKey могут приобрести работу / Only ArtKey holders can purchase
+                </p>
+              </div>
+            )}
             <InquiryForm
               artworkTitle={titleMain}
               artworkId={aw.id}
               artistName={aw.artist.displayName}
             />
           </RevealOnScroll>
+
+          {/* Confirm dialog */}
+          {confirmOpen && (
+            <div
+              onClick={(e) => { if (e.target === e.currentTarget) setConfirmOpen(false) }}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 99999,
+                backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', padding: '20px',
+              }}
+            >
+              <div style={{
+                backgroundColor: 'var(--bg)', borderRadius: 'var(--radius)',
+                padding: '32px', maxWidth: '420px', width: '100%',
+                boxShadow: 'var(--elev-2)',
+              }}>
+                <h2 className="font-display" style={{ fontSize: '1.25rem', marginBottom: '8px' }}>
+                  Подтверждение покупки / Confirm Purchase
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', marginBottom: '8px' }}>
+                  Вы приобретаете работу «{titleMain}»
+                </p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginBottom: '24px' }}>
+                  Это демо-транзакция. Реальная оплата не производится.<br />
+                  This is a demo transaction. No real payment is processed.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmOpen(false)}
+                    style={{
+                      padding: '10px 20px', borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border)', backgroundColor: 'transparent',
+                      color: 'var(--text-secondary)', fontSize: '0.875rem', cursor: 'pointer',
+                    }}
+                  >
+                    Отмена / Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePurchase}
+                    style={{
+                      padding: '10px 20px', borderRadius: 'var(--radius-sm)',
+                      border: 'none', backgroundColor: 'var(--accent)',
+                      color: 'var(--accent-ink)', fontSize: '0.875rem', fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Подтвердить / Confirm
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Purchase Ceremony */}
+          {ceremonyData && (
+            reducedMotion ? (
+              <PurchaseCeremonyStatic data={ceremonyData} onComplete={handleCeremonyComplete} />
+            ) : (
+              <PurchaseCeremony data={ceremonyData} onComplete={handleCeremonyComplete} />
+            )
+          )}
 
           {/* Art Key + Provenance */}
           {aw.artKey && (

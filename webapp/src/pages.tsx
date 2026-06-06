@@ -41,6 +41,7 @@ export function RootLayout() {
             <NavPill to="/halls" label="Залы" />
             <NavPill to="/artists" label="Художники" />
             <NavPill to="/verify" label="ArtKey" />
+            <NavPill to="/how-it-works" label="Как работает" />
           </nav>
 
           <div className="ml-auto flex items-center">
