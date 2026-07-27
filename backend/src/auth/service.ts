@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type {
   LoginRequest,
   RegisterPayload,
@@ -46,6 +47,7 @@ export class AuthService {
     const user = await this.db.user
       .create({
         data: {
+          id: randomUUID(),
           email: input.email,
           passwordHash,
           displayName: input.displayName,
@@ -210,6 +212,7 @@ export class AuthService {
     const refreshToken = createRefreshToken()
     const session = await this.db.authSession.create({
       data: {
+        id: randomUUID(),
         userId: user.id,
         refreshTokenHash: hashRefreshToken(refreshToken),
         expiresAt: this.refreshExpiresAt(),

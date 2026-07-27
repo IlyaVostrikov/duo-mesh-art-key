@@ -28,23 +28,27 @@ if (!_Bun) {
   ;(globalThis as any).Bun = {
     ...(_Bun ?? {}),
     password: {
-      hash(password: string, options: { algorithm: string; cost: number }) {
+      hash(password: string, options?: { algorithm?: string; cost?: number }) {
+        // Default cost=12 (~4s on modern hw) — Bun argon2id defaults are higher but scrypt needs N=2^cost to be reasonable
+        const cost = options?.cost ?? 12
         const salt = randomBytes(16)
-        const key = scryptSync(password, salt, 64, { N: 1 << options.cost, r: 8, p: 1 })
-        // Return a bcrypt-like string for compatibility with Bun.password.verify
+        const key = scryptSync(password, salt, 64, { N: 1 << cost, r: 8, p: 1 })
         const parts = [
-          `$2b$${String(options.cost).padStart(2, '0')}$`,
+          `$2b$${String(cost).padStart(2, '0')}$`,
           salt.toString('base64').replace(/=+$/, ''),
           key.toString('base64').replace(/=+$/, ''),
         ]
         return parts.join('')
       },
       verify(password: string, hash: string) {
-        const [, , algorithm, costAndSalt, keyStr] = hash.split('$')
+        const parts = hash.split('$')
+        // hash format: $2b$<cost>$<salt>$<key>
+        const costAndSalt = parts[3]
+        if (!costAndSalt) throw new Error('Invalid password hash format')
         const cost = parseInt(costAndSalt.slice(0, 2), 10)
         const saltB64 = costAndSalt.slice(2)
         const salt = Buffer.from(saltB64, 'base64')
-        const expected = Buffer.from(keyStr, 'base64')
+        const expected = Buffer.from(parts[4] ?? '', 'base64')
         const actual = scryptSync(password, salt, expected.length, { N: 1 << cost, r: 8, p: 1 })
         return timingSafeEqual(actual, expected)
       },

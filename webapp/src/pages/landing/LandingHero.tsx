@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 const MISSION_RU = 'Каждая работа заслуживает доказуемой подлинности.'
 const HERO_IMG = '/hero/final-2-flythrough.jpg'
 
-export function LandingHero() {
+export function LandingHero(_props?: { heroWork?: unknown; lang?: string }) {
   return (
     <section style={{
       height: '100svh',
@@ -34,7 +34,7 @@ export function LandingHero() {
         pointerEvents: 'none',
       }} />
 
-      {/* Text overlay */}
+      {/* Text overlay with glassmorphism */}
       <div style={{
         position: 'relative',
         zIndex: 1,
@@ -42,7 +42,18 @@ export function LandingHero() {
         padding: 'clamp(28px, 6vw, 88px)',
         pointerEvents: 'none',
       }}>
-        <div style={{ pointerEvents: 'auto' }}>
+        <div style={{
+          display: 'inline-block',
+          pointerEvents: 'auto',
+          background: 'rgba(0, 0, 0, 0.22)',
+          backdropFilter: 'blur(24px) saturate(1.4)',
+          WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
+          borderRadius: 18,
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          padding: 'clamp(18px, 2.5vw, 30px) clamp(20px, 3vw, 34px)',
+          maxWidth: '44ch',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
+        }}>
           <p style={{
             fontFamily: 'var(--ak-mono)',
             fontSize: 'clamp(10px, 1vw, 12.5px)',

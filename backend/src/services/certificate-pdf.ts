@@ -10,11 +10,17 @@
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import QRCode from 'qrcode'
 import { PDFDocument, rgb, type PDFPage, type PDFFont, type RGB } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 
 const VERIFY_BASE = process.env.PUBLIC_VERIFY_BASE ?? 'http://localhost:5173'
+
+const BASE_DIR = (() => {
+  if (typeof import.meta.dir !== 'undefined') return import.meta.dir
+  return resolve(fileURLToPath(import.meta.url), '../../../..')
+})()
 
 // ─── Design tokens (from certificate.css) ───
 
@@ -48,7 +54,7 @@ const ONH = onN(O.nHair)
 
 // ─── Fonts ───
 
-const FONT_DIR = resolve(import.meta.dir, '../../assets/fonts')
+const FONT_DIR = resolve(BASE_DIR, 'assets/fonts')
 
 interface Fonts { sans: PDFFont; sansB: PDFFont; mono: PDFFont }
 
