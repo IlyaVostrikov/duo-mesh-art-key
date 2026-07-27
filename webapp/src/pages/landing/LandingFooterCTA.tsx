@@ -18,7 +18,7 @@ export function LandingFooterCTA({ lang: _ }: { lang: 'ru' | 'en'; onToggleLang:
             <h2 className="text-display-sm m-0 text-foreground">
               Присоединяйтесь
               <br />
-              <span style={{ color: 'var(--text-secondary)' }}>к DUO MESH</span>
+              <span className="ak-footer-cta-muted">к DUO MESH</span>
             </h2>
           </RevealOnScroll>
 

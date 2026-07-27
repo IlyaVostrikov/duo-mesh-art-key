@@ -50,7 +50,14 @@ const MODEL_URLS: Record<string, string> = {
   'mesh-poem':      '/assets/models/mesh-poem.glb',
 }
 
-const DATABASE_URL = process.env.DATABASE_URL ?? 'postgresql://superuser:superpassword@localhost:54329/duo_mesh?schema=public'
+const DATABASE_URL = (() => {
+  const raw = process.env.DATABASE_URL ?? 'postgresql://superuser:superpassword@localhost:54329/duo_mesh?schema=public'
+  const url = new URL(raw)
+  if (url.searchParams.get('sslmode') === 'require' && !url.searchParams.has('uselibpqcompat')) {
+    url.searchParams.set('uselibpqcompat', 'true')
+  }
+  return url.toString()
+})()
 
 const adapter = new PrismaPg({ connectionString: DATABASE_URL })
 const prisma = new PrismaClient({ adapter })

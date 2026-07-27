@@ -85,6 +85,7 @@ function SceneContent({
 
     const yaw = currentYaw.current
     const pitch = currentPitch.current
+    const panProgress = panRef.current
     const panOffset = panProgress * z * 1.2 // scales with distance: far=wide, near=subtle
     const lookX = z * Math.tan(yaw) + panOffset
     const lookY = EYE + z * Math.tan(pitch)

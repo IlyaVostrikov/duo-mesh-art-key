@@ -23,4 +23,8 @@ import { defineConfig } from 'astro/config';
 //      Site, since SSR routes need the Node server. See README "SSR upgrade
 //      path". Note: per-page ISR is a Vercel/Netlify feature, not available on
 //      DigitalOcean/Yandex — use CDN cache headers for freshness instead.
-export default defineConfig({});
+import react from "@astrojs/react";
+
+export default defineConfig({
+  integrations: [react()],
+});

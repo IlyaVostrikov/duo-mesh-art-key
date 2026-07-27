@@ -66,7 +66,11 @@ export function RegisterForm({
           setFormError(caughtError.message)
           return
         }
-        setFormError('Unexpected auth error')
+        if (caughtError instanceof TypeError && caughtError.message.includes('fetch')) {
+          setFormError('Сервер недоступен. Попробуйте позже. / Server unavailable. Try again later.')
+          return
+        }
+        setFormError(caughtError instanceof Error ? caughtError.message : 'Unexpected auth error')
       }
     },
   })

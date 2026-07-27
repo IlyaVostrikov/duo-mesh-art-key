@@ -4,14 +4,13 @@ interface ImageHoverZoomProps {
   children: ReactNode
   scale?: number
   speed?: number
-  className?: string
 }
 
 /**
  * Zooms the image on hover, tracking cursor position for a parallax-like origin shift.
  * Wrap an <img> or any element — applies scale transform with transform-origin following the cursor.
  */
-export function ImageHoverZoom({ children, scale = 1.12, speed = 0.15, className }: ImageHoverZoomProps) {
+export function ImageHoverZoom({ children, scale = 1.12, speed = 0.15 }: ImageHoverZoomProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState('scale(1)')
   const frameRef = useRef<number>(0)
@@ -56,17 +55,13 @@ export function ImageHoverZoom({ children, scale = 1.12, speed = 0.15, className
   return (
     <div
       ref={ref}
+      className="motion-zoom"
       onMouseMove={onMove}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      className={className}
       style={{
         transform,
         transition: 'transform-origin 0s',
-        willChange: 'transform',
-        overflow: 'hidden',
-        width: '100%',
-        height: '100%',
       }}
     >
       {children}

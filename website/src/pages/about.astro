@@ -1,50 +1,57 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro'
+import BaseLayout from "../layouts/BaseLayout.astro";
+import GridLines from "../components/GridLines.astro";
+import PageHeader from "../components/PageHeader.astro";
+import PageFooter from "../components/PageFooter.astro";
 ---
 
 <BaseLayout title="О платформе" description="DUO MESH — экосистема для независимых художников с цифровыми сертификатами подлинности Art Key.">
-  <div class="container about-page">
-    <h1>О платформе</h1>
-    <div class="about-grid">
-      <div class="about-section">
-        <h2>Что такое DUO MESH</h2>
-        <p>DUO MESH — это не маркетплейс. Это город искусства, где у каждого художника есть свой дом, а улицы — это выставки.</p>
-        <p>Мы создаём экосистему, в которой независимые художники получают полноценное виртуальное присутствие: персональный выставочный зал, цифровые сертификаты подлинности на каждую работу и прямую связь с покупателями.</p>
-      </div>
-      <div class="about-section">
-        <h2>Art Key — цифровой паспорт произведения</h2>
-        <p>Каждая работа на платформе получает уникальный идентификатор Art Key — криптографически защищённый сертификат, который подтверждает подлинность произведения и отслеживает историю владения (provenance).</p>
-        <p>Это не NFT — это практичная система для реального искусства: физического и цифрового.</p>
-      </div>
-      <div class="about-section">
-        <h2>Для художников</h2>
-        <ul>
-          <li>Бесплатный выставочный зал</li>
-          <li>Прямой контакт с покупателями</li>
-          <li>Сертификаты подлинности на каждую работу</li>
-          <li>Отслеживание провенанса</li>
-          <li>Премьеры и события</li>
-        </ul>
-      </div>
-      <div class="about-section">
-        <h2>Для коллекционеров</h2>
-        <ul>
-          <li>Прямой контакт с художниками</li>
-          <li>Проверка подлинности через Art Key</li>
-          <li>История владения каждой работы</li>
-          <li>Виртуальные прогулки по залам</li>
-        </ul>
+  <PageHeader />
+
+  <!-- Контент -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <h1 class="display sm rv">О платформе</h1>
+
+        <div class="row rv" style="margin-top:clamp(40px,6vw,72px)">
+          <div>
+            <h2 class="display xs" style="margin-bottom:1rem">Что такое DUO MESH</h2>
+            <p class="body" style="max-width:48ch;text-align:left;margin-bottom:1rem">DUO MESH — это не маркетплейс. Это город искусства, где у каждого художника есть свой дом, а улицы — это выставки.</p>
+            <p class="body" style="max-width:48ch;text-align:left">Мы создаём экосистему, в которой независимые художники получают полноценное виртуальное присутствие: персональный выставочный зал, цифровые сертификаты подлинности на каждую работу и прямую связь с покупателями.</p>
+          </div>
+          <div>
+            <h2 class="display xs" style="margin-bottom:1rem">Art Key — цифровой паспорт</h2>
+            <p class="body" style="max-width:48ch;text-align:left;margin-bottom:1rem">Каждая работа на платформе получает уникальный идентификатор Art Key — криптографически защищённый сертификат, который подтверждает подлинность произведения и отслеживает историю владения.</p>
+            <p class="body" style="max-width:48ch;text-align:left">Это не NFT — это практичная система для реального искусства: физического и цифрового.</p>
+          </div>
+        </div>
+
+        <div class="row rv" style="margin-top:clamp(40px,6vw,72px)">
+          <div style="border:1px solid color-mix(in oklab,var(--ink) 12%,transparent);padding:clamp(26px,4vw,40px)">
+            <h2 class="display xs" style="margin-bottom:1rem">Для художников</h2>
+            <ul class="namelist" style="list-style:none;line-height:2.2">
+              <li>— Бесплатный выставочный зал</li>
+              <li>— Прямой контакт с покупателями</li>
+              <li>— Сертификаты подлинности на каждую работу</li>
+              <li>— Отслеживание провенанса</li>
+              <li>— Премьеры и события</li>
+            </ul>
+          </div>
+          <div style="border:1px solid color-mix(in oklab,var(--ink) 12%,transparent);padding:clamp(26px,4vw,40px)">
+            <h2 class="display xs" style="margin-bottom:1rem">Для коллекционеров</h2>
+            <ul class="namelist" style="list-style:none;line-height:2.2">
+              <li>— Прямой контакт с художниками</li>
+              <li>— Проверка подлинности через Art Key</li>
+              <li>— История владения каждой работы</li>
+              <li>— Виртуальные прогулки по залам</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</BaseLayout>
+  </section>
 
-<style>
-  .about-page h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 2rem; }
-  .about-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; }
-  .about-section h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--accent); }
-  .about-section p { color: var(--text-secondary); line-height: 1.7; margin-bottom: 0.75rem; }
-  .about-section ul { list-style: none; padding: 0; }
-  .about-section li { color: var(--text-secondary); padding: 0.3rem 0; }
-  .about-section li::before { content: '— '; color: var(--accent); }
-</style>
+  <PageFooter />
+</BaseLayout>

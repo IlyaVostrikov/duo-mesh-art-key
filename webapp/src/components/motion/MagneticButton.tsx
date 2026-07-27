@@ -6,7 +6,6 @@ interface MagneticButtonProps {
   strength?: number
   /** Transition speed factor */
   speed?: number
-  className?: string
   onClick?: () => void
 }
 
@@ -14,7 +13,7 @@ interface MagneticButtonProps {
  * Button that magnetically follows the cursor within a bounded radius.
  * On leave, springs back to center. Complements the CustomCursor.
  */
-export function MagneticButton({ children, strength = 8, speed = 0.18, className, onClick }: MagneticButtonProps) {
+export function MagneticButton({ children, strength = 8, speed = 0.18, onClick }: MagneticButtonProps) {
   const ref = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const frameRef = useRef<number>(0)
@@ -64,7 +63,6 @@ export function MagneticButton({ children, strength = 8, speed = 0.18, className
       onMouseMove={onMove}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      className={className}
       style={{
         transform: `translate(${pos.x}px, ${pos.y}px)`,
         transition: 'transform 0s',

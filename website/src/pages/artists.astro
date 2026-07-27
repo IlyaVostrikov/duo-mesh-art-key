@@ -1,17 +1,30 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro'
+import BaseLayout from "../layouts/BaseLayout.astro";
+import GridLines from "../components/GridLines.astro";
+import PageHeader from "../components/PageHeader.astro";
+import PageFooter from "../components/PageFooter.astro";
 ---
 
 <BaseLayout title="Художники" description="Познакомьтесь с независимыми художниками на платформе DUO MESH.">
-  <div class="container">
-    <div class="page-header">
-      <h1>Художники</h1>
-      <input type="search" id="artist-search" class="search-input" placeholder="Поиск по имени..." />
+  <PageHeader />
+
+  <!-- Контент -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <h1 class="display sm">Художники</h1>
+          <input type="search" id="artist-search" placeholder="Поиск по имени..." style="font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;background:transparent;border:1px solid color-mix(in oklab,var(--ink) 20%,transparent);padding:.5rem 1rem;color:var(--ink);min-width:220px" />
+        </div>
+        <div id="artist-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem;margin-top:1.5rem">
+          <p style="grid-column:1/-1;text-align:center;opacity:.55;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;padding:3rem 0">Загрузка...</p>
+        </div>
+      </div>
     </div>
-    <div id="artist-grid" class="artist-grid">
-      <p class="loading">Загрузка...</p>
-    </div>
-  </div>
+  </section>
+
+  <PageFooter />
 </BaseLayout>
 
 <script>
@@ -20,24 +33,24 @@ import BaseLayout from '../layouts/BaseLayout.astro'
   let debounceTimer: ReturnType<typeof setTimeout>
 
   async function loadArtists(search?: string) {
-    grid.innerHTML = '<p class="loading">Загрузка...</p>'
+    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;opacity:.55;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;padding:3rem 0">Загрузка...</p>'
     try {
       const data = await window.api.artists.list(1, search)
       if (data.artists.length === 0) {
-        grid.innerHTML = '<p class="empty">Художники не найдены</p>'
+        grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;opacity:.55;font-family:var(--mono);font-size:.7rem;padding:3rem 0">Художники не найдены</p>'
         return
       }
-      grid.innerHTML = data.artists.map((a) => {
+      grid.innerHTML = data.artists.map((a: any) => {
         const name = a.displayName ?? 'Анонимный художник'
         const link = a.hall?.slug ? `/halls/${a.hall.slug}` : `/artists/${a.id}`
-        const avatar = a.avatarUrl ? `<img src="${a.avatarUrl}" alt="${name}" />` : `<div class="avatar-placeholder">${name[0]}</div>`
-        return `<a href="${link}" class="artist-card">
-          <div class="avatar">${avatar}${a.verified ? '<span class="verified">✓</span>' : ''}</div>
-          <div class="info"><h3>${name}</h3><p>${a.location ?? ''}</p><p class="followers">${a.followersCount} подписчиков</p></div>
+        const avatar = a.avatarUrl ? `<img src="${a.avatarUrl}" alt="${name}" />` : `<div class="a-placeholder">${name[0]}</div>`
+        return `<a href="${link}" class="a-card">
+          <div class="a-avatar">${avatar}${a.verified ? '<span class="a-verified">&#10003;</span>' : ''}</div>
+          <div class="a-info"><h3>${name}</h3><p>${a.location ?? ''}</p><p class="a-followers">${a.followersCount} подписчиков</p></div>
         </a>`
       }).join('')
     } catch (err) {
-      grid.innerHTML = `<p class="error">Ошибка: ${(err as Error).message}</p>`
+      grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;opacity:.55;font-family:var(--mono);font-size:.7rem;padding:3rem 0">Ошибка: ${(err as Error).message}</p>`
     }
   }
 
@@ -50,18 +63,13 @@ import BaseLayout from '../layouts/BaseLayout.astro'
 </script>
 
 <style>
-  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
-  .page-header h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.02em; }
-  .search-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.95rem; min-width: 240px; }
-  .artist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
-  .loading, .empty, .error { grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 3rem 0; }
-  .artist-card { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; color: var(--text); transition: border-color 0.2s; }
-  .artist-card:hover { border-color: var(--accent); }
-  .avatar { position: relative; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
-  .avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .avatar-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--accent-dim); font-size: 1.5rem; font-weight: 700; color: white; }
-  .verified { position: absolute; bottom: 0; right: 0; width: 20px; height: 20px; background: var(--accent); border-radius: 50%; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; color: white; }
-  .info h3 { font-size: 1rem; font-weight: 600; }
-  .info p { font-size: 0.85rem; color: var(--text-secondary); }
-  .followers { margin-top: 0.15rem; }
+  .a-card { display:flex; align-items:center; gap:1rem; padding:1rem; border:1px solid color-mix(in oklab,var(--ink) 10%,transparent); text-decoration:none; color:var(--ink); transition:border-color .35s; }
+  .a-card:hover { border-color:color-mix(in oklab,var(--ink) 28%,transparent); }
+  .a-avatar { position:relative; width:56px; height:56px; border-radius:50%; overflow:hidden; flex-shrink:0; }
+  .a-avatar img { width:100%; height:100%; object-fit:cover; }
+  .a-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--iri-deep); font-family:var(--serif); font-size:1.5rem; color:var(--paper); }
+  .a-verified { position:absolute; bottom:0; right:0; width:20px; height:20px; background:var(--iri-deep); border-radius:50%; font-size:.65rem; display:flex; align-items:center; justify-content:center; color:var(--paper); }
+  .a-info h3 { font-family:var(--sans); font-size:.95rem; font-weight:600; }
+  .a-info p { font-family:var(--mono); font-size:.68rem; opacity:.6; letter-spacing:.04em; }
+  .a-followers { margin-top:.15rem; }
 </style>

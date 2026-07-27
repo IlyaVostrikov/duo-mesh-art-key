@@ -13,8 +13,6 @@ interface SplitTextProps {
   stagger?: number
   /** Direction: up, down, or none (fade only) */
   direction?: 'up' | 'down' | 'none'
-  className?: string
-  style?: React.CSSProperties
 }
 
 const dirOffset: Record<string, string> = {
@@ -35,8 +33,6 @@ export function SplitText({
   duration = 0.4,
   stagger = 0.02,
   direction = 'up',
-  className,
-  style,
 }: SplitTextProps) {
   const [visible, setVisible] = useState(false)
   const ref = useRef<HTMLElement>(null)
@@ -58,7 +54,7 @@ export function SplitText({
     : text.split('')
 
   return (
-    <Tag ref={ref as any} className={className} style={style} aria-label={text}>
+    <Tag ref={ref as any} aria-label={text}>
       {units.map((unit, i) => {
         const isSpace = mode === 'words' && /^\s+$/.test(unit)
         const transitionDelay = `${delay + i * stagger}s`

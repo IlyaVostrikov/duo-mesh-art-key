@@ -218,6 +218,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   })
 
   app.notFound((c) => c.json(errorResponse('NOT_FOUND', 'Route not found'), 404))
+
   app.onError(handleError)
 
   return app

@@ -10,7 +10,6 @@ interface StaggeredRevealProps {
   direction?: 'up' | 'down' | 'left' | 'right'
   /** Trigger when element enters viewport */
   threshold?: number
-  className?: string
 }
 
 const dirOffset: Record<string, { x: number; y: number }> = {
@@ -31,7 +30,6 @@ export function StaggeredReveal({
   initialDelay = 0,
   direction = 'up',
   threshold = 0.1,
-  className,
 }: StaggeredRevealProps) {
   const [visible, setVisible] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -51,7 +49,7 @@ export function StaggeredReveal({
   const kids = Children.toArray(children).filter(isValidElement)
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref}>
       {kids.map((child, i) => (
         <div
           key={i}

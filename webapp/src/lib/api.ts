@@ -113,17 +113,31 @@ export class ApiClient {
     options: RequestOptions,
   ): Promise<z.infer<TSchema>> {
     const response = await this.rawRequest(path, options)
-    const data = await response.json()
-    return schema.parse(data)
+    let data: unknown
+    try {
+      data = await response.json()
+    } catch {
+      throw new ApiRequestError(response.status, 'PARSE_ERROR', 'Server returned invalid JSON')
+    }
+    const result = schema.safeParse(data)
+    if (!result.success) {
+      throw new ApiRequestError(response.status, 'SCHEMA_MISMATCH', 'Server response format is unexpected')
+    }
+    return result.data
   }
 
   private async rawRequest(path: string, options: RequestOptions): Promise<Response> {
-    const response = await fetch(`${apiBaseUrl}${path}`, {
-      method: options.method ?? 'GET',
-      credentials: 'include',
-      headers: this.headers(options),
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    })
+    let response: Response
+    try {
+      response = await fetch(`${apiBaseUrl}${path}`, {
+        method: options.method ?? 'GET',
+        credentials: 'include',
+        headers: this.headers(options),
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      })
+    } catch (error) {
+      throw new ApiRequestError(0, 'NETWORK_ERROR', 'Сервер недоступен. Проверьте подключение. / Server unreachable. Check connection.')
+    }
 
     if (response.status === 401 && options.auth && options.retryOnUnauthorized !== false) {
       const refreshed = await this.refreshOnce().catch(async (error: unknown) => {

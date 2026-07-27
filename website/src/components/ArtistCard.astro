@@ -10,14 +10,14 @@ export interface Props {
 }
 
 const { id, displayName, avatarUrl, location, hallSlug, verified, followersCount } = Astro.props
-const name = displayName ?? 'Анонимный художник'
+const name = displayName ?? "Анонимный художник"
 const link = hallSlug ? `/halls/${hallSlug}` : `/artists/${id}`
 ---
 
 <a href={link} class="artist-card">
   <div class="artist-avatar">
     {avatarUrl ? <img src={avatarUrl} alt={name} /> : <div class="avatar-placeholder">{name[0]}</div>}
-    {verified && <span class="verified-badge" title="Верифицирован">✓</span>}
+    {verified && <span class="verified-badge" title="Верифицирован">&#10003;</span>}
   </div>
   <div class="artist-info">
     <h3 class="artist-name">{name}</h3>
@@ -32,14 +32,14 @@ const link = hallSlug ? `/halls/${hallSlug}` : `/artists/${id}`
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    border: 1px solid color-mix(in oklab, var(--ink) 10%, transparent);
     text-decoration: none;
-    color: var(--text);
-    transition: border-color 0.2s;
+    color: var(--ink);
+    transition: border-color .35s ease;
   }
-  .artist-card:hover { border-color: var(--accent); }
+  .artist-card:hover {
+    border-color: color-mix(in oklab, var(--ink) 28%, transparent);
+  }
   .artist-avatar {
     position: relative;
     width: 56px; height: 56px;
@@ -47,26 +47,44 @@ const link = hallSlug ? `/halls/${hallSlug}` : `/artists/${id}`
     overflow: hidden;
     flex-shrink: 0;
   }
-  .artist-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .artist-avatar img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
   .avatar-placeholder {
     width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
-    background: var(--accent-dim);
-    font-size: 1.5rem; font-weight: 700;
-    color: white;
+    background: var(--iri-deep);
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    color: var(--paper);
   }
   .verified-badge {
     position: absolute;
     bottom: 0; right: 0;
     width: 20px; height: 20px;
-    background: var(--accent);
+    background: var(--iri-deep);
     border-radius: 50%;
-    font-size: 0.7rem;
+    font-size: .65rem;
     display: flex; align-items: center; justify-content: center;
-    color: white;
+    color: var(--paper);
   }
   .artist-info { min-width: 0; }
-  .artist-name { font-size: 1rem; font-weight: 600; }
-  .artist-location { font-size: 0.85rem; color: var(--text-secondary); }
-  .artist-followers { font-size: 0.8rem; color: var(--text-secondary); }
+  .artist-name {
+    font-family: var(--sans);
+    font-size: .95rem;
+    font-weight: 600;
+  }
+  .artist-location {
+    font-family: var(--mono);
+    font-size: .68rem;
+    opacity: .6;
+    letter-spacing: .04em;
+  }
+  .artist-followers {
+    font-family: var(--mono);
+    font-size: .64rem;
+    opacity: .5;
+    letter-spacing: .04em;
+    margin-top: .1rem;
+  }
 </style>

@@ -1,79 +1,240 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro'
+import BaseLayout from "../layouts/BaseLayout.astro";
+import GridLines from "../components/GridLines.astro";
+import SectionLabel from "../components/SectionLabel.astro";
+import PillArrow from "../components/PillArrow.astro";
+import MeshArt from "../components/MeshArt.astro";
+import CaptionRow from "../components/CaptionRow.astro";
+import ArtKeySeal from "../components/ArtKeySeal.astro";
+import HeroScrubCanvas from "../components/HeroScrubCanvas.tsx";
 ---
 
 <BaseLayout
   title="DUO MESH"
-  description="Виртуальные выставочные залы для независимых художников. Verified Art Marketplace с цифровыми сертификатами подлинности."
+  description="Виртуальная галерея с проверяемым происхождением. Каждая работа несёт собственное доказательство."
 >
-  <section class="hero">
-    <div class="hero-content container">
-      <h1 class="hero-title">
-        Искусство обретает<br />
-        <span>цифровой дом</span>
-      </h1>
-      <p class="hero-text">
-        DUO MESH — экосистема для независимых художников. Виртуальные выставочные залы,
-        премьеры работ, цифровые сертификаты подлинности Art Key и прямой контакт с художником.
-      </p>
-      <div class="hero-actions">
-        <a href="/artworks" class="btn btn-primary">Смотреть работы</a>
-        <a href="/artists" class="btn btn-secondary">Открыть художников</a>
+  <!-- ============ ГЕРОЙ СО СКРАБ-АНИМАЦИЕЙ ============ -->
+  <HeroScrubCanvas client:load>
+    <div style="--line:color-mix(in oklab,var(--paper) 11%,transparent);position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.35) 0%,transparent 40%,transparent 70%,rgba(0,0,0,.25) 100%);pointer-events:none;z-index:1"></div>
+    <div class="wrap" style="height:100%;--line:color-mix(in oklab,var(--paper) 11%,transparent)">
+      <GridLines />
+      <div class="layer" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;padding:clamp(22px,3vw,34px) 0 clamp(22px,3vw,34px)">
+        <div class="heronav">
+          <div class="wordmark rv in" style="color:var(--paper)">duo&nbsp;mesh<b>.</b></div>
+          <div class="navcard">
+            <nav class="menu">
+              <a href="/about" style="color:var(--paper)">О галерее</a>
+              <a href="/artworks" style="color:var(--paper)">Работы</a>
+              <a href="/artists" style="color:var(--paper)">Художники</a>
+              <a href="/verify" style="color:var(--paper)">Art&nbsp;Key</a>
+            </nav>
+            <div class="enter"><a href="http://localhost:5173/register" style="color:var(--paper)">Войти в галерею ↗</a></div>
+          </div>
+        </div>
+        <div>
+          <div class="arrow-lg" style="color:var(--paper)">↘</div>
+        </div>
+      </div>
+    </div>
+  </HeroScrubCanvas>
+
+  <!-- Текст и копирайт после скраба -->
+  <section class="sec paper" style="padding:clamp(40px,6vw,80px) 0 clamp(28px,4vw,56px)">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="heromid" style="margin:0">
+          <div class="rv">
+            <span class="stars"></span>
+            <p class="body">Виртуальная галерея трёхмерных работ. Каждая показана в тихом зале «белого куба» и привязана к проверяемому Art&nbsp;Key — происхождение, которое можно проверить, а не просто принять на веру.</p>
+          </div>
+          <div class="copyright rv">&copy;{new Date().getFullYear()}</div>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="features container">
-    <h2 class="section-title">Как это работает</h2>
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">🎨</div>
-        <h3>Виртуальные залы</h3>
-        <p>Каждый художник получает собственное выставочное пространство — не ленту товаров, а атмосферную галерею.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔑</div>
-        <h3>Art Key</h3>
-        <p>Цифровой сертификат подлинности с уникальным ключом, историей владения и QR-верификацией.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📜</div>
-        <h3>Провенанс</h3>
-        <p>Полная история каждого произведения: создание → продажи → владельцы. Прозрачность и доверие.</p>
+  <!-- ============ МАНИФЕСТ (ink) ============ -->
+  <section class="sec ink pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="01" text="Меньше доверия. Больше доказательства." />
+          <PillArrow dir="right" />
+        </div>
+        <h2 class="display rv">Каждая работа несёт<br>собственное доказательство.</h2>
+
+        <div class="row" style="margin-top:clamp(40px,6vw,80px)">
+          <div class="rv">
+            <span class="stars"></span>
+            <p class="two-col">DUO&nbsp;MESH — пространство музейного уровня для цифрового искусства. В основе простой принцип: подлинность должна быть доказуема. Каждый объект запечатан в подписанную цепочку, дополняемую только вперёд. Мы показываем работу в тишине, а доказательство берёт на себя криптография. Зал тих намеренно; уверенность — не декорация.</p>
+            <div style="margin-top:clamp(36px,5vw,64px)">
+              <div class="stat">Ed25519<small>Подписанная цепочка происхождения</small></div>
+            </div>
+          </div>
+          <div class="rv">
+            <MeshArt variant="alt" ratio=".86" />
+            <CaptionRow index="02" title="Укрытие в форме" meta="&copy;2025" />
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="cta container">
-    <h2>Готовы открыть свою галерею?</h2>
-    <p>Присоединяйтесь к DUO MESH и получите свой выставочный зал.</p>
-    <a href="http://localhost:5173/register" class="btn btn-primary">Стать художником</a>
+  <!-- ============ ВОЗМОЖНОСТИ (paper) ============ -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="02" text="Зал без громких углов." back />
+          <PillArrow dir="right" />
+        </div>
+        <h2 class="display sm rv">Видно не всё,<br>что мы делаем.</h2>
+
+        <div style="margin-top:clamp(40px,6vw,72px)">
+          <!-- Выставочные залы -->
+          <div class="caprow rv">
+            <div class="text">
+              <SectionLabel index="01" text="Сначала атмосфера." />
+              <div class="caphead">
+                <h3 class="display xs">Выставочные залы</h3>
+                <a href="/artworks" class="viewlink">Смотреть зал &nearr;</a>
+              </div>
+              <p class="two-col">Каждый художник получает собственное виртуальное пространство — не ленту товаров, а атмосферную галерею. Стены, свет и дистанция компонуются как фотография. Работы подгружаются постепенно с адаптивным разрешением.</p>
+            </div>
+            <MeshArt ratio="1.5" />
+          </div>
+
+          <!-- Art Key -->
+          <div class="caprow flip rv">
+            <div class="text">
+              <SectionLabel index="02" text="Создано, чтобы чувствовать." />
+              <div class="caphead">
+                <h3 class="display xs">Происхождение Art&nbsp;Key</h3>
+                <a href="/verify" class="viewlink">Проверить ключ &nearr;</a>
+              </div>
+              <p class="two-col">Цифровой сертификат подлинности с уникальным ключом, историей владения и криптографической верификацией. Не NFT — практичная система для реального искусства. Каждый Art&nbsp;Key связывает подписной ключ художника с работой через аттестацию, подписанную реестром.</p>
+            </div>
+            <MeshArt variant="alt" ratio="1.5" />
+          </div>
+
+          <!-- Провенанс -->
+          <div class="caprow rv">
+            <div class="text">
+              <SectionLabel index="03" text="Важна история." />
+              <div class="caphead">
+                <h3 class="display xs">Провенанс</h3>
+                <a href="/how-it-works" class="viewlink">Как это работает &nearr;</a>
+              </div>
+              <p class="two-col">Полная история каждого произведения: создание &rarr; продажи &rarr; владельцы. Прозрачность и доверие, подкреплённые математикой. Цепочка хешей неизменяема и проверяема офлайн — ничто в статусе «проверено» не имитируется.</p>
+            </div>
+            <MeshArt ratio="1.5" />
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
+
+  <!-- ============ ПЕЧАТЬ ART KEY (paper) ============ -->
+  <section class="sec paper" style="padding:0 0 clamp(56px,9vw,120px)">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="03" text="Доказательство, показанное тихо." />
+          <div class="arrow-lg">&swarhk;</div>
+        </div>
+        <div class="keycard rv">
+          <ArtKeySeal />
+          <div>
+            <span class="verified">Реальное событие в цепочке</span>
+            <h3 class="display sm" style="margin:.7rem 0 .2rem">Art&nbsp;Key — Белый куб I</h3>
+            <p class="body" style="max-width:46ch;text-align:left">Выдаётся работе при приобретении и дописывается в подписанную детерминированную цепочку хешей. Печать генерируется из собственного дайджеста записи — другая работа даёт другой знак.</p>
+            <div class="hashline">
+              цепочка&nbsp;#0014 &middot; ed25519<br />
+              sha256: 7f3a9c2e10b46d8f5a1c93eebc04d27a8f6051b3d9e2740caa1f8b6e3c5d9012
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ДЛЯ ХУДОЖНИКОВ (paper) ============ -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="04" text="Присоединяйтесь." back />
+          <PillArrow dir="right" />
+        </div>
+        <div class="row" style="align-items:center">
+          <blockquote class="quote rv"><span class="qm">&laquo;</span>Впервые сертификат — не обещание на бумаге. Доказательство путешествует вместе с работой, и покупатель может проверить его, не полагаясь на моё слово.</blockquote>
+          <div class="rv">
+            <MeshArt variant="alt" ratio="1.3" style="max-width:280px;margin-left:auto" />
+            <div class="namelist" style="margin-top:1rem;text-align:right">
+              Художник-резидент<br />
+              <b>DUO MESH &blacktriangleleft;</b><br />
+              <span style="font-family:var(--mono);font-size:.62rem;opacity:.6">[02] Открытая галерея &middot; &copy;2026</span>
+            </div>
+          </div>
+        </div>
+        <div class="logos rv">
+          <span>Atelier</span><span>Forme</span><span>Kunsthal</span><span>Vellum</span><span>Quietus</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA (paper) ============ -->
+  <section class="sec paper" style="padding:0 0 clamp(56px,9vw,120px)">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer" style="text-align:center">
+        <h2 class="display sm rv">Готовы открыть свою галерею?</h2>
+        <p class="body rv" style="max-width:40ch;margin:1.5rem auto;text-align:center">Присоединяйтесь к DUO&nbsp;MESH и получите свой выставочный зал с цифровыми сертификатами подлинности.</p>
+        <div class="rv" style="margin-top:1.5rem">
+          <a href="http://localhost:5173/register" style="font-family:var(--sans);font-weight:600;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;color:inherit;text-decoration:underline;text-underline-offset:4px">Стать художником &nearr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ФУТЕР (ink) ============ -->
+  <footer class="sec ink pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <SectionLabel index="05" text="Доказательства должны жить долго." />
+        <h2 class="display rv" style="margin:1rem 0 2rem">Некоторым пространствам<br>положено молчать.</h2>
+        <div class="row">
+          <div class="rv">
+            <div class="socials">
+              <span class="soc">in</span><span class="soc">x</span><span class="soc">be</span><span class="soc">ig</span>
+            </div>
+            <MeshArt ratio="1.7" style="margin-top:2rem" />
+          </div>
+          <div class="rv">
+            <div class="footinfo">
+              <div><h6>Реестр</h6><p>Ed25519 &middot; закреплённый якорь</p></div>
+              <div><h6>Проверка</h6><p>Работает офлайн</p></div>
+              <div><h6>Залы</h6><p>Белый куб &middot; Секвенция</p></div>
+              <div><h6>Часы</h6><p>Всегда открыто</p></div>
+            </div>
+            <div style="margin-top:clamp(40px,6vw,80px)">
+              <div class="label" style="opacity:.6;margin-bottom:.6rem">— Входите тихо</div>
+              <div class="email">hello@duomesh.art</div>
+            </div>
+          </div>
+        </div>
+        <div class="footbar">
+          <span>&copy; {new Date().getFullYear()} DUO MESH — Все работы аутентифицированы.</span>
+          <span><a href="/about">О платформе</a><a href="/trust">Доверие</a></span>
+        </div>
+      </div>
+    </div>
+  </footer>
 </BaseLayout>
-
-<style>
-  .hero {
-    padding: 4rem 0;
-    text-align: center;
-    background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
-  }
-  .hero-title { font-size: 3.5rem; line-height: 1.1; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 1.5rem; }
-  .hero-title span { color: var(--accent); }
-  .hero-text { max-width: 640px; margin: 0 auto 2rem; font-size: 1.15rem; color: var(--text-secondary); line-height: 1.7; }
-  .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-  .btn { display: inline-block; padding: 0.75rem 1.75rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; transition: all 0.2s; }
-  .btn-primary { background: var(--accent); color: white; }
-  .btn-primary:hover { background: var(--accent-dim); color: white; }
-  .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
-  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-  .section-title { font-size: 2rem; font-weight: 700; margin-bottom: 2rem; text-align: center; }
-  .features { padding: 4rem 0; }
-  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
-  .feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; text-align: center; }
-  .feature-icon { font-size: 2.5rem; margin-bottom: 1rem; }
-  .feature-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
-  .feature-card p { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6; }
-  .cta { padding: 4rem 0; text-align: center; }
-  .cta h2 { font-size: 2rem; font-weight: 700; margin-bottom: 0.75rem; }
-  .cta p { color: var(--text-secondary); margin-bottom: 1.5rem; }
-</style>

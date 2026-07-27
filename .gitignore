@@ -37,3 +37,4 @@ backend/.prisma-generate.lock
 .vscode/
 *.swp
 *.swo
+.vercel

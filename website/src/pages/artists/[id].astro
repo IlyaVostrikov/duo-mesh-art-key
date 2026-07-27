@@ -1,11 +1,28 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro'
+export function getStaticPaths() {
+  return [{ params: { id: "view" } }];
+}
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import GridLines from "../../components/GridLines.astro";
+import PageHeader from "../../components/PageHeader.astro";
+import PageFooter from "../../components/PageFooter.astro";
 ---
 
 <BaseLayout title="Художник" description="Профиль художника на платформе DUO MESH.">
-  <div class="container" id="artist-profile">
-    <p class="loading">Загрузка профиля...</p>
-  </div>
+  <PageHeader />
+
+  <!-- Контент -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer" id="artist-profile">
+        <p style="text-align:center;opacity:.55;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;padding:3rem 0">Загрузка профиля...</p>
+      </div>
+    </div>
+  </section>
+
+  <PageFooter />
 </BaseLayout>
 
 <script>
@@ -19,60 +36,46 @@ import BaseLayout from '../../layouts/BaseLayout.astro'
       const name = artist.displayName ?? 'Анонимный художник'
 
       container.innerHTML = `
-        <a href="/artists" class="back-link">&larr; К каталогу</a>
-        <div class="artist-header">
-          <div class="avatar">${artist.avatarUrl ? `<img src="${artist.avatarUrl}" alt="${name}" />` : `<div class="placeholder">${name[0]}</div>`}${artist.verified ? '<span class="verified">✓</span>' : ''}</div>
+        <a href="/artists" style="display:inline-block;margin-bottom:1.5rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);opacity:.55;text-decoration:none">&larr; К каталогу</a>
+        <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:1.5rem">
+          <div style="position:relative;width:80px;height:80px;border-radius:50%;overflow:hidden;flex-shrink:0">
+            ${artist.avatarUrl ? `<img src="${artist.avatarUrl}" alt="${name}" style="width:100%;height:100%;object-fit:cover" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--iri-deep);font-family:var(--serif);font-size:2rem;color:var(--paper)">${name[0]}</div>`}
+            ${artist.verified ? '<span style="position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--iri-deep);border-radius:50%;font-size:.7rem;display:flex;align-items:center;justify-content:center;color:var(--paper)">&#10003;</span>' : ''}
+          </div>
           <div>
-            <h1>${name}</h1>
-            ${artist.location ? `<p class="location">${artist.location}</p>` : ''}
-            <p class="followers">${artist.followersCount} подписчиков</p>
-            ${artist.hall?.slug ? `<a href="/halls/${artist.hall.slug}" class="hall-link">Посмотреть выставочный зал &rarr;</a>` : ''}
+            <h1 class="display xs" style="margin-bottom:.2rem">${name}</h1>
+            ${artist.location ? `<p style="font-family:var(--mono);font-size:.68rem;opacity:.5;letter-spacing:.04em">${artist.location}</p>` : ''}
+            <p style="font-family:var(--mono);font-size:.66rem;opacity:.5;margin-top:.2rem">${artist.followersCount} подписчиков</p>
+            ${artist.hall?.slug ? `<a href="/halls/${artist.hall.slug}" style="display:inline-block;margin-top:.5rem;font-family:var(--sans);font-weight:600;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);text-decoration:underline;text-underline-offset:3px">Выставочный зал &rarr;</a>` : ''}
           </div>
         </div>
-        ${artist.bio ? `<p class="bio">${artist.bio}</p>` : ''}
-        ${artist.artistStatement ? `<div class="statement"><h3>Artist Statement</h3><p>${artist.artistStatement}</p></div>` : ''}
-        <h2 class="section-title">Работы художника</h2>
-        <div class="artwork-grid">
-          ${works.artworks.length === 0 ? '<p class="empty">Пока нет опубликованных работ</p>' :
-            works.artworks.map((aw) => `
-              <a href="/artworks/${aw.id}" class="card">
-                <div class="card-image">${aw.images[0] ? `<img src="${aw.images[0]}" alt="${aw.title}" loading="lazy" />` : '<div class="no-img"></div>'}</div>
-                <div class="card-body"><h3>${aw.title}</h3>${aw.price ? `<p class="price">${Number(aw.price).toLocaleString()} ${aw.currency}</p>` : ''}</div>
+        ${artist.bio ? `<p style="font-family:var(--sans);font-size:.84rem;line-height:1.62;opacity:.8;margin-bottom:1.5rem;max-width:720px">${artist.bio}</p>` : ''}
+        ${artist.artistStatement ? `<div style="border:1px solid color-mix(in oklab,var(--ink) 10%,transparent);padding:1.5rem;margin-bottom:2rem"><h3 style="font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;opacity:.5;margin-bottom:.5rem">Artist Statement</h3><p style="font-family:var(--sans);font-size:.84rem;line-height:1.62;opacity:.8">${artist.artistStatement}</p></div>` : ''}
+        <h2 class="display xs" style="margin-bottom:1.5rem">Работы художника</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem">
+          ${works.artworks.length === 0 ? '<p style="grid-column:1/-1;text-align:center;opacity:.5;font-family:var(--mono);font-size:.7rem;padding:3rem 0">Пока нет опубликованных работ</p>' :
+            works.artworks.map((aw: any) => `
+              <a href="/artworks/${aw.id}" class="aw-card">
+                <div class="aw-img">${aw.images[0] ? `<img src="${aw.images[0]}" alt="${aw.title}" loading="lazy" />` : '<div class="aw-noimg"></div>'}</div>
+                <div class="aw-body"><h3>${aw.title}</h3>${aw.price ? `<p class="aw-price">${Number(aw.price).toLocaleString()} ${aw.currency}</p>` : ''}</div>
               </a>
             `).join('')
           }
         </div>`
     } catch (err) {
-      container.innerHTML = `<p class="error">Ошибка: ${(err as Error).message}</p>`
+      container.innerHTML = `<p style="text-align:center;opacity:.55;font-family:var(--mono);font-size:.7rem;padding:3rem 0">Ошибка: ${(err as Error).message}</p>`
     }
   }
   load()
 </script>
 
 <style>
-  .loading, .error, .empty { text-align: center; color: var(--text-secondary); padding: 3rem 0; }
-  .back-link { display: inline-block; margin-bottom: 1.5rem; color: var(--text-secondary); }
-  .artist-header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
-  .avatar { position: relative; width: 80px; height: 80px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
-  .avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--accent-dim); font-size: 2rem; font-weight: 700; color: white; }
-  .verified { position: absolute; bottom: 0; right: 0; width: 24px; height: 24px; background: var(--accent); border-radius: 50%; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; color: white; }
-  .artist-header h1 { font-size: 2rem; font-weight: 700; }
-  .location { color: var(--text-secondary); }
-  .followers { font-size: 0.9rem; color: var(--text-secondary); }
-  .hall-link { display: inline-block; margin-top: 0.5rem; color: var(--accent); font-weight: 600; }
-  .bio { color: var(--text-secondary); line-height: 1.7; margin-bottom: 1.5rem; max-width: 720px; }
-  .statement { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
-  .statement h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 0.5rem; }
-  .statement p { color: var(--text-secondary); line-height: 1.7; }
-  .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
-  .artwork-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
-  .card { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; text-decoration: none; color: var(--text); transition: border-color 0.2s; }
-  .card:hover { border-color: var(--accent); }
-  .card-image { aspect-ratio: 4/3; overflow: hidden; background: #1a1a20; }
-  .card-image img { width: 100%; height: 100%; object-fit: cover; }
-  .no-img { width: 100%; height: 100%; }
-  .card-body { padding: 1rem; }
-  .card-body h3 { font-size: 1rem; font-weight: 600; }
-  .price { color: var(--gold); font-weight: 600; margin-top: 0.25rem; }
+  .aw-card { display:block; border:1px solid color-mix(in oklab,var(--ink) 12%,transparent); text-decoration:none; color:var(--ink); transition:border-color .35s; }
+  .aw-card:hover { border-color:color-mix(in oklab,var(--ink) 30%,transparent); }
+  .aw-img { aspect-ratio:4/3; overflow:hidden; background:color-mix(in oklab,var(--ink) 5%,transparent); }
+  .aw-img img { width:100%; height:100%; object-fit:cover; }
+  .aw-noimg { width:100%; height:100%; }
+  .aw-body { padding:1rem; }
+  .aw-body h3 { font-family:var(--sans); font-size:.92rem; font-weight:600; margin-bottom:.2rem; }
+  .aw-price { font-family:var(--serif); font-size:1rem; font-weight:300; margin-top:.35rem; opacity:.85; }
 </style>
