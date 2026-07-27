@@ -51,7 +51,7 @@ export function LandingHero(_props?: { heroWork?: unknown; lang?: string }) {
           borderRadius: 18,
           border: '1px solid rgba(255, 255, 255, 0.12)',
           padding: 'clamp(18px, 2.5vw, 30px) clamp(20px, 3vw, 34px)',
-          maxWidth: '44ch',
+          maxWidth: '48ch',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
         }}>
           <p style={{
@@ -68,7 +68,7 @@ export function LandingHero(_props?: { heroWork?: unknown; lang?: string }) {
           <h1 style={{
             fontFamily: 'var(--ak-font), Georgia, serif',
             fontWeight: 300,
-            fontSize: 'clamp(36px, 6.5vw, 82px)',
+            fontSize: 'clamp(30px, 5vw, 64px)',
             lineHeight: 1.02,
             letterSpacing: '-.01em',
             margin: 0,
