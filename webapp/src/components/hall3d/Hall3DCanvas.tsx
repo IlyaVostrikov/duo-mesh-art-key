@@ -2,7 +2,9 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { useTextureCache } from '@/hooks/useTextureCache'
-import { useKeyboardCamera } from '@/hooks/useKeyboardCamera'
+import { useKeyboardCamera, FOV_DEFAULT, FOV_NEAR, FOV_FAR } from '@/hooks/useKeyboardCamera'
+import type { NavDir } from '@/hooks/useKeyboardCamera'
+import { HallNavControls } from './HallNavControls'
 import { useEnvironmentMap } from '@/hooks/useEnvironmentMap'
 import { GalleryWall } from './GalleryWall'
 import { GalleryFloor } from './GalleryFloor'
@@ -34,6 +36,7 @@ interface SceneContentProps {
   onClick: (id: string) => void
   dollyRef: React.MutableRefObject<number>
   panRef: React.MutableRefObject<number>
+  zoomRef: React.MutableRefObject<number>
   mouseNorm: { x: number; y: number }
   enableParallax: boolean
   wallWidth: number
@@ -42,7 +45,7 @@ interface SceneContentProps {
 
 function SceneContent({
   artworks, layout, textureCache, hoveredId, onHover, onClick,
-  dollyRef, panRef, mouseNorm, enableParallax, wallWidth, customization,
+  dollyRef, panRef, zoomRef, mouseNorm, enableParallax, wallWidth, customization,
 }: SceneContentProps) {
   const c = { ...DEFAULT_CUSTOMIZATION, ...(customization ?? {}) } as Required<Omit<HallCustomization, 'wallColor'>> & { wallColor?: string }
   const lighting = LIGHTING_PRESETS[c.lightingPreset] ?? LIGHTING_PRESETS.warm
@@ -87,6 +90,18 @@ function SceneContent({
     const pitch = currentPitch.current
     const panProgress = panRef.current
     const panOffset = panProgress * z * 1.2 // scales with distance: far=wide, near=subtle
+
+    // FOV-based zoom: zoomRef [-1, 1] → FOV [FOV_FAR, FOV_NEAR]
+    const zoom = zoomRef.current
+    const targetFov = zoom >= 0
+      ? THREE.MathUtils.lerp(FOV_DEFAULT, FOV_NEAR, zoom)
+      : THREE.MathUtils.lerp(FOV_DEFAULT, FOV_FAR, -zoom)
+    const smoothedFov = THREE.MathUtils.lerp(pcam.fov, targetFov, Math.min(1, LERP_SPEED * dt))
+    if (Math.abs(pcam.fov - smoothedFov) > 0.01) {
+      pcam.fov = smoothedFov
+      pcam.updateProjectionMatrix()
+    }
+
     const lookX = z * Math.tan(yaw) + panOffset
     const lookY = EYE + z * Math.tan(pitch)
 
@@ -176,7 +191,8 @@ interface Hall3DCanvasProps {
 
 export function Hall3DCanvas({ artworks, layout, onArtworkClick, customization }: Hall3DCanvasProps) {
   const reduced = useReducedMotion()
-  const { dollyRef, panRef } = useKeyboardCamera(!reduced)
+  const virtualDirRef = useRef<NavDir>({ v: 0, h: 0, zoom: 0 })
+  const { dollyRef, panRef, zoomRef } = useKeyboardCamera(!reduced, false, virtualDirRef)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [mouseNorm, setMouseNorm] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -250,6 +266,7 @@ export function Hall3DCanvas({ artworks, layout, onArtworkClick, customization }
         onClick={reduced ? () => {} : handleClick}
         dollyRef={dollyRef}
         panRef={panRef}
+        zoomRef={zoomRef}
         mouseNorm={reduced ? { x: 0, y: 0 } : mouseNorm}
         enableParallax={!reduced}
         wallWidth={wallWidth}
@@ -259,7 +276,8 @@ export function Hall3DCanvas({ artworks, layout, onArtworkClick, customization }
   )
 
   return (
-    <div ref={containerRef} className="w-full h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
+    <div ref={containerRef} className="w-full h-screen overflow-hidden relative" style={{ backgroundColor: 'var(--bg)' }}>
+      <HallNavControls virtualDirRef={virtualDirRef} />
       {canvasContent}
     </div>
   )
