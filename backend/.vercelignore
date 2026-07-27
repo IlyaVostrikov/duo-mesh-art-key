@@ -1,0 +1,15 @@
+node_modules/
+src/vercel-entry.ts
+scripts/apply-migrations-neon.mjs
+uploads/
+data/
+tmp/
+tests/
+*.test.ts
+.env
+.env.*
+!.env.example
+.git/
+.gitignore
+*.log
+coverage/

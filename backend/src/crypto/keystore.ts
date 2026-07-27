@@ -1,3 +1,4 @@
+import { readFile, writeFile } from 'node:fs/promises'
 import { sha256Hex } from './hash'
 
 /**
@@ -42,7 +43,7 @@ export class KeyStore {
   private async load(): Promise<StoreFile> {
     if (this.store) return this.store
     try {
-      const raw = await Bun.file(this.storePath).text()
+      const raw = await readFile(this.storePath, 'utf-8')
       this.store = JSON.parse(raw) as StoreFile
     } catch {
       this.store = {}
@@ -52,7 +53,7 @@ export class KeyStore {
 
   private async save(): Promise<void> {
     if (!this.store) return
-    await Bun.write(this.storePath, JSON.stringify(this.store, null, 2))
+    await writeFile(this.storePath, JSON.stringify(this.store, null, 2))
   }
 
   async set(keyId: string, privateKeyHex: string): Promise<void> {

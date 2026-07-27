@@ -1,8 +1,10 @@
+import { Hono } from 'hono'
 import { createApp } from './app'
 import { createBackendRuntime } from './runtime'
 
 const runtime = createBackendRuntime()
-const app = createApp({ env: runtime.env, prisma: runtime.prisma })
+const inner = createApp({ env: runtime.env, prisma: runtime.prisma })
+const app = new Hono().route('/api', inner)
 
 const server = Bun.serve({
   port: runtime.env.PORT,

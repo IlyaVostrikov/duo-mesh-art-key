@@ -28,7 +28,22 @@ export class SigningService {
     const existing = await this.prisma.signingKey.findFirst({
       where: { ownerType: 'PLATFORM', isActive: true },
     })
-    if (existing) return existing.id
+    if (existing) {
+      // On serverless (Vercel), the keystore file is empty after cold start.
+      // Try to restore the private key from env var if missing.
+      if (!(await this.keyStore.has(existing.id))) {
+        const hex = process.env.PLATFORM_PRIVATE_KEY_HEX
+        if (hex) {
+          await this.keyStore.set(existing.id, hex)
+        } else {
+          console.warn(
+            'Platform key exists in DB but private key is missing from keystore. ' +
+            'Set PLATFORM_PRIVATE_KEY_HEX env var for serverless deployments.',
+          )
+        }
+      }
+      return existing.id
+    }
 
     const kp = await generateEd25519KeyPair()
     const key = await this.prisma.signingKey.create({

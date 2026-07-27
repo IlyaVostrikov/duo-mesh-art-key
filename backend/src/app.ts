@@ -1,9 +1,22 @@
 import { resolve } from 'node:path'
 import { mkdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
-import { serveStatic } from 'hono/bun'
 import { secureHeaders } from 'hono/secure-headers'
+
+const isVercel = Boolean(process.env.VERCEL)
+
+// Bun-only: serveStatic for local uploads; on Vercel, uploads go via S3/Spaces
+let serveStatic: ReturnType<typeof import('hono/bun').serveStatic> | null = null
+if (!isVercel) {
+  try {
+    const bunMod = await import('hono/bun')
+    serveStatic = bunMod.serveStatic
+  } catch {
+    // hono/bun not available; local upload serving disabled
+  }
+}
 
 import type { DbClient } from './db'
 import type { AppEnv } from './env'
@@ -69,10 +82,18 @@ type CreateAppOptions = {
   prisma: DbClient
 }
 
+function resolveDataDir(): string {
+  if (isVercel) return resolve('/tmp', 'duo-mesh-data')
+  // Bun: import.meta.dir; Node.js: derive from import.meta.url
+  const baseDir = typeof import.meta.dir !== 'undefined'
+    ? import.meta.dir
+    : resolve(fileURLToPath(import.meta.url), '../..')
+  return resolve(baseDir, '../data')
+}
+
 export function createApp({ env, prisma }: CreateAppOptions) {
   // ── Crypto infra ──
-  // Ensure data directory exists for keystore
-  const dataDir = resolve(import.meta.dir, '../data')
+  const dataDir = resolveDataDir()
   mkdirSync(dataDir, { recursive: true })
 
   const keyStore = new KeyStore(
@@ -150,11 +171,14 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.get('/health', (c) => c.json({ status: 'ok' }))
 
   // Allow cross-origin loading of uploaded assets (overrides secureHeaders CORP: same-origin)
-  app.use('/uploads/*', async (c, next) => {
-    c.res.headers.set('Cross-Origin-Resource-Policy', 'cross-origin')
-    await next()
-  })
-  app.use('/uploads/*', serveStatic({ root: './' }))
+  // On Vercel, uploads are served via S3/Spaces, not local filesystem
+  if (serveStatic) {
+    app.use('/uploads/*', async (c, next) => {
+      c.res.headers.set('Cross-Origin-Resource-Policy', 'cross-origin')
+      await next()
+    })
+    app.use('/uploads/*', serveStatic({ root: './' }))
+  }
 
   // Rate limit auth endpoints against brute-force (production only)
   app.use(
@@ -171,22 +195,22 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   )
 
   // Mount routes
-  app.route('/api/auth', createAuthRoutes())
-  app.route('/api/artists', createArtistRoutes())
-  app.route('/api/artworks', createArtworkRoutes())
-  app.route('/api/halls', createHallRoutes())
-  app.route('/api/art-keys', createArtKeyRoutes())
-  app.route('/api/follows', createFollowRoutes())
-  app.route('/api/search', createSearchRoutes())
-  app.route('/api/inquiries', createInquiryRoutes())
-  app.route('/api/uploads', createUploadRoutes())
-  app.route('/api/featured', createFeaturedRoutes())
-  app.route('/api/sales', createSalesRoutes())
-  app.route('/api/admin', createAdminRoutes())
-  app.route('/api/public-keys', createPublicKeyRoutes())
-  app.route('/api', createTransferRoutes())
-  app.route('/api', createPurchaseRoutes())
-  app.route('/api', createTransparencyRoutes())
+  app.route('/auth', createAuthRoutes())
+  app.route('/artists', createArtistRoutes())
+  app.route('/artworks', createArtworkRoutes())
+  app.route('/halls', createHallRoutes())
+  app.route('/art-keys', createArtKeyRoutes())
+  app.route('/follows', createFollowRoutes())
+  app.route('/search', createSearchRoutes())
+  app.route('/inquiries', createInquiryRoutes())
+  app.route('/uploads', createUploadRoutes())
+  app.route('/featured', createFeaturedRoutes())
+  app.route('/sales', createSalesRoutes())
+  app.route('/admin', createAdminRoutes())
+  app.route('/public-keys', createPublicKeyRoutes())
+  app.route('/transfers', createTransferRoutes())
+  app.route('/purchases', createPurchaseRoutes())
+  app.route('/transparency', createTransparencyRoutes())
 
   app.doc('/openapi.json', {
     openapi: '3.0.0',
