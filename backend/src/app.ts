@@ -208,8 +208,8 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/sales', createSalesRoutes())
   app.route('/admin', createAdminRoutes())
   app.route('/public-keys', createPublicKeyRoutes())
-  app.route('/transfers', createTransferRoutes())
-  app.route('/purchases', createPurchaseRoutes())
+  app.route('/', createTransferRoutes())
+  app.route('/', createPurchaseRoutes())
   app.route('/transparency', createTransparencyRoutes())
 
   app.doc('/openapi.json', {
