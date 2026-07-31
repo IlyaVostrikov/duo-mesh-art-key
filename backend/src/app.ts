@@ -124,10 +124,10 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   })
   const provenanceTransferService = new ProvenanceTransferService(prisma, signingService)
 
-  // ── Bootstrap: ensure platform signing key exists ──
+  // ── Bootstrap: ensure platform key exists & sync keys from DB ──
   // Fire-and-forget; will be ready by the time genesis is signed
-  signingService.ensurePlatformKey().catch((err) => {
-    console.error('Failed to ensure platform signing key:', err)
+  signingService.ensureKeys().catch((err) => {
+    console.error('Failed to ensure keys:', err)
   })
 
   const app = new OpenAPIHono<AppBindings>({

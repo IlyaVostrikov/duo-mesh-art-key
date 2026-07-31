@@ -5,6 +5,7 @@ import {
   verifyProvenanceSignature,
   KeyStore,
 } from '../crypto'
+import type { StoreEntry } from '../crypto/keystore'
 
 export interface ProvenancePayload {
   artworkId: string
@@ -23,8 +24,9 @@ export class SigningService {
     private keyStore: KeyStore,
   ) {}
 
-  /** Ensure a platform signing key exists. Creates one on first boot. */
-  async ensurePlatformKey(): Promise<string> {
+  /** Ensure platform key exists and sync all keys from DB on cold start. */
+  async ensureKeys(): Promise<void> {
+    // 1. Ensure platform signing key exists
     const existing = await this.prisma.signingKey.findFirst({
       where: { ownerType: 'PLATFORM', isActive: true },
     })
@@ -35,6 +37,14 @@ export class SigningService {
         const hex = process.env.PLATFORM_PRIVATE_KEY_HEX
         if (hex) {
           await this.keyStore.set(existing.id, hex)
+          // Persist encrypted key in DB for future cold starts
+          const entry = await this.keyStore.getEntry(existing.id)
+          if (entry && !existing.encryptedPrivateKey) {
+            await this.prisma.signingKey.update({
+              where: { id: existing.id },
+              data: { encryptedPrivateKey: entry },
+            })
+          }
         } else {
           console.warn(
             'Platform key exists in DB but private key is missing from keystore. ' +
@@ -42,19 +52,52 @@ export class SigningService {
           )
         }
       }
-      return existing.id
+    } else {
+      const kp = await generateEd25519KeyPair()
+      const key = await this.prisma.signingKey.create({
+        data: {
+          ownerType: 'PLATFORM',
+          publicKey: kp.publicKey,
+          keyAlias: 'DUO MESH Platform Key',
+        },
+      })
+      await this.keyStore.set(key.id, kp.privateKey)
+      const entry = await this.keyStore.getEntry(key.id)
+      if (entry) {
+        await this.prisma.signingKey.update({
+          where: { id: key.id },
+          data: { encryptedPrivateKey: entry },
+        })
+      }
     }
 
-    const kp = await generateEd25519KeyPair()
-    const key = await this.prisma.signingKey.create({
-      data: {
-        ownerType: 'PLATFORM',
-        publicKey: kp.publicKey,
-        keyAlias: 'DUO MESH Platform Key',
-      },
+    // 2. Run migration: add encrypted_private_key column if missing
+    try {
+      await this.prisma.$executeRawUnsafe(
+        `ALTER TABLE signing_keys ADD COLUMN IF NOT EXISTS encrypted_private_key JSONB`,
+      )
+    } catch { /* column may already exist from a prior run; ignore */ }
+
+    // 3. Sync all keys from DB into the keystore (cold-start recovery)
+    const dbKeys = await this.prisma.signingKey.findMany({
+      where: { encryptedPrivateKey: { not: null } },
+      select: { id: true, encryptedPrivateKey: true },
     })
-    await this.keyStore.set(key.id, kp.privateKey)
-    return key.id
+    for (const dbKey of dbKeys) {
+      if (!(await this.keyStore.has(dbKey.id))) {
+        await this.keyStore.setEntry(dbKey.id, dbKey.encryptedPrivateKey as unknown as StoreEntry)
+      }
+    }
+
+    // 4. Revoke active keys whose private key was lost (no encryptedPrivateKey in DB)
+    await this.prisma.signingKey.updateMany({
+      where: {
+        isActive: true,
+        encryptedPrivateKey: null,
+        ownerType: { not: 'PLATFORM' },
+      },
+      data: { isActive: false, revokedAt: new Date() },
+    })
   }
 
   /** Generate an Ed25519 keypair for an artist at onboarding. */
@@ -77,6 +120,15 @@ export class SigningService {
       },
     })
     await this.keyStore.set(key.id, kp.privateKey)
+
+    // Persist encrypted key in DB so it survives Vercel cold starts
+    const entry = await this.keyStore.getEntry(key.id)
+    if (entry) {
+      await this.prisma.signingKey.update({
+        where: { id: key.id },
+        data: { encryptedPrivateKey: entry },
+      })
+    }
 
     return { keyId: key.id, publicKey: kp.publicKey }
   }
