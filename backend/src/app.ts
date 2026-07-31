@@ -92,7 +92,7 @@ function resolveDataDir(): string {
   return resolve(baseDir, '../data')
 }
 
-export function createApp({ env, prisma }: CreateAppOptions) {
+export async function createApp({ env, prisma }: CreateAppOptions) {
   // ── Crypto infra ──
   const dataDir = resolveDataDir()
   mkdirSync(dataDir, { recursive: true })
@@ -125,10 +125,13 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   const provenanceTransferService = new ProvenanceTransferService(prisma, signingService)
 
   // ── Bootstrap: ensure platform key exists & sync keys from DB ──
-  // Fire-and-forget; will be ready by the time genesis is signed
-  signingService.ensureKeys().catch((err) => {
+  // MUST await — the migration and key sync must complete before any request
+  // touches the signing_keys table (Prisma queries fail if columns are missing).
+  try {
+    await signingService.ensureKeys()
+  } catch (err) {
     console.error('Failed to ensure keys:', err)
-  })
+  }
 
   const app = new OpenAPIHono<AppBindings>({
     defaultHook: validationErrorHook,
@@ -246,4 +249,4 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   return app
 }
 
-export type AppType = ReturnType<typeof createApp>
+export type AppType = Awaited<ReturnType<typeof createApp>>

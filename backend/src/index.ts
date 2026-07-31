@@ -3,7 +3,7 @@ import { createApp } from './app'
 import { createBackendRuntime } from './runtime'
 
 const runtime = createBackendRuntime()
-const inner = createApp({ env: runtime.env, prisma: runtime.prisma })
+const inner = await createApp({ env: runtime.env, prisma: runtime.prisma })
 const app = new Hono().route('/api', inner)
 
 const server = Bun.serve({
