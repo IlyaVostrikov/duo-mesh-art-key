@@ -35,17 +35,20 @@ export interface UploadConfig {
   maxImageBytes: number
   max3DBytes: number
   storage?: StorageService | null
+  baseDir: string
 }
 
 export class UploadService {
   private readonly maxImageBytes: number
   private readonly max3DBytes: number
   private readonly storage: StorageService | null
+  private readonly baseDir: string
 
   constructor(config: UploadConfig) {
     this.maxImageBytes = config.maxImageBytes
     this.max3DBytes = config.max3DBytes
     this.storage = config.storage ?? null
+    this.baseDir = config.baseDir
   }
 
   // ── Local disk upload (existing) ──
@@ -96,7 +99,7 @@ export class UploadService {
         const uuid = crypto.randomUUID()
         const sanitized = sanitizeFilename(file.name)
         const key = `${userId}/${datePath}/${uuid}-${sanitized}`
-        const dir = join('uploads', userId, datePath)
+        const dir = join(this.baseDir, userId, datePath)
 
         await mkdir(dir, { recursive: true })
         const filePath = join(dir, `${uuid}-${sanitized}`)
@@ -110,7 +113,7 @@ export class UploadService {
         hasher.update(new Uint8Array(buffer))
         hashes[file.name] = hasher.digest('hex') as string
 
-        files.push({ name: file.name, url: `/uploads/${key}`, size: file.size, type: file.type })
+        files.push({ name: file.name, url: `/api/uploads/${key}`, size: file.size, type: file.type })
       }
     } catch (err) {
       if (err instanceof UploadValidationError) throw err
@@ -147,7 +150,7 @@ export class UploadService {
 
     // Single bundle UUID so relative paths between extracted files resolve
     const bundleUuid = crypto.randomUUID()
-    const bundleDir = join('uploads', userId, datePath, bundleUuid)
+    const bundleDir = join(this.baseDir, userId, datePath, bundleUuid)
     await mkdir(bundleDir, { recursive: true })
 
     for (const [filename, data] of entries) {
@@ -199,7 +202,7 @@ export class UploadService {
         isImage ? `image/${ext === 'jpg' ? 'jpeg' : ext}` :
         'application/octet-stream'
 
-      files.push({ name: filename, url: `/uploads/${key}`, size: data.length, type: mimeType })
+      files.push({ name: filename, url: `/api/uploads/${key}`, size: data.length, type: mimeType })
     }
 
     if (files.length === 0) {
@@ -289,7 +292,7 @@ export class UploadService {
       }
     }
 
-    await walk('uploads')
+    await walk(this.baseDir)
     return { deleted, errors }
   }
 
@@ -301,7 +304,7 @@ export class UploadService {
     } else {
       // Prevent path traversal — ensure resolved path stays inside uploads/
       const resolved = resolve(key)
-      const uploadsRoot = resolve('uploads')
+      const uploadsRoot = resolve(this.baseDir)
       if (!resolved.startsWith(uploadsRoot + sep)) {
         throw new UploadValidationError('Invalid file path')
       }

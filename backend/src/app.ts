@@ -49,6 +49,7 @@ import { createUploadRoutes } from './routes/uploads'
 import { createFeaturedRoutes } from './routes/featured'
 import { createSalesRoutes } from './routes/sales'
 import { createAdminRoutes } from './routes/admin'
+import { createSeedRoutes } from './routes/seed'
 import { createPublicKeyRoutes } from './routes/public-keys'
 import { createTransferRoutes } from './routes/transfers'
 import { createPurchaseRoutes } from './routes/purchase'
@@ -119,6 +120,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
     maxImageBytes: env.UPLOAD_MAX_IMAGE_BYTES,
     max3DBytes: env.UPLOAD_MAX_3D_BYTES,
     storage: storageService,
+    baseDir: isVercel ? '/tmp/uploads' : 'uploads',
   })
   const provenanceTransferService = new ProvenanceTransferService(prisma, signingService)
 
@@ -171,13 +173,32 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.get('/health', (c) => c.json({ status: 'ok' }))
 
   // Allow cross-origin loading of uploaded assets (overrides secureHeaders CORP: same-origin)
-  // On Vercel, uploads are served via S3/Spaces, not local filesystem
+  // On Vercel, uploads are served from /tmp; locally via Bun serveStatic
+  app.use('/uploads/*', async (c, next) => {
+    c.res.headers.set('Cross-Origin-Resource-Policy', 'cross-origin')
+    await next()
+  })
   if (serveStatic) {
-    app.use('/uploads/*', async (c, next) => {
-      c.res.headers.set('Cross-Origin-Resource-Policy', 'cross-origin')
-      await next()
-    })
     app.use('/uploads/*', serveStatic({ root: './' }))
+  } else if (isVercel) {
+    app.get('/uploads/*', async (c) => {
+      const { readFile } = await import('node:fs/promises')
+      // c.req.path is e.g. /uploads/... inside the /api-mounted app
+      const filePath = resolve('/tmp', c.req.path.replace(/^\//, ''))
+      try {
+        const data = await readFile(filePath)
+        const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
+        const mimeTypes: Record<string, string> = {
+          jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+          webp: 'image/webp', svg: 'image/svg+xml', gif: 'image/gif',
+          glb: 'model/gltf-binary', gltf: 'model/gltf+json',
+          bin: 'application/octet-stream', hdr: 'image/vnd.radiance',
+        }
+        return c.body(data, 200, { 'Content-Type': mimeTypes[ext] ?? 'application/octet-stream' })
+      } catch {
+        return c.json({ error: 'NOT_FOUND', message: 'File not found' }, 404)
+      }
+    })
   }
 
   // Rate limit auth endpoints against brute-force (production only)
@@ -207,6 +228,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/featured', createFeaturedRoutes())
   app.route('/sales', createSalesRoutes())
   app.route('/admin', createAdminRoutes())
+  app.route('/seed', createSeedRoutes())
   app.route('/public-keys', createPublicKeyRoutes())
   app.route('/', createTransferRoutes())
   app.route('/', createPurchaseRoutes())

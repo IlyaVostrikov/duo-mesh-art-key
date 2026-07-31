@@ -29,6 +29,7 @@ import { AdminArtworks } from './pages/admin/AdminArtworks'
 import { TrustModel } from './pages/TrustModel'
 import { HowItWorks } from './pages/HowItWorks'
 import { DashboardKeys } from './pages/dashboard/DashboardKeys'
+import { CertificatePage } from './pages/certificate/CertificatePage'
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -102,6 +103,13 @@ const verifyKeyCodeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/verify/$keyCode',
   component: VerifyResultPage,
+})
+
+// Certificate route (live HTML, also consumed by Puppeteer for PDF via ?print=1)
+const certificateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/certificate/$keyCode',
+  component: CertificatePage,
 })
 
 // Dashboard routes
@@ -265,6 +273,7 @@ const routeTree = rootRoute.addChildren([
   dashboardKeysRoute,
   verifyRoute,
   verifyKeyCodeRoute,
+  certificateRoute,
 ])
 
 export const router = createRouter({ routeTree })

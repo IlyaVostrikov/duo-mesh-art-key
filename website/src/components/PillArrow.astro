@@ -1,0 +1,19 @@
+---
+/**
+ * Пилюля-кнопка со стрелкой.
+ * dir: left | right | up-right | down-right | down-left | up-left
+ */
+interface Props { dir?: string; href?: string; label?: string }
+const { dir = "right", href, label } = Astro.props;
+
+const GLYPHS: Record<string, string> = {
+  left: "←", right: "→",
+  "up-right": "↗", "down-right": "↘",
+  "down-left": "↙", "up-left": "↖",
+};
+const glyph = GLYPHS[dir] ?? "→";
+const Tag = href ? "a" : "button";
+---
+<Tag class="pill" href={href} aria-label={label ?? dir}>
+  <span class="glyph">{glyph}</span>
+</Tag>

@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000'
+const API_BASE = import.meta.env?.PUBLIC_API_BASE ?? 'https://duo-mesh-art-key-api.vercel.app'
 
 async function fetchAPI<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`

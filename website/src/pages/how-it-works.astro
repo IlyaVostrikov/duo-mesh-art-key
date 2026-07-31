@@ -1,0 +1,306 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import GridLines from "../components/GridLines.astro";
+import SectionLabel from "../components/SectionLabel.astro";
+import PageHeader from "../components/PageHeader.astro";
+import PageFooter from "../components/PageFooter.astro";
+---
+
+<BaseLayout title="Как это работает" description="ArtKey — цифровой паспорт подлинности. Та же криптография, что защищает банки, обновления ПО и сертификаты сайтов.">
+  <PageHeader />
+
+  <!-- Герой -->
+  <section class="sec ink pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="01" text="Документация." />
+        </div>
+        <h1 class="display rv">ArtKey —<br>как это работает</h1>
+        <p class="body rv" style="max-width:48ch;margin-top:clamp(28px,4vw,48px);text-align:left">
+          Документация о криптографической технологии подлинности DUO MESH. Два слоя: простыми словами — для всех, и точно — для тех, кто хочет проверить нас сам.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Что такое ArtKey -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="rv" style="border:1px solid color-mix(in oklab,var(--ink) 12%,transparent);padding:clamp(28px,4vw,48px)">
+          <p class="body" style="text-align:left;max-width:52ch;font-size:clamp(.9rem,1.5vw,1.06rem);line-height:1.8">
+            ArtKey — цифровой паспорт подлинности. Та же криптография, что защищает банки, обновления ПО и сертификаты сайтов. Три доказательства, пересчитываемые математически: работа не подменена, выпуск подписан художником, история владения не прерывалась. Проверить можете вы — не доверяя нам на слово.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Зачем это нужно -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="02" text="Мотивация." back />
+        </div>
+        <h2 class="display sm rv">Зачем это нужно</h2>
+        <p class="body rv" style="max-width:46ch;margin-top:clamp(24px,4vw,40px);text-align:left">
+          Подлинность в искусстве — репутация, бумаги, эксперты. На доверии. Бумагу подделывают. Эксперты ошибаются. Галереи закрываются. ArtKey добавляет слой, который нельзя подделать — переводя часть вопроса из «поверьте» в «проверьте».
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Строительные блоки -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="03" text="Четыре криптографических инструмента." />
+        </div>
+        <h2 class="display sm rv" style="margin-bottom:clamp(32px,5vw,48px)">Строительные блоки</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1px;background:color-mix(in oklab,var(--ink) 8%,transparent);border:1px solid color-mix(in oklab,var(--ink) 8%,transparent)">
+          <!-- 01 — SHA-256 -->
+          <div class="rv" style="background:var(--paper);padding:clamp(24px,3vw,36px);display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)">
+            <div style="display:flex;align-items:baseline;gap:.5rem">
+              <span style="font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;opacity:.5">01</span>
+              <h3 style="font-family:var(--serif);font-size:clamp(1.1rem,2vw,1.4rem);font-weight:400">Отпечаток — SHA-256</h3>
+            </div>
+            <p class="body" style="text-align:left;font-size:.84rem;line-height:1.65">Файл → 64 символа. Тот же файл — тот же отпечаток. Измените пиксель — отпечаток станет другим. Восстановить файл из отпечатка нельзя.</p>
+            <div style="padding:.7rem 1rem;border-left:2px solid var(--ink);background:color-mix(in oklab,var(--ink) 3%,transparent)">
+              <p style="font-family:var(--mono);font-size:.62rem;letter-spacing:.04em;opacity:.7"><b style="opacity:1">ArtKey:</b> integrityHash работы. Подмена ломает совпадение с реестром.</p>
+            </div>
+          </div>
+          <!-- 02 — Ed25519 -->
+          <div class="rv" style="background:var(--paper);padding:clamp(24px,3vw,36px);display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)">
+            <div style="display:flex;align-items:baseline;gap:.5rem">
+              <span style="font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;opacity:.5">02</span>
+              <h3 style="font-family:var(--serif);font-size:clamp(1.1rem,2vw,1.4rem);font-weight:400">Подпись — Ed25519</h3>
+            </div>
+            <p class="body" style="text-align:left;font-size:.84rem;line-height:1.65">Приватный ключ подписывает, публичный проверяет. Подделать подпись без приватного ключа нельзя.</p>
+            <div style="padding:.7rem 1rem;border-left:2px solid var(--ink);background:color-mix(in oklab,var(--ink) 3%,transparent)">
+              <p style="font-family:var(--mono);font-size:.62rem;letter-spacing:.04em;opacity:.7"><b style="opacity:1">ArtKey:</b> Художник подписывает выпуск. Без его ключа никто не выпустит запись от его имени.</p>
+            </div>
+          </div>
+          <!-- 03 — Hash Chain -->
+          <div class="rv" style="background:var(--paper);padding:clamp(24px,3vw,36px);display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)">
+            <div style="display:flex;align-items:baseline;gap:.5rem">
+              <span style="font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;opacity:.5">03</span>
+              <h3 style="font-family:var(--serif);font-size:clamp(1.1rem,2vw,1.4rem);font-weight:400">Цепочка — Hash Chain</h3>
+            </div>
+            <p class="body" style="text-align:left;font-size:.84rem;line-height:1.65">Каждая запись содержит отпечаток предыдущей. Чтобы подменить прошлое — нужно переписать всё последующее.</p>
+            <div style="padding:.7rem 1rem;border-left:2px solid var(--ink);background:color-mix(in oklab,var(--ink) 3%,transparent)">
+              <p style="font-family:var(--mono);font-size:.62rem;letter-spacing:.04em;opacity:.7"><b style="opacity:1">ArtKey:</b> Provenance: мастерская → коллекционер → галерея. Удаление звена разрывает цепь математически.</p>
+            </div>
+          </div>
+          <!-- 04 — RFC 3161 -->
+          <div class="rv" style="background:var(--paper);padding:clamp(24px,3vw,36px);display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)">
+            <div style="display:flex;align-items:baseline;gap:.5rem">
+              <span style="font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;opacity:.5">04</span>
+              <h3 style="font-family:var(--serif);font-size:clamp(1.1rem,2vw,1.4rem);font-weight:400">Якорь — RFC 3161</h3>
+            </div>
+            <p class="body" style="text-align:left;font-size:.84rem;line-height:1.65">Цепочка в нашей базе не мешает нам переписать историю задним числом. Внешний якорь времени — мешает.</p>
+            <div style="padding:.7rem 1rem;border-left:2px solid var(--ink);background:color-mix(in oklab,var(--ink) 3%,transparent)">
+              <p style="font-family:var(--mono);font-size:.62rem;letter-spacing:.04em;opacity:.7"><b style="opacity:1">ArtKey:</b> Корень цепочки заверяется независимой службой времени и публикуется в transparency log.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Жизненный цикл -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="04" text="Путь работы." />
+        </div>
+        <h2 class="display sm rv" style="margin-bottom:clamp(32px,5vw,48px)">Жизненный цикл</h2>
+        <div class="rv" style="display:flex;border:1px solid color-mix(in oklab,var(--ink) 10%,transparent);overflow:hidden">
+          <div style="flex:1;padding:clamp(20px,3vw,28px);text-align:center;border-right:1px solid color-mix(in oklab,var(--ink) 10%,transparent)">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;font-family:var(--mono);font-size:.7rem;font-weight:600">1</div>
+            <p style="font-family:var(--sans);font-size:.82rem;font-weight:600;margin-bottom:.2rem">Отпечаток</p>
+            <p style="font-family:var(--mono);font-size:.6rem;opacity:.5;letter-spacing:.04em">Файл → SHA-256</p>
+          </div>
+          <div style="flex:1;padding:clamp(20px,3vw,28px);text-align:center;border-right:1px solid color-mix(in oklab,var(--ink) 10%,transparent)">
+            <div style="width:28px;height:28px;border-radius:50%;border:1px solid color-mix(in oklab,var(--ink) 20%,transparent);display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;font-family:var(--mono);font-size:.7rem;color:var(--ink);opacity:.6">2</div>
+            <p style="font-family:var(--sans);font-size:.82rem;font-weight:600;margin-bottom:.2rem">Выпуск</p>
+            <p style="font-family:var(--mono);font-size:.6rem;opacity:.5;letter-spacing:.04em">Подпись художника → genesis</p>
+          </div>
+          <div style="flex:1;padding:clamp(20px,3vw,28px);text-align:center;border-right:1px solid color-mix(in oklab,var(--ink) 10%,transparent)">
+            <div style="width:28px;height:28px;border-radius:50%;border:1px solid color-mix(in oklab,var(--ink) 20%,transparent);display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;font-family:var(--mono);font-size:.7rem;color:var(--ink);opacity:.6">3</div>
+            <p style="font-family:var(--sans);font-size:.82rem;font-weight:600;margin-bottom:.2rem">Цепочка</p>
+            <p style="font-family:var(--mono);font-size:.6rem;opacity:.5;letter-spacing:.04em">Передачи сцеплены хешами</p>
+          </div>
+          <div style="flex:1;padding:clamp(20px,3vw,28px);text-align:center;border-right:1px solid color-mix(in oklab,var(--ink) 10%,transparent)">
+            <div style="width:28px;height:28px;border-radius:50%;border:1px solid color-mix(in oklab,var(--ink) 20%,transparent);display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;font-family:var(--mono);font-size:.7rem;color:var(--ink);opacity:.6">4</div>
+            <p style="font-family:var(--sans);font-size:.82rem;font-weight:600;margin-bottom:.2rem">Якорь</p>
+            <p style="font-family:var(--mono);font-size:.6rem;opacity:.5;letter-spacing:.04em">Независимая метка времени</p>
+          </div>
+          <div style="flex:1;padding:clamp(20px,3vw,28px);text-align:center">
+            <div style="width:28px;height:28px;border-radius:50%;border:1px solid color-mix(in oklab,var(--ink) 20%,transparent);display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;font-family:var(--mono);font-size:.7rem;color:var(--ink);opacity:.6">5</div>
+            <p style="font-family:var(--sans);font-size:.82rem;font-weight:600;margin-bottom:.2rem">Проверка</p>
+            <p style="font-family:var(--mono);font-size:.6rem;opacity:.5;letter-spacing:.04em">Пересчёт + публичные ключи</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Как проверить самому -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="05" text="Независимая верификация." />
+        </div>
+        <h2 class="display sm rv" style="margin-bottom:clamp(28px,4vw,40px)">Как проверить самому</h2>
+        <div class="rv" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;background:color-mix(in oklab,var(--ink) 8%,transparent);border:1px solid color-mix(in oklab,var(--ink) 8%,transparent)">
+          <div style="background:var(--paper);padding:clamp(22px,3vw,28px);text-align:center">
+            <p style="font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;opacity:.5;margin-bottom:.5rem">Шаг 1</p>
+            <h4 style="font-family:var(--serif);font-size:1rem;font-weight:400;margin-bottom:.3rem">Пересчитайте отпечаток</h4>
+            <p style="font-family:var(--mono);font-size:.64rem;opacity:.55;letter-spacing:.04em">SHA-256 файла работы → сверка с реестром</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(22px,3vw,28px);text-align:center">
+            <p style="font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;opacity:.5;margin-bottom:.5rem">Шаг 2</p>
+            <h4 style="font-family:var(--serif);font-size:1rem;font-weight:400;margin-bottom:.3rem">Проверьте подписи</h4>
+            <p style="font-family:var(--mono);font-size:.64rem;opacity:.55;letter-spacing:.04em">Каждую — публичным ключом подписавшего</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(22px,3vw,28px);text-align:center">
+            <p style="font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;opacity:.5;margin-bottom:.5rem">Шаг 3</p>
+            <h4 style="font-family:var(--serif);font-size:1rem;font-weight:400;margin-bottom:.3rem">Проверьте цепочку и время</h4>
+            <p style="font-family:var(--mono);font-size:.64rem;opacity:.55;letter-spacing:.04em">Связь записей + метка времени по порядку</p>
+          </div>
+        </div>
+        <div class="rv" style="margin-top:1rem;border:1px solid color-mix(in oklab,var(--ink) 12%,transparent);padding:clamp(20px,3vw,28px);text-align:center">
+          <p style="font-family:var(--mono);font-size:.66rem;letter-spacing:.04em;opacity:.7;line-height:1.7">
+            Provenance можно выгрузить как подписанный JSON и проверить офлайн, независимым верификатором, без обращения к нашему серверу. Спецификация канонизации и хеширования открыта.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Что доказывает / что нет -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="06" text="Честный маркетинг." />
+        </div>
+        <h2 class="display sm rv" style="margin-bottom:clamp(28px,4vw,40px)">Что доказывает и что нет</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:clamp(16px,3vw,24px)">
+          <!-- Доказывает -->
+          <div class="rv" style="border:1px solid rgba(40,167,69,.2);padding:clamp(24px,3vw,32px)">
+            <span style="display:inline-block;font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .6rem;color:#155724;background:rgba(40,167,69,.08);border:1px solid rgba(40,167,69,.15);margin-bottom:1.2rem">Доказывает математически</span>
+            <div style="display:flex;flex-direction:column;gap:1rem">
+              <div>
+                <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem"><span style="width:5px;height:5px;border-radius:50%;background:#28a745;flex-shrink:0"></span><b style="font-family:var(--sans);font-size:.88rem">Целостность</b></div>
+                <p style="font-family:var(--sans);font-size:.78rem;opacity:.65;padding-left:9px">Работа и записи не изменены.</p>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem"><span style="width:5px;height:5px;border-radius:50%;background:#28a745;flex-shrink:0"></span><b style="font-family:var(--sans);font-size:.88rem">Авторство</b></div>
+                <p style="font-family:var(--sans);font-size:.78rem;opacity:.65;padding-left:9px">Кто подписал выпуск и передачи.</p>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem"><span style="width:5px;height:5px;border-radius:50%;background:#28a745;flex-shrink:0"></span><b style="font-family:var(--sans);font-size:.88rem">Порядок и время</b></div>
+                <p style="font-family:var(--sans);font-size:.78rem;opacity:.65;padding-left:9px">Последовательность и когда.</p>
+              </div>
+            </div>
+          </div>
+          <!-- Требует доверия -->
+          <div class="rv" style="border:1px solid rgba(240,173,78,.25);padding:clamp(24px,3vw,32px)">
+            <span style="display:inline-block;font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .6rem;color:#856404;background:rgba(240,173,78,.08);border:1px solid rgba(240,173,78,.15);margin-bottom:1.2rem">Требует доверия</span>
+            <div style="display:flex;flex-direction:column;gap:1rem">
+              <div>
+                <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem"><span style="width:5px;height:5px;border-radius:50%;background:#f0ad4e;flex-shrink:0"></span><b style="font-family:var(--sans);font-size:.88rem">Атомы ↔ биты</b></div>
+                <p style="font-family:var(--sans);font-size:.78rem;opacity:.65;padding-left:9px">Связь цифрового отпечатка с физической работой.</p>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem"><span style="width:5px;height:5px;border-radius:50%;background:#f0ad4e;flex-shrink:0"></span><b style="font-family:var(--sans);font-size:.88rem">Личность</b></div>
+                <p style="font-family:var(--sans);font-size:.78rem;opacity:.65;padding-left:9px">Что художник — тот, за кого себя выдаёт.</p>
+              </div>
+            </div>
+            <p style="font-family:var(--sans);font-size:.72rem;color:#856404;opacity:.7;font-style:italic;margin-top:1rem">
+              Первое звено — на доверии. ArtKey убирает доверие из всего остального.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Почему не блокчейн -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="07" text="Архитектурный выбор." />
+        </div>
+        <h2 class="display sm rv" style="margin-bottom:clamp(20px,3vw,32px)">Почему не блокчейн</h2>
+        <div class="rv" style="border:1px solid color-mix(in oklab,var(--ink) 12%,transparent);padding:clamp(24px,4vw,36px)">
+          <p class="body" style="text-align:left;max-width:52ch;line-height:1.75">
+            Подписи, хеш-цепочка и внешний якорь дают те же гарантии целостности — без распределённого консенсуса, токена и майнинга. Без энергозатрат и зависимости от чужой сети. Блокчейн решает задачу «доверие между незнакомцами без центра». У нас центр есть — платформа. Её возможную нечестность нейтрализуем подписями и внешним якорем. Для задачи «паспорт работы» это более прямой и дешёвый путь.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Глоссарий -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="08" text="Термины." />
+        </div>
+        <h2 class="display sm rv" style="margin-bottom:clamp(20px,3vw,32px)">Глоссарий</h2>
+        <div class="rv" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;background:color-mix(in oklab,var(--ink) 8%,transparent);border:1px solid color-mix(in oklab,var(--ink) 8%,transparent)">
+          <div style="background:var(--paper);padding:clamp(16px,2vw,22px)">
+            <span style="font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;display:block;margin-bottom:.25rem">SHA-256</span>
+            <p style="font-family:var(--sans);font-size:.72rem;opacity:.6">Необратимый цифровой отпечаток данных.</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(16px,2vw,22px)">
+            <span style="font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;display:block;margin-bottom:.25rem">Ed25519</span>
+            <p style="font-family:var(--sans);font-size:.72rem;opacity:.6">Схема цифровой подписи на эллиптических кривых.</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(16px,2vw,22px)">
+            <span style="font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;display:block;margin-bottom:.25rem">Hash chain</span>
+            <p style="font-family:var(--sans);font-size:.72rem;opacity:.6">Записи, сцепленные отпечатками.</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(16px,2vw,22px)">
+            <span style="font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;display:block;margin-bottom:.25rem">RFC 3161</span>
+            <p style="font-family:var(--sans);font-size:.72rem;opacity:.6">Независимая метка времени.</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(16px,2vw,22px)">
+            <span style="font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;display:block;margin-bottom:.25rem">Transparency log</span>
+            <p style="font-family:var(--sans);font-size:.72rem;opacity:.6">Публичный журнал, не переписываемый задним числом.</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(16px,2vw,22px)">
+            <span style="font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;display:block;margin-bottom:.25rem">Provenance</span>
+            <p style="font-family:var(--sans);font-size:.72rem;opacity:.6">Документированная история владения.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <PageFooter>
+    <div class="row rv" style="margin-bottom:clamp(40px,6vw,72px)">
+      <a href="/trust" style="font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--paper);text-decoration:none;opacity:.7">← Модель доверия</a>
+      <a href="/verify" style="font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--paper);text-decoration:none">Проверить ArtKey →</a>
+    </div>
+  </PageFooter>
+</BaseLayout>

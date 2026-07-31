@@ -3,7 +3,7 @@ import { Link, useParams, useRouter } from '@tanstack/react-router'
 import { ModelViewer3D } from '@/components/artwork/ModelViewer3D'
 import { ArtKeyQR } from '@/components/artwork/ArtKeyQR'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-import { InquiryForm } from '@/components/inquiry/InquiryForm'
+import { InquiryProvider, InquiryButton, InquiryFormInline } from '@/components/inquiry/InquiryForm'
 import { FollowButton } from '@/components/FollowButton'
 import { VerifiedBadge } from '@/components/ui/verified-badge'
 import { assetUrl } from '@/lib/asset-url'
@@ -170,6 +170,7 @@ export function ArtworkDetailPage() {
   const iosSrc = aw.usdzUrl ?? (aw.modelUrl ? aw.modelUrl.replace(/\.(glb|gltf)$/i, '.usdz') : undefined)
 
   return (
+    <InquiryProvider artworkTitle={titleMain} artworkId={aw.id} artistName={aw.artist.displayName}>
     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '48px 20px 96px' }}>
       <div style={{
         display: 'grid',
@@ -364,11 +365,7 @@ export function ArtworkDetailPage() {
                 </p>
               </div>
             )}
-            <InquiryForm
-              artworkTitle={titleMain}
-              artworkId={aw.id}
-              artistName={aw.artist.displayName}
-            />
+            <InquiryButton />
           </RevealOnScroll>
 
           {/* Confirm dialog */}
@@ -516,6 +513,8 @@ export function ArtworkDetailPage() {
         </div>
       </div>
     </div>
+    <InquiryFormInline />
+    </InquiryProvider>
   )
 }
 

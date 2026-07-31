@@ -1,0 +1,177 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import GridLines from "../components/GridLines.astro";
+import SectionLabel from "../components/SectionLabel.astro";
+import PageHeader from "../components/PageHeader.astro";
+import PageFooter from "../components/PageFooter.astro";
+---
+
+<BaseLayout title="Art Key · Верификация" description="Введите код сертификата для проверки подлинности. Та же криптография, что защищает банки и обновления ПО.">
+  <PageHeader />
+
+  <!-- Герой -->
+  <section class="sec ink pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="01" text="Проверка подлинности." />
+        </div>
+        <h1 class="display rv">Art Key<br>· Верификация</h1>
+        <p class="body rv" style="max-width:48ch;margin-top:clamp(28px,4vw,48px);text-align:left">
+          Введите код сертификата для проверки подлинности. Та же криптография, что защищает банки, обновления ПО и сертификаты сайтов — три доказательства, пересчитываемые математически.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Форма проверки -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer" style="text-align:center">
+        <div class="toprow">
+          <SectionLabel index="02" text="Введите код." back />
+        </div>
+        <div class="rv" style="max-width:540px;margin:clamp(32px,5vw,56px) auto 0">
+          <form id="verify-form" style="display:flex;flex-direction:column;align-items:center;gap:1rem">
+            <p style="font-family:var(--sans);font-size:.78rem;opacity:.55;margin-bottom:.25rem">Введите код сертификата для проверки подлинности</p>
+            <input
+              type="text"
+              id="key-input"
+              placeholder="DUO-2026-XXXXXXXX"
+              style="width:100%;max-width:440px;font-family:var(--mono);font-size:.9rem;letter-spacing:.05em;text-align:center;background:transparent;border:1px solid color-mix(in oklab,var(--ink) 22%,transparent);padding:1rem 1.25rem;color:var(--ink);outline:none"
+            />
+            <button
+              type="submit"
+              style="font-family:var(--sans);font-weight:600;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;background:var(--ink);color:var(--paper);border:none;padding:.85rem 2.25rem;cursor:pointer;margin-top:.5rem"
+            >
+              Проверить
+            </button>
+          </form>
+          <div id="verify-result" style="margin-top:2rem;display:none"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Что происходит при проверке -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="03" text="Что происходит при проверке." />
+        </div>
+        <h2 class="display sm rv" style="margin-bottom:clamp(28px,4vw,40px)">Три проверки</h2>
+        <div class="rv" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;background:color-mix(in oklab,var(--ink) 8%,transparent);border:1px solid color-mix(in oklab,var(--ink) 8%,transparent)">
+          <div style="background:var(--paper);padding:clamp(22px,3vw,32px);text-align:center">
+            <p style="font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;opacity:.5;margin-bottom:.6rem">Целостность</p>
+            <h4 style="font-family:var(--serif);font-size:1.05rem;font-weight:400;margin-bottom:.3rem">Хеш-совпадение</h4>
+            <p style="font-family:var(--sans);font-size:.74rem;opacity:.55;line-height:1.5">integrityHash работы пересчитывается и сверяется с записанным в реестре. Подмена ломает совпадение.</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(22px,3vw,32px);text-align:center">
+            <p style="font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;opacity:.5;margin-bottom:.6rem">Цепочка</p>
+            <h4 style="font-family:var(--serif);font-size:1.05rem;font-weight:400;margin-bottom:.3rem">Непрерывность цепи</h4>
+            <p style="font-family:var(--sans);font-size:.74rem;opacity:.55;line-height:1.5">Каждая запись содержит prevRecordHash. Разрыв означает удаление или вставку записи задним числом.</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(22px,3vw,32px);text-align:center">
+            <p style="font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;opacity:.5;margin-bottom:.6rem">Подпись</p>
+            <h4 style="font-family:var(--serif);font-size:1.05rem;font-weight:400;margin-bottom:.3rem">Ed25519 верификация</h4>
+            <p style="font-family:var(--sans);font-size:.74rem;opacity:.55;line-height:1.5">Каждая запись подписана ключом реестра. Проверяется математически — без приватного ключа подпись не подделать.</p>
+          </div>
+        </div>
+        <p class="rv" style="font-family:var(--mono);font-size:.64rem;letter-spacing:.04em;opacity:.45;text-align:center;margin-top:1.5rem">
+          Проверено пересчётом хешей · Verified by hash recalculation
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ссылки -->
+  <section class="sec paper" style="padding:0 0 clamp(56px,9vw,120px)">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="rv" style="display:flex;gap:clamp(20px,4vw,48px);flex-wrap:wrap;justify-content:center;padding-top:clamp(24px,4vw,40px);border-top:1px solid color-mix(in oklab,var(--ink) 10%,transparent)">
+          <a href="/how-it-works" style="font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--ink);text-decoration:none">Как это работает →</a>
+          <a href="/trust" style="font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--ink);text-decoration:none">Модель доверия →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <PageFooter />
+</BaseLayout>
+
+<script>
+  const form = document.getElementById('verify-form')! as HTMLFormElement
+  const input = document.getElementById('key-input')! as HTMLInputElement
+  const result = document.getElementById('verify-result')!
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const code = input.value.trim()
+    if (!code) return
+
+    result.style.display = 'block'
+    result.innerHTML = '<p style="font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;opacity:.5;padding:2rem 0;text-align:center">Проверка ключа...</p>'
+
+    try {
+      const data = await window.api.artworks.verifyKey(code)
+      const s = data.status ?? 'unknown'
+
+      if (s === 'unknown' || !data.artwork) {
+        result.innerHTML = `<div style="text-align:center;padding:clamp(24px,4vw,40px);border:1px solid color-mix(in oklab,var(--ink) 10%,transparent)">
+          <p style="font-family:var(--serif);font-size:1.3rem;margin-bottom:.5rem;opacity:.4">Не найдено</p>
+          <p style="font-family:var(--sans);font-size:.8rem;opacity:.5">Код ${escapeHtml(code)} не найден в реестре DUO MESH.<br>Проверьте правильность кода или обратитесь к художнику.</p>
+        </div>`
+        return
+      }
+
+      const isVerified = s === 'valid'
+      const statusLabel = isVerified ? 'Подлинно' : 'Целостность нарушена'
+      const statusColor = isVerified ? '#155724' : '#7a1a1a'
+      const statusBg = isVerified ? 'rgba(40,167,69,.08)' : 'rgba(220,53,69,.08)'
+      const statusBorder = isVerified ? 'rgba(40,167,69,.2)' : 'rgba(220,53,69,.2)'
+
+      const title = data.artwork?.title ?? '—'
+      const artist = data.artwork?.artist?.displayName ?? '—'
+      const issued = data.artKey?.issuedAt ? new Date(data.artKey.issuedAt).toLocaleDateString('ru-RU') : '—'
+      const hash = data.artKey?.integrityHash ?? '—'
+      const chainLen = data.chainLength ?? data.provenance?.length ?? 0
+      const keyCode = data.artKey?.keyCode ?? code
+
+      result.innerHTML = `
+        <div style="text-align:center;margin-bottom:2rem">
+          <span style="display:inline-block;font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:.25rem .7rem;color:${statusColor};background:${statusBg};border:1px solid ${statusBorder}">${statusLabel}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:color-mix(in oklab,var(--ink) 8%,transparent);border:1px solid color-mix(in oklab,var(--ink) 8%,transparent);text-align:left">
+          <div style="background:var(--paper);padding:clamp(18px,2vw,24px)">
+            <p style="font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;opacity:.45;margin-bottom:.35rem">Ключ</p>
+            <p style="font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;word-break:break-all">${escapeHtml(keyCode)}</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(18px,2vw,24px)">
+            <p style="font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;opacity:.45;margin-bottom:.35rem">Работа</p>
+            <p style="font-family:var(--serif);font-size:1rem">${escapeHtml(title)}</p>
+            <p style="font-family:var(--sans);font-size:.76rem;opacity:.6">${escapeHtml(artist)}</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(18px,2vw,24px)">
+            <p style="font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;opacity:.45;margin-bottom:.35rem">SHA-256</p>
+            <p style="font-family:var(--mono);font-size:.66rem;letter-spacing:.03em;opacity:.6;word-break:break-all">${escapeHtml(hash)}</p>
+          </div>
+          <div style="background:var(--paper);padding:clamp(18px,2vw,24px)">
+            <p style="font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;opacity:.45;margin-bottom:.35rem">Выдан</p>
+            <p style="font-family:var(--sans);font-size:.82rem">${issued}</p>
+            <p style="font-family:var(--mono);font-size:.62rem;opacity:.4;letter-spacing:.04em">Записей в цепочке: ${chainLen}</p>
+          </div>
+        </div>`
+    } catch (err) {
+      result.innerHTML = `<p style="font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:#7a1a1a;text-align:center;padding:1.5rem 0">Ошибка загрузки: ${escapeHtml((err as Error).message)}</p>`
+    }
+  })
+
+  function escapeHtml(s: string) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+  }
+</script>

@@ -1,0 +1,11 @@
+---
+/**
+ * Иридесцентная mesh-поверхность с зерном — замена B&W-фото из референса.
+ * variant: "base" | "alt"  |  ratio: любое CSS aspect-ratio (напр. "1.5", ".86")
+ * style: доп. инлайн-стили (margin, max-width и т.п.)
+ */
+interface Props { variant?: "base" | "alt"; ratio?: string; class?: string; style?: string }
+const { variant = "base", ratio = "1.5", class: cls = "", style = "" } = Astro.props;
+const klass = ["art", "mesh", variant === "alt" ? "alt" : "", cls].filter(Boolean).join(" ");
+---
+<div class={klass} style={`aspect-ratio:${ratio};${style}`}></div>

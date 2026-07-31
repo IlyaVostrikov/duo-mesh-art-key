@@ -29,25 +29,14 @@ const POSTER_URLS: Record<string, string> = {
   'hybrid-flora':      '/assets/posters/hybrid-flora.jpg',
   'glitch-portrait':   '/assets/posters/glitch-portrait.jpg',
   // 2D — Openverse CC0 (commons + flickr)
-  'neon-nocturne':    '/assets/posters/neon-nocturne.jpg',
+  'neon-nocturne':    '/assets/posters/data-ghosts.jpg',
   'data-ghosts':      '/assets/posters/data-ghosts.jpg',
   'metro-diptych':    '/assets/posters/metro-diptych.jpg',
-  // 3D — screenshots from Khronos glTF-Sample-Assets (CC-BY 4.0)
-  'bronze-echo':      '/assets/posters/bronze-echo.png',
-  'scanned-figure':   '/assets/posters/scanned-figure.jpg',
-  'digital-double':   '/assets/posters/digital-double.png',
-  'frozen-gesture':   '/assets/posters/frozen-gesture.jpg',
-  'portal-v2':        '/assets/posters/portal-v2.jpg',
-  'mesh-poem':        '/assets/posters/mesh-poem.jpg',
+  // 3D — posters deleted; models also removed
+  'frozen-gesture':   '/assets/posters/frozen-gesture.svg',
 }
 const MODEL_URLS: Record<string, string> = {
-  // CC0 3D models from Polygonal Mind (https://github.com/ToxSam/open-source-3D-assets)
-  'bronze-echo':    '/assets/models/bronze-echo.glb',
-  'scanned-figure': '/assets/models/scanned-figure.glb',
-  'digital-double': '/assets/models/digital-double.glb',
-  'frozen-gesture': '/assets/models/frozen-gesture.glb',
-  'portal-v2':      '/assets/models/portal-v2.glb',
-  'mesh-poem':      '/assets/models/mesh-poem.glb',
+  // All GLB model files were deleted — no 3D models available
 }
 
 const DATABASE_URL = (() => {
@@ -206,7 +195,7 @@ const ARTISTS: ArtistSeed[] = [
       titleEn: 'Drozdov Lab',
       descriptionRu: 'Цифровой сюрреализм на границе кода и воображения. Генеративные ландшафты и пост-цифровые портреты.',
       descriptionEn: 'Digital surrealism at the border of code and imagination. Generative landscapes and post-digital portraits.',
-      coverImageUrl: '',
+      coverImageUrl: '/assets/posters/anatomie-du-reve.jpg',
     },
     artworks: [
       { slug: 'neon-nocturne', titleRu: 'Неоновый ноктюрн', titleEn: 'Neon Nocturne', descriptionRu: 'Плотный цифровой коллаж, где анатомические формы встречаются с неоновой геометрией киберпанка.', descriptionEn: 'A dense digital collage where anatomical forms meet cyberpunk neon geometry.', year: 2025, medium: 'Цифровая живопись, печать на алюминии', dimensions: '90×120 см', category: 'DIGITAL', styleTags: ['surreal', 'cyberpunk', 'digital'], mediaType: 'IMAGE_2D', price: 2400, status: 'LISTED', editionType: 'LIMITED', extraProvenance: [] },
@@ -292,7 +281,7 @@ const ARTISTS: ArtistSeed[] = [
       titleEn: 'Iron Forge',
       descriptionRu: 'Цифровая скульптура нового века. Фигуративные GLB-модели, фотограмметрия и AR-экспонаты.',
       descriptionEn: 'Digital sculpture for the new century. Figurative GLB models, photogrammetry, and AR exhibits.',
-      coverImageUrl: '',
+      coverImageUrl: '/assets/posters/frozen-gesture.svg',
     },
     artworks: [
       { slug: 'bronze-echo', titleRu: 'Бронзовый отголосок', titleEn: 'Bronze Echo', descriptionRu: 'Цифровая реконструкция античного шлема с процедурной патиной. Модель оптимизирована для AR и WebXR.', descriptionEn: 'A digital reconstruction of an ancient helmet with procedural patina. Model optimised for AR and WebXR.', year: 2026, medium: 'Blender, Substance Painter', dimensions: 'GLB, ~40K tris', category: 'SCULPTURE', styleTags: ['3D', 'sculpture', 'historical', 'AR-ready'], mediaType: 'MODEL_3D', software: 'BLENDER', isScanned: false, polyCount: 40000, price: 3800, status: 'LISTED', editionType: 'UNIQUE' },

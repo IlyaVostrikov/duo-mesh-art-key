@@ -1,0 +1,16 @@
+---
+import GridLines from "./GridLines.astro";
+---
+
+<footer class="sec ink pad-y">
+  <div class="wrap">
+    <GridLines />
+    <div class="layer">
+      <slot />
+      <div class="footbar" style="border-top:none;margin-top:0">
+        <span>&copy; {new Date().getFullYear()} DUO MESH — Все работы аутентифицированы.</span>
+        <span><a href="/about">О платформе</a><a href="/trust">Доверие</a></span>
+      </div>
+    </div>
+  </div>
+</footer>
