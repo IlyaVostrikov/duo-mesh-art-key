@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Spinner } from '@/components/ui/spinner'
 import { FileUpload } from '@/components/ui/file-upload'
 import { apiBaseUrl } from '@/lib/api'
+import { uploadFiles } from '@/lib/upload'
 
 const CATEGORIES = ['DIGITAL', 'PAINTING', 'SCULPTURE', 'PHOTOGRAPHY', 'DRAWING', 'MIXED_MEDIA', 'PRINT', 'NFT', 'OTHER']
 
@@ -18,23 +19,6 @@ const STATUS_LABELS: Record<string, string> = {
   ARCHIVED: 'Архив',
 }
 const STATUSES = ['DRAFT', 'LISTED', 'IN_EXHIBITION', 'SOLD', 'RESERVED', 'ARCHIVED'] as const
-
-async function uploadFiles(files: File[], accessToken: string): Promise<{ files: Array<{ name: string; url: string; size: number; type: string }>; hashes: Record<string, string> }> {
-  const formData = new FormData()
-  for (const f of files) formData.append('files', f)
-
-  const res = await fetch(`${apiBaseUrl}/api/uploads`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body: formData,
-  })
-  if (!res.ok) {
-    let serverMessage: string | undefined
-    try { const e = await res.json(); serverMessage = e.message ?? e.error } catch { /* not JSON */ }
-    throw new Error(serverMessage ?? `Upload failed (HTTP ${res.status} ${res.statusText})`)
-  }
-  return res.json()
-}
 
 interface Props {
   artworkId: string

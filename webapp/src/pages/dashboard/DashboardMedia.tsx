@@ -5,8 +5,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { DashboardLayout } from './DashboardLayout'
 import { CreateArtworkForm } from '@/components/artwork/CreateArtworkForm'
 import { apiBaseUrl } from '@/lib/api'
-
-type UploadedFile = { name: string; url: string; size: number; type: string }
+import { uploadFile, type UploadedFile } from '@/lib/upload'
 
 const ACCEPT_3D = '.glb,.gltf,.blend,.obj,.fbx,.stl,.usdz'
 const ACCEPT_ZIP = '.zip'
@@ -25,24 +24,13 @@ export function DashboardMedia() {
   // Artwork creation from uploaded file
   const [creatingFrom, setCreatingFrom] = useState<UploadedFile | null>(null)
 
-  const uploadFile = useCallback(async (file: File) => {
-    const formData = new FormData()
-    formData.append('files', file)
+  const doUpload = useCallback(async (file: File) => {
     setUploading(true)
     setError(null)
 
     try {
-      const res = await fetch(`${apiBaseUrl}/api/uploads`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${auth.accessToken!}` },
-        body: formData,
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.message ?? `HTTP ${res.status}`)
-      }
-      const data = await res.json()
-      setFiles((prev) => [...(data.files ?? []), ...prev])
+      const result = await uploadFile(file, auth.accessToken!)
+      setFiles((prev) => [result, ...prev])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -58,7 +46,7 @@ export function DashboardMedia() {
         headers: { Authorization: `Bearer ${auth.accessToken!}` },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setFiles((prev) => prev.filter((f) => f.url !== `/uploads/${key}`))
+      setFiles((prev) => prev.filter((f) => f.key !== key))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed')
     }
@@ -68,12 +56,12 @@ export function DashboardMedia() {
     e.preventDefault()
     setDragOver(false)
     const dropped = Array.from(e.dataTransfer.files)
-    for (const file of dropped) uploadFile(file)
+    for (const file of dropped) doUpload(file)
   }, [uploadFile])
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files ?? [])
-    for (const file of selected) uploadFile(file)
+    for (const file of selected) doUpload(file)
     if (e.target) e.target.value = ''
   }, [uploadFile])
 
@@ -172,8 +160,7 @@ export function DashboardMedia() {
             ) : (
               <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
                 {files.map((f) => {
-                  const key = f.url.replace('/uploads/', '')
-                  const fullUrl = `${apiBaseUrl}${f.url}`
+                  const fullUrl = f.url
                   const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
                   const isImage = f.type.startsWith('image/') && !MODEL_EXTENSIONS.has(ext)
                   return (
@@ -230,7 +217,7 @@ export function DashboardMedia() {
                         )}
                         <button
                           type="button"
-                          onClick={() => deleteFile(key)}
+                          onClick={() => deleteFile(f.key)}
                           className="shrink-0 px-3 py-1 rounded text-xs"
                           style={{
                             backgroundColor: 'rgba(255,255,255,0.15)',

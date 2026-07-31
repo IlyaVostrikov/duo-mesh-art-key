@@ -5,29 +5,13 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { FileUpload } from '@/components/ui/file-upload'
 import { apiBaseUrl } from '@/lib/api'
+import { uploadFiles } from '@/lib/upload'
 
 const CATEGORIES = ['DIGITAL', 'PAINTING', 'SCULPTURE', 'PHOTOGRAPHY', 'DRAWING', 'MIXED_MEDIA', 'PRINT', 'NFT', 'OTHER']
 
 interface CreatedArtwork {
   id: string
   title: string
-}
-
-async function uploadFiles(files: File[], accessToken: string): Promise<{ files: Array<{ name: string; url: string; size: number; type: string }>; hashes: Record<string, string> }> {
-  const formData = new FormData()
-  for (const f of files) formData.append('files', f)
-
-  const res = await fetch(`${apiBaseUrl}/api/uploads`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body: formData,
-  })
-  if (!res.ok) {
-    let serverMessage: string | undefined
-    try { const e = await res.json(); serverMessage = e.message ?? e.error } catch { /* not JSON */ }
-    throw new Error(serverMessage ?? `Upload failed (HTTP ${res.status} ${res.statusText})`)
-  }
-  return res.json()
 }
 
 export function CreateArtworkForm({
@@ -99,14 +83,6 @@ export function CreateArtworkForm({
         const uploadData = await uploadFiles([posterFile], auth.accessToken!)
         posterUrl = uploadData.files?.[0]?.url ?? posterUrl
         Object.assign(fileHashes, uploadData.hashes)
-
-        // Also compute browser-side hash
-        const fileBuffer = await posterFile.arrayBuffer()
-        const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer)
-        const hashHex = Array.from(new Uint8Array(hashBuffer))
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join('')
-        fileHashes[posterFile.name] = hashHex
       }
 
       // Upload 3D model (zip or individual file)
@@ -223,7 +199,7 @@ export function CreateArtworkForm({
           >
             <div style={{ aspectRatio: '4/5', overflow: 'hidden' }}>
               <img
-                src={posterPreviewUrl ?? `${apiBaseUrl}${preselectedPosterUrl}`}
+                src={posterPreviewUrl ?? (preselectedPosterUrl?.startsWith('http') ? preselectedPosterUrl : `${apiBaseUrl}${preselectedPosterUrl}`)}
                 alt="Preview"
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
@@ -256,7 +232,7 @@ export function CreateArtworkForm({
         /* Already uploaded via Media Library — show reference */
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img
-            src={`${apiBaseUrl}${preselectedPosterUrl}`}
+            src={preselectedPosterUrl?.startsWith('http') ? preselectedPosterUrl : `${apiBaseUrl}${preselectedPosterUrl}`}
             alt={preselectedPosterName ?? 'Preselected poster'}
             style={{
               width: '80px', height: '80px', objectFit: 'cover',
