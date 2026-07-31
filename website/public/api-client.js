@@ -1,5 +1,5 @@
 // DUO MESH API client — loaded globally via BaseLayout
-const API_BASE = 'http://localhost:3000'
+const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://duo-mesh-art-key-api.vercel.app'
 
 async function fetchAPI(path, init) {
   const res = await fetch(API_BASE + path, {

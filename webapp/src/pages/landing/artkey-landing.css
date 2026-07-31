@@ -3,23 +3,23 @@
    Scoped to .artkey-landing container
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+/* Fonts inherited from index.css: Inter Variable + Onest Variable */
 
 :root {
-  --ak-paper:      #f4f3f1;
-  --ak-paper-2:    #ece9e4;
-  --ak-ink:        #16140f;
-  --ak-ink-2:      rgba(22,20,15,.62);
-  --ak-ink-3:      rgba(22,20,15,.40);
-  --ak-hair:       rgba(22,20,15,.14);
-  --ak-hair-soft:  rgba(22,20,15,.07);
+  --ak-paper:      var(--bg);
+  --ak-paper-2:    var(--surface-2);
+  --ak-ink:        var(--text);
+  --ak-ink-2:      var(--text-secondary);
+  --ak-ink-3:      var(--text-muted);
+  --ak-hair:       var(--border);
+  --ak-hair-soft:  color-mix(in oklab, var(--border) 50%, transparent);
   --ak-noir:       #0c0b0a;
   --ak-on-noir:    #efece6;
   --ak-on-noir-2:  rgba(239,236,230,.58);
   --ak-on-noir-3:  rgba(239,236,230,.30);
   --ak-hair-noir:  rgba(239,236,230,.16);
-  --ak-font:       'Space Grotesk', system-ui, sans-serif;
-  --ak-mono:       'Space Mono', ui-monospace, monospace;
+  --ak-font:       var(--font-display);
+  --ak-mono:       var(--font-sans);
   --ak-ease:       cubic-bezier(.22,.61,.16,1);
 }
 

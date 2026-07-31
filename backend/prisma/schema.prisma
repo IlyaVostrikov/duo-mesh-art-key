@@ -227,14 +227,15 @@ enum SigningKeyOwnerType {
 }
 
 model SigningKey {
-  id        String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  ownerType SigningKeyOwnerType  @map("owner_type")
-  ownerId   String?              @map("owner_id") @db.Uuid
-  publicKey String               @map("public_key")
-  keyAlias  String?              @map("key_alias")
-  isActive  Boolean              @default(true) @map("is_active")
-  revokedAt DateTime?            @map("revoked_at")
-  createdAt DateTime             @default(now()) @map("created_at")
+  id                   String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  ownerType            SigningKeyOwnerType  @map("owner_type")
+  ownerId              String?              @map("owner_id") @db.Uuid
+  publicKey            String               @map("public_key")
+  keyAlias             String?              @map("key_alias")
+  encryptedPrivateKey  Json?                @map("encrypted_private_key") @db.JsonB
+  isActive             Boolean              @default(true) @map("is_active")
+  revokedAt            DateTime?            @map("revoked_at")
+  createdAt            DateTime             @default(now()) @map("created_at")
 
   artKeysSigned          ArtKey[]             @relation("ArtistSigningKey")
   platformCoSignatures   ArtKey[]             @relation("PlatformSigningKey")

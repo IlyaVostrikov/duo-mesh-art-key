@@ -38,3 +38,4 @@ backend/.prisma-generate.lock
 *.swp
 *.swo
 .vercel
+.env*

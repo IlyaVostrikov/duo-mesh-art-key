@@ -1,0 +1,28 @@
+---
+/**
+ * Печать Art Key: розетка (guilloché) + mesh-решётка.
+ * Это статичный мотив; в проде сид/геометрию можно вывести из дайджеста записи,
+ * чтобы разные работы давали разный знак (см. seed → SVG).
+ */
+interface Props { class?: string }
+const { class: cls = "" } = Astro.props;
+---
+<svg class={`seal ${cls}`} viewBox="0 0 200 200" fill="none" stroke="currentColor" aria-label="Печать Art Key">
+  <circle cx="100" cy="100" r="94" stroke-width="1" opacity=".4" />
+  <circle cx="100" cy="100" r="78" stroke-width="1" opacity=".7" />
+  <circle cx="100" cy="100" r="52" stroke-width="1" />
+  <g opacity=".55">
+    <line x1="100" y1="6" x2="100" y2="194" stroke-width=".5" />
+    <line x1="6" y1="100" x2="194" y2="100" stroke-width=".5" />
+    <line x1="33" y1="33" x2="167" y2="167" stroke-width=".5" />
+    <line x1="167" y1="33" x2="33" y2="167" stroke-width=".5" />
+  </g>
+  <g opacity=".8">
+    <circle cx="100" cy="100" r="34" stroke-width=".6" />
+    <circle cx="100" cy="78" r="22" stroke-width=".6" />
+    <circle cx="119" cy="111" r="22" stroke-width=".6" />
+    <circle cx="81" cy="111" r="22" stroke-width=".6" />
+  </g>
+  <path d="M100 70 L124 100 L100 130 L76 100 Z" stroke-width="1.4" />
+  <path d="M100 70 L100 130 M76 100 L124 100" stroke-width=".7" opacity=".7" />
+</svg>

@@ -4,9 +4,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Spinner } from '@/components/ui/spinner'
+import { FileUpload } from '@/components/ui/file-upload'
 import { apiBaseUrl } from '@/lib/api'
+import { uploadFiles } from '@/lib/upload'
 
 const CATEGORIES = ['DIGITAL', 'PAINTING', 'SCULPTURE', 'PHOTOGRAPHY', 'DRAWING', 'MIXED_MEDIA', 'PRINT', 'NFT', 'OTHER']
+
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'Черновик',
+  LISTED: 'В зале',
+  IN_EXHIBITION: 'На выставке',
+  SOLD: 'Продано',
+  RESERVED: 'Резерв',
+  ARCHIVED: 'Архив',
+}
 const STATUSES = ['DRAFT', 'LISTED', 'IN_EXHIBITION', 'SOLD', 'RESERVED', 'ARCHIVED'] as const
 
 interface Props {
@@ -28,6 +39,23 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
   const [price, setPrice] = useState('')
   const [currency, setCurrency] = useState('RUB')
   const [status, setStatus] = useState('DRAFT')
+  const [posterUrl, setPosterUrl] = useState<string | null>(null)
+  const [posterFile, setPosterFile] = useState<File | null>(null)
+  const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null)
+  const [modelUrl, setModelUrl] = useState<string | null>(null)
+  const [modelFile, setModelFile] = useState<File | null>(null)
+
+  const handlePosterSelect = (file: File | null) => {
+    if (posterPreviewUrl) URL.revokeObjectURL(posterPreviewUrl)
+    setPosterFile(file)
+    setPosterPreviewUrl(file ? URL.createObjectURL(file) : null)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (posterPreviewUrl) URL.revokeObjectURL(posterPreviewUrl)
+    }
+  }, [posterPreviewUrl])
 
   // Load artwork
   useEffect(() => {
@@ -47,6 +75,8 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
         setPrice(data.price ?? '')
         setCurrency(data.currency ?? 'RUB')
         setStatus(data.status ?? 'DRAFT')
+        setPosterUrl(data.posterUrl ?? null)
+        setModelUrl(data.modelUrl ?? null)
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Load failed')
       } finally {
@@ -66,6 +96,26 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
     }
     setSaving(true)
     try {
+      let newPosterUrl = posterUrl
+      let newModelUrl = modelUrl
+
+      if (posterFile) {
+        const uploadData = await uploadFiles([posterFile], auth.accessToken!)
+        newPosterUrl = uploadData.files?.[0]?.url ?? newPosterUrl
+      }
+
+      if (modelFile) {
+        const uploadData = await uploadFiles([modelFile], auth.accessToken!)
+        const modelEntry = uploadData.files?.find((f: { name: string; url: string }) => {
+          const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+          return ext === 'glb' || ext === 'gltf'
+        })
+        if (!modelEntry) {
+          throw new Error('No .glb or .gltf model found in the uploaded 3D file.')
+        }
+        newModelUrl = modelEntry.url
+      }
+
       const res = await fetch(`${apiBaseUrl}/api/artworks/${artworkId}`, {
         method: 'PATCH',
         headers: {
@@ -79,6 +129,9 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
           price: price ? Number(price) : undefined,
           currency,
           status,
+          posterUrl: newPosterUrl ?? undefined,
+          modelUrl: newModelUrl ?? undefined,
+          mediaType: newModelUrl ? 'MODEL_3D' : undefined,
         }),
       })
       if (!res.ok) {
@@ -87,7 +140,12 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
       }
       onSaved()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+      const msg = err instanceof Error ? err.message : 'Save failed'
+      if (msg === 'Failed to fetch' || msg.startsWith('Failed to fetch')) {
+        setError('Сервер не отвечает. Проверь, запущен ли бэкенд (bun run dev), не упал ли он при обработке ZIP, и не блокирует ли прокси большие файлы. / Server unreachable — check backend logs, ZIP size, and proxy.')
+      } else {
+        setError(msg)
+      }
     } finally {
       setSaving(false)
     }
@@ -118,6 +176,99 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
           Название (RU) <span style={{ color: 'var(--accent)' }}>*</span>
         </label>
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Название работы" />
+      </div>
+
+      {/* Poster / preview image */}
+      <div style={{
+        padding: '16px',
+        borderRadius: 'var(--radius)',
+        border: posterFile ? '1px solid var(--accent)' : '1px solid var(--border)',
+        backgroundColor: posterFile ? 'rgba(var(--accent-rgb), 0.02)' : 'var(--bg)',
+      }}>
+        <div className="flex gap-4">
+          {/* Card preview */}
+          {(posterPreviewUrl || posterUrl) && (
+            <div
+              style={{
+                width: '140px',
+                flexShrink: 0,
+                borderRadius: 'var(--radius)',
+                overflow: 'hidden',
+                boxShadow: '0 0 0 1px var(--border)',
+                backgroundColor: 'var(--surface)',
+              }}
+            >
+              <div style={{ aspectRatio: '4/5', overflow: 'hidden' }}>
+                <img
+                  src={posterPreviewUrl ?? (posterUrl ? `${apiBaseUrl}${posterUrl}` : '')}
+                  alt="Poster preview"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              </div>
+              <div style={{ padding: '6px 8px' }}>
+                <p className="text-xs" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
+                  {posterFile ? 'Новое превью / New preview' : 'Текущее превью / Current'}
+                </p>
+              </div>
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+              Превью / Preview Image
+            </span>
+            <p className="text-xs mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>
+              Изображение, которое показывается в карточках галереи. Загрузите новое, чтобы заменить.
+            </p>
+            <FileUpload
+              accept=".jpg,.jpeg,.png,.webp,.svg"
+              maxSize={10 * 1024 * 1024}
+              onFileSelect={handlePosterSelect}
+              label={posterFile ? posterFile.name : 'Заменить превью / Replace preview'}
+              imagePreview
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 3D model */}
+      <div style={{
+        padding: '16px',
+        borderRadius: 'var(--radius)',
+        border: modelFile ? '1px solid var(--accent)' : '1px solid var(--border)',
+        backgroundColor: modelFile ? 'rgba(var(--accent-rgb), 0.02)' : 'var(--bg)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+            3D модель / 3D Model
+          </span>
+          {modelUrl && !modelFile && (
+            <span style={{
+              fontSize: '0.65rem', padding: '1px 6px', borderRadius: '99px',
+              backgroundColor: 'var(--surface)', color: 'var(--text-muted)',
+              border: '1px solid var(--border)',
+            }}>
+              Загружена / Uploaded
+            </span>
+          )}
+          {!modelUrl && !modelFile && (
+            <span style={{
+              fontSize: '0.65rem', padding: '1px 6px', borderRadius: '99px',
+              backgroundColor: 'var(--surface)', color: 'var(--text-muted)',
+              border: '1px solid var(--border)',
+            }}>
+              Нет / None
+            </span>
+          )}
+        </div>
+        <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+          Загрузите ZIP-архив с моделью или отдельный .glb/.gltf файл. При добавлении 3D-модели тип работы сменится на MODEL_3D.
+        </p>
+        <FileUpload
+          accept=".zip,.glb,.gltf,.blend,.obj,.fbx,.stl,.usdz"
+          maxSize={100 * 1024 * 1024}
+          onFileSelect={setModelFile}
+          label={modelFile ? `3D модель: ${modelFile.name}` : 'Заменить 3D модель / Replace 3D model'}
+        />
       </div>
 
       <div>
@@ -163,7 +314,7 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
           className="w-full h-9 px-3 text-sm rounded-4xl border"
           style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--border)' }}
         >
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]} ({s})</option>)}
         </select>
       </div>
 

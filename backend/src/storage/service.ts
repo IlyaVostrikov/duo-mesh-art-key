@@ -65,9 +65,13 @@ export class StorageService {
       s3 ??
       new S3Client({
         endpoint: config.endpoint,
-        // DigitalOcean Spaces selects the Space region from the endpoint; AWS SDK signing uses us-east-1.
-        region: 'us-east-1',
+        // Use the configured region (e.g. "auto" for R2, "us-east-1" for DO Spaces)
+        region: config.region,
         forcePathStyle: false,
+        // Disable automatic CRC32 checksums — they break presigned PUT URLs when
+        // the SDK pre-computes a checksum without the actual file body.
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+        responseChecksumValidation: 'WHEN_REQUIRED',
         credentials: {
           accessKeyId: config.accessKeyId,
           secretAccessKey: config.secretAccessKey,
@@ -145,10 +149,14 @@ export class StorageService {
 
   publicUrlForKey(key: string) {
     assertSafeObjectKey(key)
-    const baseUrl =
-      this.config.cdnBaseUrl ?? `https://${this.config.bucket}.${this.config.region}.digitaloceanspaces.com`
-
-    return joinUrlPath(baseUrl, key)
+    if (this.config.cdnBaseUrl) {
+      return joinUrlPath(this.config.cdnBaseUrl, key)
+    }
+    // Derive public URL from endpoint host by inserting the bucket name:
+    // R2: https://<id>.r2.cloudflarestorage.com → https://<bucket>.<id>.r2.cloudflarestorage.com
+    const endpointUrl = new URL(this.config.endpoint)
+    endpointUrl.hostname = `${this.config.bucket}.${endpointUrl.hostname}`
+    return joinUrlPath(endpointUrl.toString(), key)
   }
 }
 

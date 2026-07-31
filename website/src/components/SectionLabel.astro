@@ -1,0 +1,14 @@
+---
+/**
+ * Капс-микролейбл секции: [индекс] · ТЕКСТ, с опциональными пилюлями.
+ * Сам индекс передавай без скобок ("01") — скобки добавляются стилем.
+ */
+import PillArrow from "./PillArrow.astro";
+interface Props { index?: string; text: string; back?: boolean }
+const { index, text, back = false } = Astro.props;
+---
+<span class="label">
+  {back && <PillArrow dir="left" />}
+  {index && <span class="idx">[{index}]</span>}
+  {text}
+</span>

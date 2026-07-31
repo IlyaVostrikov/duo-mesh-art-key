@@ -1,0 +1,11 @@
+---
+/**
+ * Caption-ряд под артвортом: «[индекс] Название» слева, мета (©год) справа.
+ */
+interface Props { index?: string; title: string; meta?: string }
+const { index, title, meta } = Astro.props;
+---
+<div class="cap">
+  <span>{index && <span class="idx">[{index}]</span>} {title}</span>
+  {meta && <span>{meta}</span>}
+</div>

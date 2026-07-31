@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/lib/use-auth'
 import { apiBaseUrl } from '@/lib/api'
+import { uploadFile } from '@/lib/upload'
 import { joinBilingual, joinBilingualTitle } from '@/lib/utils'
 
 export interface OnboardingProfile {
@@ -27,22 +28,6 @@ export function useArtistOnboarding() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function uploadFile(file: File): Promise<string | null> {
-    const formData = new FormData()
-    formData.append('files', file)
-    const res = await fetch(`${apiBaseUrl}/api/uploads`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${auth.accessToken!}` },
-      body: formData,
-    })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.message ?? 'Upload failed')
-    }
-    const data = await res.json()
-    return data.files?.[0]?.url ?? null
-  }
-
   async function createProfile(values: OnboardingProfile): Promise<CreatedArtist> {
     setError(null)
 
@@ -58,7 +43,8 @@ export function useArtistOnboarding() {
       // Upload avatar first if present
       let avatarUrl: string | undefined
       if (values.avatarFile) {
-        avatarUrl = await uploadFile(values.avatarFile) ?? undefined
+        const result = await uploadFile(values.avatarFile, auth.accessToken!)
+        avatarUrl = result.url
       }
 
       const res = await fetch(`${apiBaseUrl}/api/artists`, {
@@ -95,5 +81,10 @@ export function useArtistOnboarding() {
     }
   }
 
-  return { submitting, error, createProfile, uploadFile, clearError: () => setError(null) }
+  async function upload(file: File): Promise<string | null> {
+    const result = await uploadFile(file, auth.accessToken!)
+    return result.url ?? null
+  }
+
+  return { submitting, error, createProfile, uploadFile: upload, clearError: () => setError(null) }
 }

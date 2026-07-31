@@ -3,7 +3,7 @@
 
 export const FEATURED_CONFIG = {
   /** Hero 3D artwork — the single model-viewer piece on the landing page */
-  heroArtworkSlug: 'digital-double',
+  heroArtworkSlug: 'cosmic-drift',
 
   /** Curated 6–8 artworks for the featured grid (mix 2D + 3D, different artists) */
   featuredArtworkSlugs: [
@@ -11,8 +11,7 @@ export const FEATURED_CONFIG = {
     'golden-thread',      // Elena Volkova — elegant gold-line abstract
     'threshold',          // Maxim Drozdov — photogrammetry scan, glitch waves
     'cosmic-drift',       // Elena Volkova — flagship large-scale abstract
-    'portal-v2',          // Kira Nova — 3D interactive AR concept
-    'bronze-echo',        // Viktor Iron — 3D digital sculpture
+    'data-ghosts',        // Maxim Drozdov — generative art
     'metro-diptych',      // Anna Sokolova — monochrome photography
     'fragments-of-light', // Daria Lys — mixed media collage
   ],
@@ -21,7 +20,7 @@ export const FEATURED_CONFIG = {
   featuredArtistSlugs: [
     'elena-volkova',
     'maxim-drozdov',
-    'viktor-iron',
     'kira-nova',
+    'anna-sokolova',
   ],
 } as const

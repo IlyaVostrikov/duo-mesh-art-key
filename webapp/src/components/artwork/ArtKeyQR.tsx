@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 
-const VERIFY_BASE = import.meta.env?.VITE_PUBLIC_VERIFY_BASE ?? 'http://localhost:5173'
+function getVerifyBase(): string {
+  if (import.meta.env?.VITE_PUBLIC_VERIFY_BASE) return import.meta.env.VITE_PUBLIC_VERIFY_BASE
+  if (typeof window !== 'undefined') return window.location.origin
+  return 'http://localhost:5173'
+}
 
 export function ArtKeyQR({ keyCode, size = 120 }: { keyCode: string; size?: number }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null)
@@ -9,7 +13,7 @@ export function ArtKeyQR({ keyCode, size = 120 }: { keyCode: string; size?: numb
 
   useEffect(() => {
     mountedRef.current = true
-    const url = `${VERIFY_BASE}/verify/${encodeURIComponent(keyCode)}`
+    const url = `${getVerifyBase()}/verify/${encodeURIComponent(keyCode)}`
     QRCode.toDataURL(url, { width: size, margin: 1, color: { dark: '#000', light: '#fff' } })
       .then((u) => { if (mountedRef.current) setDataUrl(u) })
       .catch(() => {})

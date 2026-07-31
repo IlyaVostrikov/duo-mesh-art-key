@@ -1,0 +1,210 @@
+/* ============================================================
+   DUO MESH — design system (noir editorial grid)
+   Импортируется один раз в Layout/страницу.
+   ============================================================ */
+
+:root{
+  --paper:#f1eee7;
+  --ink:#0b0b0c;
+  --ink-2:#16161a;
+
+  --serif:"Fraunces", Georgia, serif;
+  --sans:"Inter Variable", "Inter", "Helvetica Neue", sans-serif;
+  --mono:"Inter Variable", "Inter", ui-monospace, sans-serif;
+
+  /* иридесценция DUO MESH — cool blue-grey + warm lilac-grey, музейно-тихая */
+  --iri-cool:#9aa6b8;
+  --iri-blue:#aeb6c4;
+  --iri-lilac:#c3b8c8;
+  --iri-warm:#cdc2c0;
+  --iri-hi:#eef0f2;
+  --iri-deep:#5b6472;
+
+  --maxw:1280px;
+  --pad:clamp(16px,4vw,64px);
+
+  /* Shared tokens — webapp-compatible aliases */
+  --bg: var(--paper);
+  --surface: var(--paper);
+  --surface-2: color-mix(in oklab, var(--paper) 94%, var(--ink));
+  --border: color-mix(in oklab, var(--ink) 14%, transparent);
+  --text: var(--ink);
+  --text-secondary: color-mix(in oklab, var(--ink) 70%, transparent);
+  --text-muted: color-mix(in oklab, var(--ink) 50%, transparent);
+  --accent: var(--ink);
+  --accent-ink: var(--paper);
+  --font-sans: var(--sans);
+  --font-display: var(--serif);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:16px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+
+/* ---------- секции / сетка ---------- */
+.sec{position:relative}
+.sec.paper{background:var(--paper);color:var(--ink);--line:color-mix(in oklab,var(--ink) 8%,transparent)}
+.sec.ink{background:var(--ink);color:var(--paper);--line:color-mix(in oklab,var(--paper) 11%,transparent)}
+.wrap{position:relative;max-width:var(--maxw);margin:0 auto;padding:0 var(--pad)}
+.layer{position:relative;z-index:1}
+
+.lines{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,1fr);
+  border-right:1px solid var(--line);pointer-events:none;z-index:0}
+.lines i{border-left:1px solid var(--line)}
+@media(max-width:760px){
+  .lines{grid-template-columns:repeat(4,1fr)}
+  .lines i:nth-child(n+5){display:none}
+}
+
+.pad-y{padding:clamp(56px,9vw,120px) 0}
+
+/* ---------- типографика ---------- */
+.display{font-family:var(--serif);font-weight:400;line-height:.98;letter-spacing:-.01em;
+  font-size:clamp(2.4rem,6.2vw,5.4rem);font-optical-sizing:auto}
+.display.sm{font-size:clamp(2rem,4.6vw,3.6rem)}
+.display.xs{font-size:clamp(1.6rem,3vw,2.4rem)}
+
+.label{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:500;display:inline-flex;gap:.5em;align-items:center;flex-wrap:wrap}
+.idx{font-family:var(--mono);font-size:.62rem;opacity:.55;letter-spacing:.05em}
+.body{font-size:1rem;line-height:1.65;max-width:38ch;opacity:.88}
+.two-col{column-count:2;column-gap:24px;font-size:.9rem;line-height:1.6;opacity:.88}
+@media(max-width:520px){.two-col{column-count:1}}
+
+.stars{font-family:var(--sans);letter-spacing:.5em;font-size:.7rem;opacity:.6;display:block;margin-bottom:1.1rem}
+.stars::before{content:"✳ ✳ ✳"}
+
+/* ---------- пилюли / стрелки ---------- */
+.pill{width:42px;height:30px;border:1px solid color-mix(in oklab,currentColor 35%,transparent);
+  border-radius:999px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:.8rem;background:transparent;color:inherit;cursor:pointer;
+  transition:background .35s ease,transform .35s ease}
+.pill:hover{background:currentColor;transform:translateY(-1px)}
+.pill:hover .glyph{color:var(--paper)}
+.sec.ink .pill:hover .glyph{color:var(--ink)}
+.glyph{font-family:var(--sans);font-weight:400;line-height:1;transition:color .35s ease}
+.arrow-lg{font-family:var(--sans);font-weight:300;line-height:1;display:inline-block;
+  font-size:clamp(1.6rem,3vw,2.4rem);opacity:.75}
+
+/* ---------- mesh-артворк + зерно ---------- */
+.mesh{position:relative;overflow:hidden;background:
+  radial-gradient(120% 90% at 18% 22%, var(--iri-hi) 0%, transparent 42%),
+  radial-gradient(90% 80% at 82% 30%, var(--iri-lilac) 0%, transparent 46%),
+  radial-gradient(120% 120% at 70% 88%, var(--iri-deep) 0%, transparent 55%),
+  radial-gradient(100% 100% at 30% 80%, var(--iri-cool) 0%, transparent 50%),
+  linear-gradient(120deg, #8b93a2, #b6acb8 55%, #707a88);
+  background-size:200% 200%;animation:drift 22s ease-in-out infinite}
+.mesh.alt{background:
+  radial-gradient(110% 90% at 80% 20%, var(--iri-hi) 0%, transparent 40%),
+  radial-gradient(90% 90% at 20% 70%, var(--iri-warm) 0%, transparent 48%),
+  radial-gradient(120% 120% at 60% 90%, var(--iri-deep) 0%, transparent 52%),
+  linear-gradient(200deg,#79808d,#aca2b0 50%,#646d7b);background-size:220% 220%}
+.mesh::after{content:"";position:absolute;inset:-50%;pointer-events:none;mix-blend-mode:overlay;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+@keyframes drift{0%,100%{background-position:0% 0%}50%{background-position:100% 100%}}
+
+/* ---------- caption-ряд ---------- */
+.cap{display:flex;justify-content:space-between;align-items:center;
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;
+  padding:.55rem 0;opacity:.85}
+
+/* ---------- служебные раскладки ---------- */
+.toprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:clamp(28px,5vw,60px)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,5vw,72px);align-items:start}
+@media(max-width:760px){.row{grid-template-columns:1fr;gap:32px}}
+
+/* ---------- Art Key печать ---------- */
+.keycard{border:1px solid color-mix(in oklab,var(--ink) 16%,transparent);
+  padding:clamp(26px,4vw,44px);display:grid;grid-template-columns:auto 1fr;
+  gap:clamp(28px,4vw,56px);align-items:center}
+@media(max-width:680px){.keycard{grid-template-columns:1fr}}
+.seal{width:clamp(150px,18vw,210px);height:auto;display:block}
+.hashline{font-family:var(--mono);font-size:.66rem;letter-spacing:.02em;word-break:break-all;
+  opacity:.78;line-height:1.7;margin-top:1rem;padding-top:1rem;
+  border-top:1px solid color-mix(in oklab,var(--ink) 14%,transparent)}
+.verified{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.66rem;letter-spacing:.1em;text-transform:uppercase}
+.verified::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--iri-deep);
+  box-shadow:0 0 0 4px color-mix(in oklab,var(--iri-deep) 22%,transparent)}
+
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(18px);
+  transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}
+.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){
+  .mesh{animation:none}
+  .rv{opacity:1;transform:none;transition:none}
+}
+
+/* ============================================================
+   Секционные раскладки лендинга
+   ============================================================ */
+
+/* ---------- hero ---------- */
+.hero{padding:clamp(22px,3vw,34px) 0 0}
+.heronav{display:flex;justify-content:space-between;align-items:flex-start}
+.wordmark{font-family:var(--sans);font-weight:700;letter-spacing:-.045em;line-height:.82;
+  font-size:clamp(3.4rem,11vw,8.5rem);text-transform:lowercase}
+.wordmark b{color:var(--iri-deep)}
+.navcard{display:flex;gap:clamp(20px,4vw,60px);align-items:flex-start;padding-top:.6rem}
+.navthumb{width:clamp(120px,13vw,168px)}
+.menu{display:flex;flex-direction:column;gap:.28rem}
+.menu a{font-family:var(--sans);font-weight:500;font-size:.92rem;color:inherit;text-decoration:none}
+.menu a:hover{text-decoration:underline;text-underline-offset:3px}
+.enter a{font-family:var(--sans);font-weight:500;font-size:.82rem;letter-spacing:.06em;
+  text-transform:uppercase;color:inherit;text-decoration:underline;text-underline-offset:4px}
+.heromid{display:flex;justify-content:space-between;align-items:flex-end;
+  margin:clamp(40px,7vw,96px) 0 clamp(22px,3vw,34px);gap:24px;flex-wrap:wrap}
+.copyright{font-family:var(--serif);font-weight:300;font-size:clamp(3rem,8vw,7rem);
+  line-height:.8;letter-spacing:-.02em}
+.heroband{width:100%;aspect-ratio:2.55;
+  border-top:1px solid color-mix(in oklab,var(--ink) 14%,transparent);
+  border-bottom:1px solid color-mix(in oklab,var(--ink) 14%,transparent)}
+@media(max-width:900px){.heroband{aspect-ratio:1.4}.navcard{display:none}}
+
+/* ---------- возможности (caprow) ---------- */
+.caprow{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,5vw,64px);align-items:center;
+  padding:clamp(34px,5vw,56px) 0;border-top:1px solid color-mix(in oklab,var(--ink) 9%,transparent)}
+.caprow:last-child{border-bottom:1px solid color-mix(in oklab,var(--ink) 9%,transparent)}
+.caprow.flip .text{order:2}
+@media(max-width:760px){.caprow{grid-template-columns:1fr}.caprow.flip .text{order:0}}
+.caphead{display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin:.4rem 0 1rem}
+.viewlink{font-family:var(--sans);font-weight:500;font-size:.72rem;letter-spacing:.08em;
+  text-transform:uppercase;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+
+/* ---------- статистика ---------- */
+.stat{font-family:var(--serif);font-weight:300;font-size:clamp(2.8rem,6vw,4.6rem);line-height:.9}
+.stat small{display:block;font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;
+  text-transform:uppercase;opacity:.6;margin-top:.4rem}
+
+/* ---------- тестимониал ---------- */
+.quote{font-family:var(--serif);font-weight:300;font-size:clamp(1.5rem,3.4vw,2.6rem);
+  line-height:1.18;letter-spacing:-.01em}
+.quote .qm{font-size:1.4em;line-height:0;vertical-align:-.28em;opacity:.4;margin-right:.1em}
+.namelist{font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;line-height:2}
+.namelist b{font-weight:500;text-decoration:underline;text-underline-offset:3px}
+.logos{display:flex;flex-wrap:wrap;justify-content:space-between;gap:24px;
+  border-top:1px solid color-mix(in oklab,var(--ink) 12%,transparent);
+  padding-top:clamp(26px,4vw,40px);margin-top:clamp(40px,6vw,72px)}
+.logos span{font-family:var(--sans);font-weight:600;font-size:1.05rem;letter-spacing:-.02em;opacity:.78}
+
+/* ---------- футер ---------- */
+.footinfo{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(20px,3vw,40px) clamp(28px,5vw,64px)}
+.footinfo h6{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;
+  font-weight:400;opacity:.55;margin-bottom:.4rem}
+.footinfo p{font-size:.95rem}
+.socials{display:flex;gap:.6rem;margin-top:1.4rem}
+.soc{width:36px;height:36px;border-radius:50%;font-family:var(--mono);font-size:.7rem;
+  border:1px solid color-mix(in oklab,var(--paper) 25%,transparent);
+  display:flex;align-items:center;justify-content:center}
+.email{font-family:var(--serif);font-weight:300;font-size:clamp(1.6rem,4.6vw,3.2rem);letter-spacing:-.01em}
+.footbar{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7;
+  padding:clamp(28px,4vw,44px) 0;
+  border-top:1px solid color-mix(in oklab,var(--paper) 12%,transparent);margin-top:clamp(40px,6vw,72px)}
+.footbar a{color:inherit;text-decoration:none;margin-left:1.5rem}

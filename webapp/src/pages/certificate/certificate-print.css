@@ -1,0 +1,791 @@
+/* ============================================================================
+   certificate-print.css
+   Подключается CertificatePage.tsx — слой ПОВЕРХ экранного дизайна.
+   Экранный макет не трогаем, только дисциплинируем его под A4.
+
+   Три вещи, которые держат PDF:
+   1. document.fonts.ready (в Puppeteer) — лекарство от наезжающих заголовков
+   2. printBackground: true + print-color-adjust: exact — тёмный блок ключа
+   3. .cert-page { break-after: page } — два чистых листа A4 без разрывов
+   ============================================================================ */
+
+/* ── A4 без полей: поля задаём ВНУТРИ макета ── */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  /* Печатаем фоны/цвета как на экране */
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── КРИТИЧНО: flat — убираем дорогие PDF-примитивы ── */
+  /* Mesh-градиент на body → дорогой shading object в PDF.
+     Grain-текстура на body::after → tiling pattern.
+     Любой backdrop-filter/blur/mix-blend-mode → transparency group + soft mask. */
+  body {
+    background: #faf9f7 !important;
+    background-image: none !important;
+    background-attachment: scroll !important;
+  }
+
+  body::after {
+    display: none !important;
+  }
+
+  * {
+    animation: none !important;
+    transition: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+    box-shadow: none !important;
+  }
+
+  /* Убрать шапку приложения — сертификат автономный документ.
+     Без этого header рендерится как лишняя страница перед сертификатом. */
+  header {
+    display: none !important;
+  }
+
+  /* Убрать всё интерактивное */
+  .no-print,
+  button,
+  [data-print="hide"] {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DOWNLOAD SPINNER (screen only — hidden in print)
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes cert-spin {
+  to { transform: rotate(360deg); }
+}
+
+.cert-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: cert-spin 0.6s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCREEN + PRINT: Certificate page shell
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-screen {
+  background: #f4f3f1;          /* --paper */
+  min-height: 100vh;
+  padding: 40px 0;
+}
+
+.cert-page {
+  width: 210mm;
+  min-height: 297mm;
+  box-sizing: border-box;
+  margin: 0 auto 32px;
+  padding: 18mm 16mm;           /* музейные поля «белого куба» */
+  background: #faf9f7;          /* --sheet */
+
+  /* Flex column distributes content vertically — key block anchors to bottom */
+  display: flex;
+  flex-direction: column;
+
+  /* Keyline: inner border */
+  outline: 1px solid rgba(22, 20, 15, 0.08);
+  outline-offset: -12px;
+
+  /* Page shadow (screen only) */
+  box-shadow: 0 2px 24px rgba(0, 0, 0, 0.12);
+
+  /* Registration marks via box-shadow trick — 4 corner L-shapes */
+  position: relative;
+}
+
+@media print {
+  .cert-screen {
+    background: none;
+    padding: 0;
+  }
+
+  .cert-page {
+    margin: 0;
+    box-shadow: none;
+    break-after: page;
+    break-inside: avoid;
+  }
+
+  .cert-page:last-child {
+    break-after: auto;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS (certificate-specific — museum paper + ink)
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --cert-paper: #f4f3f1;
+  --cert-sheet: #faf9f7;
+  --cert-ink: #16140f;
+  --cert-noir: #0c0b0a;
+  --cert-on-noir: #efece6;
+  --cert-ink-2: rgba(22, 20, 15, 0.62);
+  --cert-ink-3: rgba(22, 20, 15, 0.40);
+  --cert-ink-4: rgba(22, 20, 15, 0.26);
+  --cert-hairline: rgba(22, 20, 15, 0.16);
+  --cert-soft: rgba(22, 20, 15, 0.08);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TYPOGRAPHY
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-brand-name {
+  font-family: 'Onest Variable', 'Onest', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--cert-ink);
+}
+
+.cert-brand-sub {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 7.5px;
+  letter-spacing: 0.08em;
+  color: var(--cert-ink-3);
+  text-transform: uppercase;
+}
+
+.cert-doc-label {
+  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-size: 9.5px;
+  color: var(--cert-ink-2);
+}
+
+.cert-edition {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 7.5px;
+  color: var(--cert-ink-3);
+}
+
+.cert-kicker {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 7.5px;
+  color: var(--cert-ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MASTHEAD
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.cert-masthead-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cert-glyph {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.cert-glyph-outer {
+  position: absolute;
+  inset: 0;
+  border: 1.6px solid var(--cert-ink);
+  border-radius: 50%;
+}
+
+.cert-glyph-inner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7.2px;
+  height: 7.2px;
+  margin: -3.6px 0 0 -3.6px;
+  background: var(--cert-ink);
+  border-radius: 50%;
+}
+
+.cert-brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.cert-masthead-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.cert-hairline {
+  width: 100%;
+  border: none;
+  border-top: 0.75px solid var(--cert-hairline);
+  margin: 12px 0 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TITLE
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.cert-h1 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 16px 0 4px;
+}
+
+.cert-h1-ru {
+  font-family: 'Onest Variable', 'Onest', sans-serif;
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.25;
+  color: var(--cert-ink);
+}
+
+.cert-h1-en {
+  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-size: 9px;
+  color: var(--cert-ink-3);
+  margin-top: 4px;
+  letter-spacing: 0.03em;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BODY: artwork poster + registry
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-body {
+  display: grid;
+  grid-template-columns: 46% 1fr;
+  gap: 24px;
+  margin-bottom: 30px;
+  align-items: start;
+}
+
+.cert-artwork-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cert-poster {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 0.75px solid var(--cert-hairline);
+}
+
+.cert-poster-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #ece9e4;
+  border: 0.75px solid var(--cert-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cert-ink-3);
+  font-size: 8.5px;
+}
+
+.cert-plate {
+  display: block;
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 8.5px;
+  color: var(--cert-ink-3);
+  margin-top: 12px;
+  text-align: center;
+  word-break: break-word;
+}
+
+/* Registry column */
+.cert-registry {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cert-registry-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 12px;
+  border-bottom: 0.5px solid var(--cert-soft);
+}
+
+.cert-registry-row:last-child {
+  border-bottom: none;
+}
+
+.cert-reg-label {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 7.5px;
+  color: var(--cert-ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cert-reg-value {
+  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--cert-ink);
+  line-height: 1.3;
+}
+
+.cert-reg-value--muted {
+  color: var(--cert-ink-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CRYPTO KEY BLOCK (dark band)
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-key-block {
+  background: var(--cert-noir);
+  margin: auto -4mm 0;         /* anchors to bottom via flex column */
+  padding: 0;
+}
+
+.cert-key-block-inner {
+  display: flex;
+  padding: 16px 18px;
+  gap: 0;
+  margin: 5px;
+  outline: 0.75px solid rgba(239, 236, 230, 0.16);
+}
+
+.cert-key-left {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.cert-key-right {
+  flex: 1;
+  min-width: 0;
+}
+
+.cert-key-divider {
+  width: 0.75px;
+  background: rgba(239, 236, 230, 0.16);
+  margin: 0 20px;
+  flex-shrink: 0;
+}
+
+.cert-key-section-label {
+  display: block;
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 7.5px;
+  color: rgba(239, 236, 230, 0.30);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.cert-key-code-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cert-key-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Key icon: circle + line */
+.cert-key-icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border: 1.5px solid rgba(239, 236, 230, 0.85);
+  border-radius: 50%;
+}
+
+.cert-key-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 22px;
+  width: 9px;
+  height: 0;
+  margin-top: -0.75px;
+  border-top: 1.5px solid rgba(239, 236, 230, 0.85);
+}
+
+.cert-key-code {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 14px;
+  color: var(--cert-on-noir);
+  word-break: break-all;
+}
+
+.cert-key-hash {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 9px;
+  color: var(--cert-on-noir);
+  word-break: break-all;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GUARANTEE: 3 pillars (PAGE 2)
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-guarantee,
+.cert-provenance,
+.cert-verify,
+.cert-signatures,
+.cert-closing {
+  margin-bottom: 16px;
+}
+
+.cert-section-kicker {
+  display: block;
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 7.5px;
+  color: var(--cert-ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* ── ГЛАВНЫЙ ФИКС: жёсткая 3-колоночная сетка ── */
+.cert-pillars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14mm;
+  align-items: start;
+}
+
+.cert-pillar {
+  break-inside: avoid;
+}
+
+.cert-pillar-num {
+  display: block;
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 7.5px;
+  color: var(--cert-ink-3);
+  margin-bottom: 6px;
+}
+
+.cert-pillar-heading {
+  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cert-ink);
+  margin: 0 0 6px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.cert-pillar-text {
+  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-size: 10px;
+  color: var(--cert-ink-2);
+  line-height: 1.6;
+  margin: 0;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PROVENANCE CHAIN: 3 nodes in a row
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-provenance-nodes {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 5%;
+  position: relative;
+  margin-bottom: 8px;
+}
+
+/* Horizontal connector line behind nodes */
+.cert-provenance-nodes::before {
+  content: '';
+  position: absolute;
+  top: 16px;
+  left: 12%;
+  right: 12%;
+  height: 0;
+  border-top: 0.75px solid var(--cert-hairline);
+}
+
+.cert-provenance-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+.cert-provenance-hash {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 7px;
+  color: var(--cert-ink-3);
+  margin-bottom: 4px;
+}
+
+.cert-provenance-medallion {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.4px solid var(--cert-ink);
+  background-color: #faf9f7;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 18px 18px;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+/* Artist — 4-point star */
+.cert-medallion--artist {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18'%3E%3Cpath d='M9 0l1.5 6.5L17 5l-4.5 4.5L17 14l-6.5-1.5L9 18l-1.5-5.5L1 13l4.5-3.5L1 5l6.5 1.5z' fill='%2316140f'/%3E%3C/svg%3E");
+}
+
+/* Acquirer — person silhouette */
+.cert-medallion--acquirer {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18'%3E%3Ccircle cx='9' cy='5.5' r='3.5' fill='%2316140f'/%3E%3Cellipse cx='9' cy='15' rx='6' ry='4.5' fill='%2316140f'/%3E%3C/svg%3E");
+}
+
+/* Future — plus */
+.cert-medallion--future {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18'%3E%3Cpath d='M9 3v12M3 9h12' stroke='%2316140f' stroke-width='1.6' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+}
+
+.cert-provenance-medallion.is-future {
+  border-color: var(--cert-ink-3);
+  opacity: 0.4;
+}
+
+.cert-provenance-role {
+  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--cert-ink);
+  text-align: center;
+}
+
+.cert-provenance-sub {
+  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-size: 8px;
+  color: var(--cert-ink-3);
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VERIFY: QR badge + text
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-verify-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.cert-qr-badge {
+  flex-shrink: 0;
+}
+
+
+.cert-verify-text {
+  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-size: 12.5px;
+  color: var(--cert-ink);
+  line-height: 1.4;
+}
+
+.cert-verify-text p {
+  margin: 0;
+}
+
+.cert-verify-url {
+  display: block;
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 8.5px;
+  color: var(--cert-ink-2);
+  margin-top: 6px;
+  word-break: break-all;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIGNATURES: 3 columns (artist · seal · registry)
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-signatures {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.cert-signature-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cert-signature-col--right {
+  text-align: right;
+}
+
+.cert-signature-line {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--cert-ink);
+  margin: 0 0 6px;
+}
+
+.cert-signature-label {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 7.5px;
+  color: var(--cert-ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cert-signature-name {
+  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-size: 11px;
+  color: var(--cert-ink);
+}
+
+.cert-signature-detail {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 8px;
+  color: var(--cert-ink-3);
+}
+
+/* Wax seal — center column */
+.cert-signature-seal {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding-bottom: 6px;
+}
+
+.cert-seal-svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.cert-seal-text {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 6px;
+  color: var(--cert-ink-2);
+  margin-top: 12px;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CLOSING
+   ═══════════════════════════════════════════════════════════════ */
+
+.cert-hairline--soft {
+  border-color: var(--cert-soft);
+}
+
+.cert-closing-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.cert-verified-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.3px solid var(--cert-ink);
+  font-size: 8px;
+  color: var(--cert-ink);
+  flex-shrink: 0;
+  margin-right: 10px;
+}
+
+.cert-closing-text {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 8px;
+  color: var(--cert-ink-2);
+  flex: 1;
+}
+
+.cert-closing-copy {
+  font-family: 'Space Mono', 'PT Mono', 'Courier New', monospace;
+  font-size: 8px;
+  color: var(--cert-ink-3);
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRINT: break-inside discipline
+   ═══════════════════════════════════════════════════════════════ */
+
+@media print {
+  .cert-key-block,
+  .cert-pillars,
+  .cert-provenance,
+  .cert-verify,
+  .cert-signatures,
+  .cert-masthead,
+  .cert-title,
+  .cert-body {
+    break-inside: avoid;
+  }
+}

@@ -1,0 +1,153 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import GridLines from "../components/GridLines.astro";
+import SectionLabel from "../components/SectionLabel.astro";
+import PageHeader from "../components/PageHeader.astro";
+import PageFooter from "../components/PageFooter.astro";
+---
+
+<BaseLayout title="Модель доверия" description="Что доказывает криптография, что требует доверия к платформе, и что остаётся за рамками системы DUO MESH.">
+  <PageHeader />
+
+  <!-- Герой -->
+  <section class="sec ink pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="toprow">
+          <SectionLabel index="01" text="Прозрачность." />
+        </div>
+        <h1 class="display rv">Модель<br>доверия</h1>
+        <p class="body rv" style="max-width:48ch;margin-top:clamp(28px,4vw,48px);text-align:left">
+          Что доказывает криптография, что требует доверия к платформе, и что остаётся за рамками системы.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Секция 1: Математически доказано -->
+  <section class="sec paper pad-y">
+    <div class="wrap">
+      <GridLines />
+      <div class="layer">
+        <div class="rv" style="margin-bottom:clamp(24px,4vw,32px);border:1px solid rgba(40,167,69,.2);padding:clamp(24px,3vw,40px)">
+          <div style="display:flex;align-items:baseline;gap:.5rem;margin-bottom:.5rem">
+            <h2 class="display sm" style="font-size:clamp(1.3rem,2.5vw,1.8rem);color:#155724">Математически доказано</h2>
+            <span style="font-family:var(--mono);font-size:.7rem;opacity:.5;color:#155724">Mathematically Proven</span>
+          </div>
+          <p style="font-family:var(--sans);font-size:.78rem;opacity:.7;color:#155724;margin-bottom:1.5rem">Эти утверждения проверяются пересчётом без доверия к серверу.</p>
+
+          <div style="display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)">
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:#28a745;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;color:#155724">Хеш-целостность записи</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.7;color:#155724;padding-left:10px;line-height:1.55">SHA-256 хеш канонического JSON полезной нагрузки пересчитывается и сверяется с записанным. Изменение payload немедленно обнаруживается.</p>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:#28a745;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;color:#155724">Подлинность Ed25519 подписи</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.7;color:#155724;padding-left:10px;line-height:1.55">Каждая подпись проверяется математически: Ed25519 (RFC 8032) над SHA-256 хешем записи. Невозможно подделать без приватного ключа.</p>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:#28a745;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;color:#155724">Неразрывность цепи</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.7;color:#155724;padding-left:10px;line-height:1.55">Каждая запись содержит prevRecordHash = хеш предыдущей записи. Разрыв цепи немедленно обнаруживается — нельзя вставить, удалить или переставить записи.</p>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:#28a745;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;color:#155724">Временной якорь (RFC 3161)</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.7;color:#155724;padding-left:10px;line-height:1.55">Genesis-хеш отправляется в независимый Time-Stamp Authority. Токен подтверждает существование хеша на указанный момент времени.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Секция 2: Требует доверия -->
+        <div class="rv" style="margin-bottom:clamp(24px,4vw,32px);border:1px solid rgba(240,173,78,.25);padding:clamp(24px,3vw,40px)">
+          <div style="display:flex;align-items:baseline;gap:.5rem;margin-bottom:.5rem">
+            <h2 class="display sm" style="font-size:clamp(1.3rem,2.5vw,1.8rem);color:#856404">Требует доверия к DUO MESH</h2>
+            <span style="font-family:var(--mono);font-size:.7rem;opacity:.5;color:#856404">Requires Trust in DUO MESH</span>
+          </div>
+          <p style="font-family:var(--sans);font-size:.78rem;opacity:.7;color:#856404;margin-bottom:1.5rem">Платформа утверждает — проверяется репутацией, а не криптографией.</p>
+
+          <div style="display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)">
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:#f0ad4e;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;color:#856404">Ключ принадлежит художнику</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.7;color:#856404;padding-left:10px;line-height:1.55">Платформа заверяет, что Ed25519 ключ был сгенерирован при онбординге художника и привязан к его аккаунту. Публичный ключ доступен для независимой проверки.</p>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:#f0ad4e;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;color:#856404">Приватный ключ под контролем</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.7;color:#856404;padding-left:10px;line-height:1.55">MVP: приватные ключи хранятся на сервере в зашифрованном виде (AES-256-GCM). Платформа обязуется не использовать ключ без ведома художника. Roadmap: некастодиальная модель (ключи в браузере).</p>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:#f0ad4e;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;color:#856404">Платформа — честный эмитент</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.7;color:#856404;padding-left:10px;line-height:1.55">Co-signature платформы означает «выпущено через DUO MESH». Это не криптографическое доказательство — это reputation-based attestation.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Секция 3: Не утверждается -->
+        <div class="rv" style="border:1px solid color-mix(in oklab,var(--ink) 12%,transparent);padding:clamp(24px,3vw,40px)">
+          <div style="display:flex;align-items:baseline;gap:.5rem;margin-bottom:.5rem">
+            <h2 class="display sm" style="font-size:clamp(1.3rem,2.5vw,1.8rem);opacity:.5">Не утверждается</h2>
+            <span style="font-family:var(--mono);font-size:.7rem;opacity:.35">Not Claimed</span>
+          </div>
+          <p style="font-family:var(--sans);font-size:.78rem;opacity:.5;margin-bottom:1.5rem">Система не претендует на эти свойства. Честный маркетинг.</p>
+
+          <div style="display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)">
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--ink);opacity:.25;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;opacity:.55">Физическая подлинность</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.45;padding-left:10px;line-height:1.55">Криптография доказывает целостность цифровых записей, но не подтверждает, что работа — подлинник. Это предмет искусствоведческой экспертизы.</p>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--ink);opacity:.25;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;opacity:.55">Неизменность файла работы</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.45;padding-left:10px;line-height:1.55">Хеш integrityHash связывает ArtKey с конкретным файлом, но проверить можно только имея доступ к файлу. Офлайн-верификатор позволяет пересчитать хеш независимо.</p>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--ink);opacity:.25;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;opacity:.55">Юридическое право собственности</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.45;padding-left:10px;line-height:1.55">Provenance-цепочка — это криптографическая история передачи. Она не является правоустанавливающим документом. Юридический титул регулируется законами юрисдикции.</p>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--ink);opacity:.25;flex-shrink:0"></span>
+                <b style="font-family:var(--sans);font-size:.9rem;opacity:.55">Рыночная стоимость</b>
+              </div>
+              <p style="font-family:var(--sans);font-size:.78rem;opacity:.45;padding-left:10px;line-height:1.55">Никакие криптографические доказательства не гарантируют и не предсказывают рыночную стоимость работы.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <PageFooter>
+    <div class="row rv" style="margin-bottom:clamp(40px,6vw,72px)">
+      <a href="/how-it-works" style="font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--paper);text-decoration:none">ArtKey — как это работает →</a>
+    </div>
+  </PageFooter>
+</BaseLayout>

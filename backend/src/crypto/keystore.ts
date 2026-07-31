@@ -9,7 +9,7 @@ import { sha256Hex } from './hash'
  * Roadmap: non-custodial (keys in browser, server only stores public keys).
  */
 
-interface StoreEntry {
+export interface StoreEntry {
   ciphertext: string // base64
   iv: string // base64
 }
@@ -83,6 +83,19 @@ export class KeyStore {
       base64ToBytes(entry.ciphertext),
     )
     return new TextDecoder().decode(plaintext)
+  }
+
+  /** Return the raw encrypted entry (for DB persistence). */
+  async getEntry(keyId: string): Promise<StoreEntry | null> {
+    const store = await this.load()
+    return store[keyId] ?? null
+  }
+
+  /** Restore a pre-encrypted entry without re-encrypting (for DB recovery). */
+  async setEntry(keyId: string, entry: StoreEntry): Promise<void> {
+    const store = await this.load()
+    store[keyId] = entry
+    await this.save()
   }
 
   async delete(keyId: string): Promise<void> {

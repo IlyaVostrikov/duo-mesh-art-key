@@ -1,0 +1,12 @@
+---
+/**
+ * Вертикальная сетка-волосок (overlay).
+ * Цвет берётся из --line родительской .sec (paper → тёмные, ink → светлые).
+ * На <760px CSS сам схлопывает до 4 колонок.
+ */
+interface Props { cols?: number }
+const { cols = 12 } = Astro.props;
+---
+<div class="lines" aria-hidden="true">
+  {Array.from({ length: cols }).map(() => <i></i>)}
+</div>
