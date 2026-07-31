@@ -68,6 +68,10 @@ export class StorageService {
         // Use the configured region (e.g. "auto" for R2, "us-east-1" for DO Spaces)
         region: config.region,
         forcePathStyle: false,
+        // Disable automatic CRC32 checksums — they break presigned PUT URLs when
+        // the SDK pre-computes a checksum without the actual file body.
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+        responseChecksumValidation: 'WHEN_REQUIRED',
         credentials: {
           accessKeyId: config.accessKeyId,
           secretAccessKey: config.secretAccessKey,
