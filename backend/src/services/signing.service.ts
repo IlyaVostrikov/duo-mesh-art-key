@@ -26,33 +26,51 @@ export class SigningService {
 
   /** Ensure platform key exists and sync all keys from DB on cold start. */
   async ensureKeys(): Promise<void> {
-    // 1. Ensure platform signing key exists
+    // 1. Run migration FIRST — Prisma schema expects encrypted_private_key column,
+    //    so any query on signing_keys will fail until the column exists.
+    try {
+      await this.prisma.$executeRawUnsafe(
+        `ALTER TABLE signing_keys ADD COLUMN IF NOT EXISTS encrypted_private_key JSONB`,
+      )
+    } catch { /* column may already exist from a prior run; ignore */ }
+
+    // 2. Ensure platform signing key exists
     const existing = await this.prisma.signingKey.findFirst({
       where: { ownerType: 'PLATFORM', isActive: true },
     })
+    // Determine whether we need to create a new platform key
+    let mustCreatePlatformKey = false
+
     if (existing) {
-      // On serverless (Vercel), the keystore file is empty after cold start.
-      // Try to restore the private key from env var if missing.
-      if (!(await this.keyStore.has(existing.id))) {
-        const hex = process.env.PLATFORM_PRIVATE_KEY_HEX
-        if (hex) {
-          await this.keyStore.set(existing.id, hex)
-          // Persist encrypted key in DB for future cold starts
-          const entry = await this.keyStore.getEntry(existing.id)
-          if (entry && !existing.encryptedPrivateKey) {
-            await this.prisma.signingKey.update({
-              where: { id: existing.id },
-              data: { encryptedPrivateKey: entry },
-            })
-          }
-        } else {
-          console.warn(
-            'Platform key exists in DB but private key is missing from keystore. ' +
-            'Set PLATFORM_PRIVATE_KEY_HEX env var for serverless deployments.',
-          )
+      if (await this.keyStore.has(existing.id)) {
+        // Key already in keystore — all good
+      } else if (process.env.PLATFORM_PRIVATE_KEY_HEX) {
+        // Recover from env var
+        await this.keyStore.set(existing.id, process.env.PLATFORM_PRIVATE_KEY_HEX)
+        const entry = await this.keyStore.getEntry(existing.id)
+        if (entry && !existing.encryptedPrivateKey) {
+          await this.prisma.signingKey.update({
+            where: { id: existing.id },
+            data: { encryptedPrivateKey: entry },
+          })
         }
+      } else {
+        // Private key lost — deactivate old key and create new one
+        console.warn(
+          'Platform key exists but private key is unrecoverable. ' +
+          'Deactivating old key and generating a new one.',
+        )
+        await this.prisma.signingKey.update({
+          where: { id: existing.id },
+          data: { isActive: false, revokedAt: new Date() },
+        })
+        mustCreatePlatformKey = true
       }
     } else {
+      mustCreatePlatformKey = true
+    }
+
+    if (mustCreatePlatformKey) {
       const kp = await generateEd25519KeyPair()
       const key = await this.prisma.signingKey.create({
         data: {
@@ -71,13 +89,6 @@ export class SigningService {
       }
     }
 
-    // 2. Run migration: add encrypted_private_key column if missing
-    try {
-      await this.prisma.$executeRawUnsafe(
-        `ALTER TABLE signing_keys ADD COLUMN IF NOT EXISTS encrypted_private_key JSONB`,
-      )
-    } catch { /* column may already exist from a prior run; ignore */ }
-
     // 3. Sync all keys from DB into the keystore (cold-start recovery)
     const dbKeys = await this.prisma.signingKey.findMany({
       where: { encryptedPrivateKey: { not: null } },
@@ -90,14 +101,10 @@ export class SigningService {
     }
 
     // 4. Revoke active keys whose private key was lost (no encryptedPrivateKey in DB)
-    await this.prisma.signingKey.updateMany({
-      where: {
-        isActive: true,
-        encryptedPrivateKey: null,
-        ownerType: { not: 'PLATFORM' },
-      },
-      data: { isActive: false, revokedAt: new Date() },
-    })
+    //    Uses raw SQL because Prisma JSONB columns don't accept plain `null` in filters.
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE signing_keys SET is_active = false, revoked_at = NOW() WHERE is_active = true AND encrypted_private_key IS NULL AND owner_type != 'PLATFORM'`,
+    )
   }
 
   /** Generate an Ed25519 keypair for an artist at onboarding. */

@@ -8,10 +8,10 @@ import { createBackendRuntime } from './runtime'
 import { createApp } from './app'
 import { Hono } from 'hono'
 
-function buildApp() {
+async function buildApp() {
   try {
     const runtime = createBackendRuntime(process.env as Record<string, string | undefined>)
-    const inner = createApp({ env: runtime.env, prisma: runtime.prisma })
+    const inner = await createApp({ env: runtime.env, prisma: runtime.prisma })
     // Mount under /api for Vercel function routing
     const app = new Hono().route('/api', inner)
     return { app }
@@ -29,7 +29,7 @@ function buildApp() {
   }
 }
 
-const { app } = buildApp()
+const { app } = await buildApp()
 
 export const GET = handle(app)
 export const POST = handle(app)
