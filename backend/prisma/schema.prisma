@@ -39,6 +39,7 @@ model User {
   notifications  Notification[]
   provenanceFrom ProvenanceRecord[] @relation("FromOwner")
   provenanceTo   ProvenanceRecord[] @relation("ToOwner")
+  storageObjects StorageObject[]
 
   @@map("users")
 }
@@ -187,6 +188,7 @@ model Artwork {
   sales              Sale[]
   collectionItems    CollectionArtwork[]
   inquiries          Inquiry[]
+  storageObjects     StorageObject[]
 
   @@index([artistId], map: "artworks_artist_id_idx")
   @@index([status], map: "artworks_status_idx")
@@ -537,4 +539,36 @@ model TransparencyLogEntry {
   @@unique([artKeyId, sequence])
   @@index([createdAt])
   @@map("transparency_log")
+}
+
+// ─── Storage Objects (manifest for every uploaded file) ───
+
+enum StorageObjectState {
+  PENDING
+  FINALIZED
+  ARCHIVED
+}
+
+model StorageObject {
+  id          String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  key         String             @unique
+  ownerId     String             @db.Uuid @map("owner_id")
+  artworkId   String?            @db.Uuid @map("artwork_id")
+  fileName    String             @map("file_name")
+  contentType String             @map("content_type")
+  byteSize    Int                @map("byte_size")
+  checksum    String?            @map("checksum")
+  visibility  String             @default("public")
+  state       StorageObjectState @default(PENDING)
+  metadata    Json?              @db.JsonB
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  owner   User     @relation(fields: [ownerId], references: [id])
+  artwork Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId])
+  @@index([artworkId])
+  @@index([state])
+  @@map("storage_objects")
 }

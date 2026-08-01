@@ -12,6 +12,11 @@ const presignedSchema = z.object({
 
 const downloadUrlSchema = z.object({ key: z.string().min(1) })
 
+const finalizeSchema = z.object({
+  key: z.string().min(1),
+  artworkId: z.string().uuid().optional(),
+})
+
 const cleanupSchema = z.object({ olderThanHours: z.coerce.number().int().positive().default(24) })
 
 type UploadRouteEnv = {
@@ -71,16 +76,46 @@ export function createUploadRoutes() {
     }
   })
 
+  // Confirm upload completed — HEAD-check S3, verify size, mark FINALIZED.
+  routes.post('/finalize', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
+    const svc = c.get('uploadService')
+    const authUser = getAuthUser(c)!
+    const parsed = finalizeSchema.safeParse(await c.req.json())
+    if (!parsed.success) {
+      return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+    }
+
+    // Verify ownership via manifest
+    const owns = await svc.checkOwnership(parsed.data.key, authUser.userId)
+    if (authUser.role !== 'ADMIN' && !owns) {
+      return c.json({ error: 'FORBIDDEN', message: 'You do not own this file' }, 403)
+    }
+
+    try {
+      const result = await svc.finalizeUpload({
+        key: parsed.data.key,
+        artworkId: parsed.data.artworkId,
+      })
+      return c.json(result, 200)
+    } catch (err) {
+      if (err instanceof UploadValidationError) {
+        return c.json({ error: err.code, message: err.message }, 400)
+      }
+      throw err
+    }
+  })
+
   // Generate download URL for a stored object.
-  // P0-10: ownership enforced via key prefix — upload paths encode userId.
+  // ACL: manifest-based ownership check (authoritative), key prefix fallback.
   routes.post('/download-url', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
     const svc = c.get('uploadService')
     const authUser = getAuthUser(c)!
     const parsed = downloadUrlSchema.safeParse(await c.req.json())
     if (!parsed.success) return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
 
-    // Verify ownership: key must start with uploads/{userId}/ unless admin
-    if (authUser.role !== 'ADMIN' && !parsed.data.key.startsWith(`uploads/${authUser.userId}/`)) {
+    // Ownership: manifest check first, key prefix as fallback
+    const owns = await svc.checkOwnership(parsed.data.key, authUser.userId)
+    if (authUser.role !== 'ADMIN' && !owns) {
       return c.json({ error: 'FORBIDDEN', message: 'You do not own this file' }, 403)
     }
 
@@ -106,14 +141,15 @@ export function createUploadRoutes() {
   })
 
   // Delete a file (S3 or local disk).
-  // P0-10: ownership enforced via key prefix — upload paths encode userId.
+  // ACL: manifest-based ownership check (authoritative), key prefix fallback.
   routes.delete('/:key{.+}', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
     const svc = c.get('uploadService')
     const authUser = getAuthUser(c)!
     const key = decodeURIComponent(c.req.param('key'))
 
-    // Verify ownership: key must start with uploads/{userId}/ unless admin
-    if (authUser.role !== 'ADMIN' && !key.startsWith(`uploads/${authUser.userId}/`)) {
+    // Ownership: manifest check first, key prefix as fallback
+    const owns = await svc.checkOwnership(key, authUser.userId)
+    if (authUser.role !== 'ADMIN' && !owns) {
       return c.json({ error: 'FORBIDDEN', message: 'You do not own this file' }, 403)
     }
 
