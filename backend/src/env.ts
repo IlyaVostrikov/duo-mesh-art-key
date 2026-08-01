@@ -7,6 +7,10 @@ const booleanStringSchema = z
 
 const knownWeakJwtSecrets = new Set(['replace-with-at-least-32-random-characters'])
 
+const knownWeakSecretStoreKeys = new Set([
+  'dev-secret-store-key-change-in-production-!!!',
+])
+
 const optionalStringSchema = z.preprocess((value) => {
   if (typeof value !== 'string') return value
   const trimmed = value.trim()
@@ -59,6 +63,7 @@ const envSchema = z.object({
   SPACES_PUBLIC_CACHE_CONTROL: stringWithDefault('public, max-age=31536000, immutable'),
 }).superRefine((env, ctx) => {
   validateJwtSecret(env, ctx)
+	  	validateSecretStoreKey(env, ctx)
   validateCorsOrigins(env, ctx)
   validateStorageEnv(env, ctx)
 })
@@ -92,6 +97,19 @@ function isWeakJwtSecret(secret: string) {
     knownWeakJwtSecrets.has(normalized) ||
     new Set(normalized).size === 1
   )
+}
+
+function validateSecretStoreKey(env: z.infer<typeof envSchema>, ctx: z.RefinementCtx) {
+  if (!isProductionLikeRuntime(env)) return
+
+  const key = env.SECRET_STORE_KEY.trim().toLowerCase()
+  if (knownWeakSecretStoreKeys.has(key) || key.length < 32) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['SECRET_STORE_KEY'],
+      message: 'SECRET_STORE_KEY must be a strong random secret (≥32 chars) in production. The default placeholder is not acceptable.',
+    })
+  }
 }
 
 function validateCorsOrigins(env: z.infer<typeof envSchema>, ctx: z.RefinementCtx) {
