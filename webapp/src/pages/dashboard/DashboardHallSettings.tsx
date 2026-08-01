@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FileUpload } from '@/components/ui/file-upload'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { apiBaseUrl } from '@/lib/api'
+import { uploadFile } from '@/lib/upload'
 
 const THEMES: { value: string; label: string }[] = [
   { value: 'default', label: 'Светлый / Light' },
@@ -99,19 +100,8 @@ export function DashboardHallSettings() {
   }, [auth.accessToken])
 
   const uploadCover = async (file: File): Promise<string | null> => {
-    const formData = new FormData()
-    formData.append('files', file)
-    const res = await fetch(`${apiBaseUrl}/api/uploads`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${auth.accessToken!}` },
-      body: formData,
-    })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.message ?? 'Upload failed')
-    }
-    const data = await res.json()
-    return data.files?.[0]?.url ?? null
+    const result = await uploadFile(file, auth.accessToken!)
+    return result.url
   }
 
   const handleSave = async (e: FormEvent) => {
