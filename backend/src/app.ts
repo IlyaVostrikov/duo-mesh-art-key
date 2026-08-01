@@ -204,7 +204,7 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
         //   /uploads/user/date/uuid-name → uploads/user/date/uuid-name
         if (storageService) {
           try {
-            const s3Key = c.req.path.replace(/^\/api\//, '')
+            const s3Key = c.req.path.replace(/^(?:\/api)?\//, '')
             const { downloadUrl } = await storageService.createDownloadUrl({ key: s3Key })
             return c.redirect(downloadUrl, 302)
           } catch { /* S3 lookup failed — fall through to 404 */ }

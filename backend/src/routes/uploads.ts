@@ -71,11 +71,18 @@ export function createUploadRoutes() {
     }
   })
 
-  // Generate download URL for a stored object
+  // Generate download URL for a stored object.
+  // P0-10: ownership enforced via key prefix — upload paths encode userId.
   routes.post('/download-url', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
     const svc = c.get('uploadService')
+    const authUser = getAuthUser(c)!
     const parsed = downloadUrlSchema.safeParse(await c.req.json())
     if (!parsed.success) return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+
+    // Verify ownership: key must start with uploads/{userId}/ unless admin
+    if (authUser.role !== 'ADMIN' && !parsed.data.key.startsWith(`uploads/${authUser.userId}/`)) {
+      return c.json({ error: 'FORBIDDEN', message: 'You do not own this file' }, 403)
+    }
 
     try {
       const result = await svc.createDownloadUrl(parsed.data.key)
@@ -98,10 +105,17 @@ export function createUploadRoutes() {
     return c.json(result, 200)
   })
 
-  // Delete a file (S3 or local disk)
+  // Delete a file (S3 or local disk).
+  // P0-10: ownership enforced via key prefix — upload paths encode userId.
   routes.delete('/:key{.+}', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
     const svc = c.get('uploadService')
+    const authUser = getAuthUser(c)!
     const key = decodeURIComponent(c.req.param('key'))
+
+    // Verify ownership: key must start with uploads/{userId}/ unless admin
+    if (authUser.role !== 'ADMIN' && !key.startsWith(`uploads/${authUser.userId}/`)) {
+      return c.json({ error: 'FORBIDDEN', message: 'You do not own this file' }, 403)
+    }
 
     try {
       await svc.deleteFile(key)
