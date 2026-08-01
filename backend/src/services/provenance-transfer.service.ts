@@ -73,6 +73,7 @@ export class ProvenanceTransferService {
         signerPublicKey,
         signerRole: params.signerRole,
         signingKeyId: params.signerKeyId,
+        occurredAt,
       },
     })
 

@@ -151,6 +151,12 @@ export class ArtworkService {
   }
 
   async delete(artworkId: string) {
+    // Refuse to delete artwork that has an ArtKey — provenance is immutable.
+    // Only DRAFT artworks (no ArtKey issued) can be hard-deleted.
+    const artKey = await this.prisma.artKey.findUnique({ where: { artworkId } })
+    if (artKey) {
+      throw new Error('Cannot delete artwork with an issued ArtKey. Archive it instead.')
+    }
     await this.prisma.artwork.delete({ where: { id: artworkId } })
   }
 

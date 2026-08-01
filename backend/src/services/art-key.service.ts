@@ -87,52 +87,56 @@ export class ArtKeyService {
       }
     }
 
-    const artKey = await this.prisma.artKey.create({
-      data: {
-        artworkId,
-        keyCode,
-        ownerKey,
-        certificateHash,
-        integrityHash,
-        issuedAt,
-        timestampToken,
-        platformSignature,
-        platformSigningKeyId,
-        artistSigningKeyId,
-      },
-    })
+    // Atomic issuance: artKey + provenance + transparency in one transaction.
+    // If any step fails, nothing is committed — prevents orphaned records.
+    const [artKey] = await this.prisma.$transaction(async (tx) => {
+      const ak = await tx.artKey.create({
+        data: {
+          artworkId,
+          keyCode,
+          ownerKey,
+          certificateHash,
+          integrityHash,
+          issuedAt,
+          timestampToken,
+          platformSignature,
+          platformSigningKeyId,
+          artistSigningKeyId,
+        },
+      })
 
-    // Genesis provenance record with signature fields
-    await this.prisma.provenanceRecord.create({
-      data: {
-        artworkId,
-        artKeyId: artKey.id,
-        sequence: 0,
-        toUserId: userId,
-        transferType: 'CREATION',
-        recordHash: genesisRecordHash,
-        prevRecordHash: integrityHash,
-        signature,
-        signerPublicKey,
-        signerRole,
-        signingKeyId: artistSigningKeyId,
-      },
-    })
+      await tx.provenanceRecord.create({
+        data: {
+          artworkId,
+          artKeyId: ak.id,
+          sequence: 0,
+          toUserId: userId,
+          transferType: 'CREATION',
+          recordHash: genesisRecordHash,
+          prevRecordHash: integrityHash,
+          signature,
+          signerPublicKey,
+          signerRole,
+          signingKeyId: artistSigningKeyId,
+          occurredAt: issuedAt,
+        },
+      })
 
-    // Append to transparency log
-    const tls = new TransparencyLogService(this.prisma)
-    await tls.append({
-      artKeyId: artKey.id,
-      entryType: 'ARTKEY_CREATED',
-      payload: {
-        keyCode: artKey.keyCode,
-        integrityHash,
-        genesisRecordHash,
-        certificateHash: artKey.certificateHash,
-      },
-    })
+      // Append to transparency log (cast: tx IS a PrismaClient minus connect/disconnect)
+      const tls = new TransparencyLogService(tx as unknown as typeof this.prisma)
+      await tls.append({
+        artKeyId: ak.id,
+        entryType: 'ARTKEY_CREATED',
+        payload: {
+          keyCode: ak.keyCode,
+          integrityHash,
+          genesisRecordHash,
+          certificateHash: ak.certificateHash,
+        },
+      })
 
-    return artKey
+      return [ak]
+    })
   }
 
   async verify(keyCode: string) {
@@ -232,7 +236,7 @@ export class ArtKeyService {
           eventType: rec.transferType,
           fromOwner: rec.fromUserId ?? null,
           toOwner: rec.toUserId,
-          occurredAt: rec.createdAt.toISOString(),
+          occurredAt: rec.occurredAt.toISOString(),
           prevRecordHash: rec.prevRecordHash ?? '',
         }
         const recalculatedHash = hashPayload(payload)
@@ -305,21 +309,31 @@ export class ArtKeyService {
 
     // ── Layer C: Platform co-signature ──
     if (artKey.platformSignature && this.signingService) {
-      const platformKey = await this.signingService.getPlatformActivePublicKey()
-      if (platformKey && provenance.length > 0) {
+      // Use HISTORICAL platform key (by platformSigningKeyId), not current active key.
+      // After rotation, current active key won't verify old signatures.
+      let platformPublicKey: string | null = null
+      if (artKey.platformSigningKeyId) {
+        platformPublicKey = await this.signingService.getPublicKey(artKey.platformSigningKeyId)
+      }
+      // Fallback: records created before platformSigningKeyId existed
+      if (!platformPublicKey) {
+        const activeKey = await this.signingService.getPlatformActivePublicKey()
+        platformPublicKey = activeKey?.publicKey ?? null
+      }
+      if (platformPublicKey && provenance.length > 0) {
         const genesisPayload = {
           artworkId: provenance[0].artworkId,
           sequence: 0,
           eventType: 'CREATION',
           fromOwner: provenance[0].fromUserId ?? null,
           toOwner: provenance[0].toUserId,
-          occurredAt: provenance[0].createdAt.toISOString(),
+          occurredAt: provenance[0].occurredAt.toISOString(),
           prevRecordHash: artKey.integrityHash,
         }
         const platResult = await this.signingService.verifyProvRecordSignature(
           genesisPayload,
           artKey.platformSignature,
-          platformKey.publicKey,
+          platformPublicKey,
         )
         checks.push({
           label: 'platform-co-signature',
