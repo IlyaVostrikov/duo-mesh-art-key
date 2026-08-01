@@ -30,12 +30,14 @@ function assertExt(ext: string, fileName: string) {
 }
 
 import type { StorageService } from '../storage/service'
+import type { DbClient } from '../db'
 
 export interface UploadConfig {
   maxImageBytes: number
   max3DBytes: number
   storage?: StorageService | null
   baseDir: string
+  prisma?: DbClient | null
 }
 
 export class UploadService {
@@ -43,12 +45,14 @@ export class UploadService {
   private readonly max3DBytes: number
   private readonly storage: StorageService | null
   private readonly baseDir: string
+  private readonly prisma: DbClient | null
 
   constructor(config: UploadConfig) {
     this.maxImageBytes = config.maxImageBytes
     this.max3DBytes = config.max3DBytes
     this.storage = config.storage ?? null
     this.baseDir = config.baseDir
+    this.prisma = config.prisma ?? null
   }
 
   // ── Local disk upload (existing) ──
@@ -241,12 +245,65 @@ export class UploadService {
     const sanitized = sanitizeFilename(opts.fileName)
     const key = `uploads/${opts.userId}/${datePath}/${uuid}-${sanitized}`
 
+    // Create PENDING storage manifest before returning presigned URL
+    if (this.prisma) {
+      await this.prisma.storageObject.create({
+        data: {
+          key,
+          ownerId: opts.userId,
+          fileName: opts.fileName,
+          contentType: opts.fileType,
+          byteSize: opts.byteSize,
+          visibility: opts.visibility ?? 'public',
+          state: 'PENDING',
+        },
+      })
+    }
+
     return this.storage.createUploadUrl({
       key,
       contentType: opts.fileType,
       byteSize: opts.byteSize,
       visibility: opts.visibility ?? 'public',
     })
+  }
+
+  /** Verify upload completed and mark StorageObject as FINALIZED. */
+  async finalizeUpload(opts: {
+    key: string
+    artworkId?: string
+  }): Promise<{ finalized: boolean; checksum?: string; byteSize?: number }> {
+    if (!this.storage) throw new Error('Storage service is not configured.')
+    if (!this.prisma) throw new Error('Database is not configured.')
+
+    const obj = await this.prisma.storageObject.findUnique({ where: { key: opts.key } })
+    if (!obj) throw new UploadValidationError('Storage object not found')
+    if (obj.state !== 'PENDING') {
+      return { finalized: false }
+    }
+
+    // HEAD the S3 object to verify it exists and get actual size
+    const head = await this.storage.headObject(opts.key)
+    if (!head) throw new UploadValidationError('File was not uploaded — object not found in storage')
+
+    // Size check: actual must match declared (±10% tolerance for upload quirks)
+    const sizeDiff = Math.abs(head.contentLength - obj.byteSize)
+    if (sizeDiff > obj.byteSize * 0.1) {
+      throw new UploadValidationError(
+        `Size mismatch: declared ${obj.byteSize} bytes, actual ${head.contentLength} bytes`,
+      )
+    }
+
+    await this.prisma.storageObject.update({
+      where: { id: obj.id },
+      data: {
+        state: 'FINALIZED',
+        checksum: head.etag,
+        ...(opts.artworkId ? { artworkId: opts.artworkId } : {}),
+      },
+    })
+
+    return { finalized: true, checksum: head.etag, byteSize: head.contentLength }
   }
 
   async createDownloadUrl(key: string) {
@@ -298,6 +355,16 @@ export class UploadService {
 
   // ── Delete ──
 
+  /** Check ownership via manifest (authoritative) or fall back to key prefix. */
+  async checkOwnership(key: string, userId: string): Promise<boolean> {
+    if (this.prisma) {
+      const obj = await this.prisma.storageObject.findUnique({ where: { key } })
+      if (obj) return obj.ownerId === userId
+    }
+    // Fallback: key prefix check (Stage A)
+    return key.startsWith(`uploads/${userId}/`)
+  }
+
   async deleteFile(key: string) {
     if (this.storage) {
       await this.storage.deleteObject(key)
@@ -313,6 +380,14 @@ export class UploadService {
       } catch (err: unknown) {
         if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
       }
+    }
+
+    // Mark manifest as ARCHIVED (don't hard-delete — audit trail)
+    if (this.prisma) {
+      await this.prisma.storageObject.updateMany({
+        where: { key, state: { not: 'ARCHIVED' } },
+        data: { state: 'ARCHIVED' },
+      })
     }
   }
 }

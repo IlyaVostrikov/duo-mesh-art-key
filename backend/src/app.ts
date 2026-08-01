@@ -121,6 +121,7 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
     max3DBytes: env.UPLOAD_MAX_3D_BYTES,
     storage: storageService,
     baseDir: isVercel ? '/tmp/uploads' : 'uploads',
+    prisma,
   })
   const provenanceTransferService = new ProvenanceTransferService(prisma, signingService)
 

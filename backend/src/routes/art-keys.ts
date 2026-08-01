@@ -52,39 +52,61 @@ export function createArtKeyRoutes() {
     const artistKey = await signingSvc.getArtistActivePublicKey(result.artist.id)
     const platformKey = await signingSvc.getPlatformActivePublicKey()
 
-    // Build provenance entries: actual chain records + platform co-signature if present
-    const provenanceEntries = result.provenance.map((p) => ({
-      payload: {
-        artworkId: result.artwork.id,
-        sequence: p.sequence,
-        eventType: p.transferType,
-        fromOwner: p.fromOwnerName,
-        toOwner: p.toOwnerName,
-        occurredAt: p.createdAt,
-        prevRecordHash: p.prevRecordHash ?? '',
-      },
-      recordHash: p.recordHash,
-      signature: p.signature,
-      signerPublicKey: p.signerPublicKey,
-      signerRole: p.signerRole,
+    // Build provenance entries: actual chain records + platform co-signature if present.
+    // P0-02: payload contains EXACT signed fields (owner IDs, not display names).
+    // The presentation section carries human-readable names separately.
+    const prisma = c.get('prisma')
+    const provenanceEntries = await Promise.all(result.provenance.map(async (p) => {
+      // Reconstruct the EXACT payload that was signed — use the stored provenance
+      // record's fromUserId/toUserId (IDs), NOT display names.
+      const fullRecord = await prisma.provenanceRecord.findFirst({
+        where: { recordHash: p.recordHash },
+        select: { fromUserId: true, toUserId: true, occurredAt: true },
+      })
+      return {
+        payload: {
+          artworkId: result.artwork.id,
+          sequence: p.sequence,
+          eventType: p.transferType,
+          fromOwner: fullRecord?.fromUserId ?? null,
+          toOwner: fullRecord?.toUserId ?? null,
+          occurredAt: fullRecord?.occurredAt?.toISOString() ?? p.createdAt,
+          prevRecordHash: p.prevRecordHash ?? '',
+        },
+        recordHash: p.recordHash,
+        signature: p.signature,
+        signerPublicKey: p.signerPublicKey,
+        signerRole: p.signerRole,
+      }
     }))
 
     // If platform co-signature exists and isn't already in provenance, add it
-    if (result.artKey.platformSignature && platformKey && !provenanceEntries.some((e) => e.signerRole === 'PLATFORM')) {
+    // P1-03: use the HISTORICAL platform key (by platformSigningKeyId)
+    if (result.artKey.platformSignature && !provenanceEntries.some((e) => e.signerRole === 'PLATFORM')) {
+      // Look up the platform key that was actually used for signing
+      const artKey = await prisma.artKey.findUnique({
+        where: { keyCode: result.artKey.keyCode },
+        select: { platformSigningKeyId: true },
+      })
+      let platformPubKey = platformKey?.publicKey ?? null
+      if (artKey?.platformSigningKeyId) {
+        const historicalKey = await signingSvc.getPublicKey(artKey.platformSigningKeyId)
+        if (historicalKey) platformPubKey = historicalKey
+      }
       const genesisEntry = provenanceEntries[0]
       if (genesisEntry) {
         provenanceEntries.splice(1, 0, {
           payload: { ...genesisEntry.payload },
           recordHash: genesisEntry.recordHash,
           signature: result.artKey.platformSignature,
-          signerPublicKey: platformKey.publicKey,
+          signerPublicKey: platformPubKey,
           signerRole: 'PLATFORM',
         })
       }
     }
 
     const exportData = {
-      version: '1.0.0',
+      version: '2.0.0',
       exportedAt: new Date().toISOString(),
       artKey: {
         keyCode: result.artKey.keyCode,
@@ -101,10 +123,22 @@ export function createArtKeyRoutes() {
         publicKey: platformKey?.publicKey ?? null,
       },
       provenance: provenanceEntries,
+      // Separate human-readable presentation metadata (not part of signed payload)
+      presentation: {
+        provenance: result.provenance.map((p) => ({
+          sequence: p.sequence,
+          transferType: p.transferType,
+          fromOwnerName: p.fromOwnerName,
+          toOwnerName: p.toOwnerName,
+          price: p.price,
+          createdAt: p.createdAt,
+        })),
+      },
       verificationHints: {
-        canonicalization: 'Keys sorted alphabetically, JSON.stringify without whitespace',
+        canonicalization: 'Recursive key-sorted JSON (RFC 8785 / JCS-style)',
         hashing: 'SHA-256 of canonical JSON',
         signature: 'Ed25519 (RFC 8032) over SHA-256 hash',
+        note: 'Payload uses owner IDs, not display names. See presentation for human-readable names.',
       },
     }
 

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 import type { AppEnv } from '../env'
@@ -145,6 +145,25 @@ export class StorageService {
         Key: assertSafeObjectKey(key),
       }),
     )
+  }
+
+  /** Verify an object exists and return its size + ETag (for upload finalization). */
+  async headObject(key: string): Promise<{ contentLength: number; etag: string } | null> {
+    try {
+      const result = await this.s3.send(
+        new HeadObjectCommand({
+          Bucket: this.config.bucket,
+          Key: assertSafeObjectKey(key),
+        }),
+      )
+      return {
+        contentLength: result.ContentLength ?? 0,
+        etag: result.ETag ?? '',
+      }
+    } catch (err: unknown) {
+      if ((err as { name?: string }).name === 'NotFound') return null
+      throw err
+    }
   }
 
   publicUrlForKey(key: string) {
