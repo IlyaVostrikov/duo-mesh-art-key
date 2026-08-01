@@ -23,10 +23,10 @@ const env: AppEnv = {
 
 describe('auth routes', () => {
   test('rejects secure cookie refresh and logout requests from untrusted origins before auth service work', async () => {
-    const app = createApp({ env, prisma: {} as DbClient })
+    const app = await createApp({ env, prisma: {} as DbClient })
     const refreshCookie = `web_app_demo_refresh=${'r'.repeat(32)}`
 
-    const noOriginRefresh = await app.request('/api/auth/refresh', {
+    const noOriginRefresh = await app.request('/auth/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -40,7 +40,7 @@ describe('auth routes', () => {
     expect(noOriginRefresh.status).toBe(403)
     expect(noOriginRefreshBody.error.code).toBe('FORBIDDEN')
 
-    const untrustedLogout = await app.request('/api/auth/logout', {
+    const untrustedLogout = await app.request('/auth/logout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
