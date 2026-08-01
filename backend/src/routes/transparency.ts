@@ -19,7 +19,7 @@ export function createTransparencyRoutes() {
   const routes = new Hono<TransparencyRouteEnv>()
 
   // Public: get transparency log for a specific ArtKey
-  routes.get('/transparency/:keyCode', async (c) => {
+  routes.get('/:keyCode', async (c) => {
     const tls = c.get('transparencyLogService')
     const artKeySvc = c.get('artKeyService')
 
@@ -46,7 +46,7 @@ export function createTransparencyRoutes() {
   })
 
   // Public: get global transparency log (all ArtKeys)
-  routes.get('/transparency', async (c) => {
+  routes.get('/', async (c) => {
     const tls = c.get('transparencyLogService')
     const parsed = pageSchema.safeParse(c.req.query())
     const { page, pageSize } = parsed.success ? parsed.data : { page: 1, pageSize: 50 }

@@ -21,10 +21,10 @@ export function createHallRoutes() {
     return c.json(halls)
   })
 
-  // Public: get hall by slug
+  // Public: get published hall by slug
   routes.get('/:slug', async (c) => {
     const svc = c.get('hallService')
-    const hall = await svc.getBySlug(c.req.param('slug'))
+    const hall = await svc.getBySlug(c.req.param('slug'), { publishedOnly: true })
     if (!hall) return c.json({ error: 'NOT_FOUND', message: 'Hall not found' }, 404)
     await svc.incrementViewCount(c.req.param('slug'))
     return c.json(hall)

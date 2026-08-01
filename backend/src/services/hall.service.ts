@@ -6,9 +6,12 @@ import { generateUniqueSlug } from '../lib/slug'
 export class HallService {
   constructor(private prisma: DbClient) {}
 
-  async getBySlug(slug: string) {
+  async getBySlug(slug: string, opts?: { publishedOnly?: boolean }) {
+    const where: { slug: string; isPublished?: boolean } = { slug }
+    if (opts?.publishedOnly) where.isPublished = true
+
     const hall = await this.prisma.exhibitionHall.findUnique({
-      where: { slug },
+      where,
       include: {
         artist: { include: { user: true } },
       },
@@ -23,9 +26,12 @@ export class HallService {
     return toHallPublicDto({ ...hall, artworks })
   }
 
-  async getByArtistId(artistId: string) {
+  async getByArtistId(artistId: string, opts?: { publishedOnly?: boolean }) {
+    const where: { artistId: string; isPublished?: boolean } = { artistId }
+    if (opts?.publishedOnly) where.isPublished = true
+
     return this.prisma.exhibitionHall.findUnique({
-      where: { artistId },
+      where,
       include: { artist: { include: { user: true } } },
     })
   }

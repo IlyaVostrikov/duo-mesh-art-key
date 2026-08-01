@@ -3,11 +3,13 @@ import { createInquirySchema } from '@duo-mesh/contracts'
 import { authGuard, requireRole, getAuthUser } from '../guards/auth'
 import type { InquiryService } from '../services/inquiry.service'
 import type { ArtistService } from '../services/artist.service'
+import type { ArtworkService } from '../services/artwork.service'
 
 type InquiryRouteEnv = {
   Variables: {
     inquiryService: InquiryService
     artistService: ArtistService
+    artworkService: ArtworkService
   }
 }
 
@@ -20,6 +22,13 @@ export function createInquiryRoutes() {
     const parsed = createInquirySchema.safeParse(body)
     if (!parsed.success) {
       return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+    }
+
+    // Verify artwork exists and is publicly visible
+    const artworkSvc = c.get('artworkService')
+    const artwork = await artworkSvc.getById(parsed.data.artworkId)
+    if (!artwork) {
+      return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
     }
 
     const inquiry = await svc.create({ ...parsed.data, message: parsed.data.message ?? '' })

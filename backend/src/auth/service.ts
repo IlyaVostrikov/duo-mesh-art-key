@@ -159,6 +159,14 @@ export class AuthService {
       select: { id: true, role: true },
     })
     if (!user) return null
+
+    // Verify the session is still active (not revoked, not expired)
+    const session = await this.db.authSession.findUnique({
+      where: { id: payload.sessionId },
+      select: { revokedAt: true, expiresAt: true },
+    })
+    if (!session || session.revokedAt || session.expiresAt <= new Date()) return null
+
     return { userId: user.id, role: user.role, sessionId: payload.sessionId }
   }
 

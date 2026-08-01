@@ -114,7 +114,7 @@ export function createArtistRoutes() {
 
   routes.get('/:id/hall', async (c) => {
     const hallSvc = c.get('hallService')
-    const hall = await hallSvc.getByArtistId(c.req.param('id'))
+    const hall = await hallSvc.getByArtistId(c.req.param('id'), { publishedOnly: true })
     if (!hall) return c.json({ error: 'NOT_FOUND', message: 'Hall not found' }, 404)
     return c.json(toHallDto(hall))
   })

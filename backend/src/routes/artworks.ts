@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { createArtworkSchema, updateArtworkSchema } from '@duo-mesh/contracts'
 import { authGuard, requireRole, optionalAuth, getAuthUser } from '../guards/auth'
-import { ArtworkService } from '../services/artwork.service'
+import { ArtworkService, InvalidFilterError } from '../services/artwork.service'
 import { ArtistService } from '../services/artist.service'
 
 type ArtworkRouteEnv = {
@@ -48,14 +48,22 @@ export function createArtworkRoutes() {
     }
 
     const q = listQuerySchema.parse(c.req.query())
-    const result = await svc.list({ ...q, artistId })
-    return c.json(result)
+    try {
+      const result = await svc.list({ ...q, artistId })
+      return c.json(result)
+    } catch (err) {
+      if (err instanceof InvalidFilterError) {
+        return c.json({ error: err.code, message: err.message }, 400)
+      }
+      throw err
+    }
   })
 
-  // Public: get artwork detail
+  // Public: get artwork detail (visibility-gated)
   routes.get('/:id', optionalAuth(), async (c) => {
     const svc = c.get('artworkService')
-    const artwork = await svc.getById(c.req.param('id'))
+    const authUser = getAuthUser(c)
+    const artwork = await svc.getById(c.req.param('id'), authUser ? { userId: authUser.userId, role: authUser.role } : undefined)
     if (!artwork) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
     return c.json(artwork)
   })
@@ -91,7 +99,7 @@ export function createArtworkRoutes() {
     const artist = await artistSvc.getByUserId(authUser!.userId)
     if (!artist) return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
 
-    const existing = await svc.getById(c.req.param('id'))
+    const existing = await svc.lookupById(c.req.param('id'))
     if (!existing) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
     if (!isOwnerOrAdmin(existing, artist.id, authUser!.role)) {
       return c.json({ error: 'FORBIDDEN', message: 'Not your artwork' }, 403)
@@ -114,7 +122,7 @@ export function createArtworkRoutes() {
     const artist = await artistSvc.getByUserId(authUser!.userId)
     if (!artist) return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
 
-    const existing = await svc.getById(c.req.param('id'))
+    const existing = await svc.lookupById(c.req.param('id'))
     if (!existing) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
     if (!isOwnerOrAdmin(existing, artist.id, authUser!.role)) {
       return c.json({ error: 'FORBIDDEN', message: 'Not your artwork' }, 403)
@@ -135,7 +143,7 @@ export function createArtworkRoutes() {
     const artist = await artistSvc.getByUserId(authUser!.userId)
     if (!artist) return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
 
-    const existing = await svc.getById(c.req.param('id'))
+    const existing = await svc.lookupById(c.req.param('id'))
     if (!existing) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
     if (!isOwnerOrAdmin(existing, artist.id, authUser!.role)) {
       return c.json({ error: 'FORBIDDEN', message: 'Not your artwork' }, 403)

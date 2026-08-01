@@ -214,18 +214,25 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
     })
   }
 
-  // Rate limit auth endpoints against brute-force (production only)
+  // Rate limit auth endpoints against brute-force (production only).
+  // Paths match the Hono-internal mount point (/auth), not the Vercel-level /api prefix.
   app.use(
-    '/api/auth/login',
+    '/auth/login',
     rateLimiter({ windowMs: 60_000, max: 10, message: 'Too many login attempts. Please try again later.', enabled: env.NODE_ENV === 'production' }),
   )
   app.use(
-    '/api/auth/register',
+    '/auth/register',
     rateLimiter({ windowMs: 60_000, max: 5, message: 'Too many registration attempts. Please try again later.', enabled: env.NODE_ENV === 'production' }),
   )
   app.use(
-    '/api/auth/refresh',
+    '/auth/refresh',
     rateLimiter({ windowMs: 60_000, max: 20, message: 'Too many refresh attempts.', enabled: env.NODE_ENV === 'production' }),
+  )
+
+  // Rate limit public inquiry creation against spam
+  app.use(
+    '/inquiries',
+    rateLimiter({ windowMs: 60_000, max: 3, message: 'Too many inquiries. Please try again later.', enabled: env.NODE_ENV === 'production' }),
   )
 
   // Mount routes
