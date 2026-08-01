@@ -199,6 +199,16 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
         }
         return c.body(data, 200, { 'Content-Type': mimeTypes[ext] ?? 'application/octet-stream' })
       } catch {
+        // File not on /tmp (cold start) — redirect to S3 public URL if storage is configured.
+        // The S3 key is the request path without the leading slash:
+        //   /uploads/user/date/uuid-name → uploads/user/date/uuid-name
+        if (storageService) {
+          try {
+            const s3Key = c.req.path.replace(/^\/api\//, '')
+            const { downloadUrl } = await storageService.createDownloadUrl({ key: s3Key })
+            return c.redirect(downloadUrl, 302)
+          } catch { /* S3 lookup failed — fall through to 404 */ }
+        }
         return c.json({ error: 'NOT_FOUND', message: 'File not found' }, 404)
       }
     })
