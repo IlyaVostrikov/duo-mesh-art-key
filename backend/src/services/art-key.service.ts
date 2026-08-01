@@ -87,53 +87,56 @@ export class ArtKeyService {
       }
     }
 
-    const artKey = await this.prisma.artKey.create({
-      data: {
-        artworkId,
-        keyCode,
-        ownerKey,
-        certificateHash,
-        integrityHash,
-        issuedAt,
-        timestampToken,
-        platformSignature,
-        platformSigningKeyId,
-        artistSigningKeyId,
-      },
-    })
+    // Atomic issuance: artKey + provenance + transparency in one transaction.
+    // If any step fails, nothing is committed — prevents orphaned records.
+    const [artKey] = await this.prisma.$transaction(async (tx) => {
+      const ak = await tx.artKey.create({
+        data: {
+          artworkId,
+          keyCode,
+          ownerKey,
+          certificateHash,
+          integrityHash,
+          issuedAt,
+          timestampToken,
+          platformSignature,
+          platformSigningKeyId,
+          artistSigningKeyId,
+        },
+      })
 
-    // Genesis provenance record with signature fields
-    await this.prisma.provenanceRecord.create({
-      data: {
-        artworkId,
-        artKeyId: artKey.id,
-        sequence: 0,
-        toUserId: userId,
-        transferType: 'CREATION',
-        recordHash: genesisRecordHash,
-        prevRecordHash: integrityHash,
-        signature,
-        signerPublicKey,
-        signerRole,
-        signingKeyId: artistSigningKeyId,
-        occurredAt: issuedAt,
-      },
-    })
+      await tx.provenanceRecord.create({
+        data: {
+          artworkId,
+          artKeyId: ak.id,
+          sequence: 0,
+          toUserId: userId,
+          transferType: 'CREATION',
+          recordHash: genesisRecordHash,
+          prevRecordHash: integrityHash,
+          signature,
+          signerPublicKey,
+          signerRole,
+          signingKeyId: artistSigningKeyId,
+          occurredAt: issuedAt,
+        },
+      })
 
-    // Append to transparency log
-    const tls = new TransparencyLogService(this.prisma)
-    await tls.append({
-      artKeyId: artKey.id,
-      entryType: 'ARTKEY_CREATED',
-      payload: {
-        keyCode: artKey.keyCode,
-        integrityHash,
-        genesisRecordHash,
-        certificateHash: artKey.certificateHash,
-      },
-    })
+      // Append to transparency log (cast: tx IS a PrismaClient minus connect/disconnect)
+      const tls = new TransparencyLogService(tx as unknown as typeof this.prisma)
+      await tls.append({
+        artKeyId: ak.id,
+        entryType: 'ARTKEY_CREATED',
+        payload: {
+          keyCode: ak.keyCode,
+          integrityHash,
+          genesisRecordHash,
+          certificateHash: ak.certificateHash,
+        },
+      })
 
-    return artKey
+      return [ak]
+    })
   }
 
   async verify(keyCode: string) {

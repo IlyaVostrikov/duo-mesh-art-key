@@ -120,7 +120,14 @@ export function createArtworkRoutes() {
       return c.json({ error: 'FORBIDDEN', message: 'Not your artwork' }, 403)
     }
 
-    await svc.delete(c.req.param('id'))
+    try {
+      await svc.delete(c.req.param('id'))
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('Cannot delete artwork')) {
+        return c.json({ error: 'ARTKEY_EXISTS', message: err.message }, 409)
+      }
+      throw err
+    }
     return c.body(null, 204)
   })
 
