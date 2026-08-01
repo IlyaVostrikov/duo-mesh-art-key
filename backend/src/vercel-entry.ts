@@ -14,6 +14,8 @@ async function buildApp() {
     const inner = await createApp({ env: runtime.env, prisma: runtime.prisma })
     // Mount under /api for Vercel function routing
     const app = new Hono().route('/api', inner)
+    // Redirect root to frontend — avoids confusing 404 when someone opens the API URL
+    app.get('/', (c) => c.redirect('https://duo-mesh-art-key.vercel.app', 302))
     return { app }
   } catch (err) {
     // Gracefully return validation errors for debugging
