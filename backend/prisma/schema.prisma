@@ -308,6 +308,7 @@ model ProvenanceRecord {
   signingKeyId    String?      @map("signing_key_id") @db.Uuid
   notes           String?      @db.Text
   createdAt       DateTime     @default(now()) @map("created_at")
+  occurredAt      DateTime     @default(now()) @map("occurred_at")
 
   artwork    Artwork     @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "provenance_artwork_id_fkey")
   artKey     ArtKey      @relation(fields: [artKeyId], references: [id], onDelete: Cascade, map: "provenance_art_key_id_fkey")

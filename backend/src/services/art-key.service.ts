@@ -116,6 +116,7 @@ export class ArtKeyService {
         signerPublicKey,
         signerRole,
         signingKeyId: artistSigningKeyId,
+        occurredAt: issuedAt,
       },
     })
 
@@ -232,7 +233,7 @@ export class ArtKeyService {
           eventType: rec.transferType,
           fromOwner: rec.fromUserId ?? null,
           toOwner: rec.toUserId,
-          occurredAt: rec.createdAt.toISOString(),
+          occurredAt: rec.occurredAt.toISOString(),
           prevRecordHash: rec.prevRecordHash ?? '',
         }
         const recalculatedHash = hashPayload(payload)
@@ -305,21 +306,31 @@ export class ArtKeyService {
 
     // ── Layer C: Platform co-signature ──
     if (artKey.platformSignature && this.signingService) {
-      const platformKey = await this.signingService.getPlatformActivePublicKey()
-      if (platformKey && provenance.length > 0) {
+      // Use HISTORICAL platform key (by platformSigningKeyId), not current active key.
+      // After rotation, current active key won't verify old signatures.
+      let platformPublicKey: string | null = null
+      if (artKey.platformSigningKeyId) {
+        platformPublicKey = await this.signingService.getPublicKey(artKey.platformSigningKeyId)
+      }
+      // Fallback: records created before platformSigningKeyId existed
+      if (!platformPublicKey) {
+        const activeKey = await this.signingService.getPlatformActivePublicKey()
+        platformPublicKey = activeKey?.publicKey ?? null
+      }
+      if (platformPublicKey && provenance.length > 0) {
         const genesisPayload = {
           artworkId: provenance[0].artworkId,
           sequence: 0,
           eventType: 'CREATION',
           fromOwner: provenance[0].fromUserId ?? null,
           toOwner: provenance[0].toUserId,
-          occurredAt: provenance[0].createdAt.toISOString(),
+          occurredAt: provenance[0].occurredAt.toISOString(),
           prevRecordHash: artKey.integrityHash,
         }
         const platResult = await this.signingService.verifyProvRecordSignature(
           genesisPayload,
           artKey.platformSignature,
-          platformKey.publicKey,
+          platformPublicKey,
         )
         checks.push({
           label: 'platform-co-signature',
