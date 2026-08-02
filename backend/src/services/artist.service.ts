@@ -94,13 +94,16 @@ export class ArtistService {
       },
     })
 
-    // Upgrade user role + optionally set avatar
-    const userUpdate: { role: typeof UserRole.ARTIST; avatarUrl?: string } = { role: UserRole.ARTIST }
-    if (data.avatarUrl) userUpdate.avatarUrl = data.avatarUrl
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: userUpdate,
-    })
+    // Upgrade GUEST/COLLECTOR → ARTIST. Never downgrade from ADMIN or existing ARTIST.
+    const currentUser = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
+    const needsRoleUpgrade = currentUser && currentUser.role !== UserRole.ARTIST && currentUser.role !== UserRole.ADMIN
+
+    if (needsRoleUpgrade || data.avatarUrl) {
+      const userUpdate: Prisma.UserUpdateInput = {}
+      if (needsRoleUpgrade) userUpdate.role = UserRole.ARTIST
+      if (data.avatarUrl) userUpdate.avatarUrl = data.avatarUrl
+      await this.prisma.user.update({ where: { id: userId }, data: userUpdate })
+    }
 
     // Generate Ed25519 signing keypair for the artist (MVP: custodial)
     if (this.signingService) {
