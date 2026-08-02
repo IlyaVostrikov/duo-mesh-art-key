@@ -117,7 +117,7 @@ export function createTransferRoutes() {
               toUserId,
               transferType: 'TRANSFER',
               notes,
-              signerKeyId: artistSigningKey?.id ?? '',
+              signerKeyId: artistSigningKey?.id ?? null,
               signerRole: artistSigningKey ? 'ARTIST' : 'PLATFORM',
             },
             tx as unknown as DbClient,
@@ -154,11 +154,12 @@ export function createTransferRoutes() {
         if (err instanceof TransactionError) {
           return c.json(errorResponse(err.code, err.message), err.status as StatusCode)
         }
-        // Unique constraint violation = concurrent transfer race
+        // P2002 unique constraint violation = concurrent transfer race
         if (
           err instanceof Error &&
-          err.message.includes('Unique constraint') &&
-          err.message.includes('artKeyId')
+          'code' in err &&
+          err.code === 'P2002' &&
+          (err as { meta?: { target?: unknown } }).meta?.target === 'artKeyId'
         ) {
           return c.json(
             errorResponse('CONFLICT', 'Another transfer was processed concurrently. Please retry.'),

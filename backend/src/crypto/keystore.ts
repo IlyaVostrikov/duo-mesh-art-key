@@ -104,16 +104,18 @@ export class KeyStore {
   }
 
   async get(keyId: string): Promise<string> {
-    const store = await this.load()
-    const entry = store[keyId]
-    if (!entry) throw new Error(`KeyStore: key ${keyId} not found`)
-    const key = await this.getKey()
-    const plaintext = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: base64ToBytes(entry.iv) },
-      key,
-      base64ToBytes(entry.ciphertext),
-    )
-    return new TextDecoder().decode(plaintext)
+    return this.enqueueWrite(async () => {
+      const store = await this.load()
+      const entry = store[keyId]
+      if (!entry) throw new Error(`KeyStore: key ${keyId} not found`)
+      const key = await this.getKey()
+      const plaintext = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: base64ToBytes(entry.iv) },
+        key,
+        base64ToBytes(entry.ciphertext),
+      )
+      return new TextDecoder().decode(plaintext)
+    })
   }
 
   /** Return the raw encrypted entry (for DB persistence). */
