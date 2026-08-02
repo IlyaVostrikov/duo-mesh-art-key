@@ -1,26 +1,34 @@
 import type { DbClient } from '../db'
 
+const DEFAULT_PAGE_SIZE = 20
+
 export class SaleService {
   constructor(private prisma: DbClient) {}
 
-  async getPurchasedArtworksByUser(userId: string) {
+  async getPurchasedArtworksByUser(userId: string, page = 1, pageSize = DEFAULT_PAGE_SIZE) {
     const collector = await this.prisma.collector.findUnique({
       where: { userId },
     })
-    if (!collector) return { artworks: [], total: 0 }
+    if (!collector) return { artworks: [], total: 0, page, pageSize }
 
-    const sales = await this.prisma.sale.findMany({
-      where: { buyerId: collector.id },
-      include: {
-        artwork: {
-          include: {
-            artist: { include: { user: true, hall: true } },
-            artKeys: { take: 1 },
+    const where = { buyerId: collector.id }
+    const [sales, total] = await Promise.all([
+      this.prisma.sale.findMany({
+        where,
+        include: {
+          artwork: {
+            include: {
+              artist: { include: { user: true, hall: true } },
+              artKeys: { take: 1 },
+            },
           },
         },
-      },
-      orderBy: { completedAt: 'desc' },
-    })
+        orderBy: { completedAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.sale.count({ where }),
+    ])
 
     const artworks = sales.map((s) => ({
       id: s.artwork.id,
@@ -43,23 +51,29 @@ export class SaleService {
         : null,
     }))
 
-    return { artworks, total: artworks.length }
+    return { artworks, total, page, pageSize }
   }
 
-  async getArtistSalesByUser(userId: string) {
+  async getArtistSalesByUser(userId: string, page = 1, pageSize = DEFAULT_PAGE_SIZE) {
     const artist = await this.prisma.artist.findUnique({
       where: { userId },
     })
-    if (!artist) return { sales: [], total: 0 }
+    if (!artist) return { sales: [], total: 0, page, pageSize }
 
-    const sales = await this.prisma.sale.findMany({
-      where: { sellerId: artist.id },
-      include: {
-        artwork: true,
-        buyer: { include: { user: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+    const where = { sellerId: artist.id }
+    const [sales, total] = await Promise.all([
+      this.prisma.sale.findMany({
+        where,
+        include: {
+          artwork: true,
+          buyer: { include: { user: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.sale.count({ where }),
+    ])
 
     return {
       sales: sales.map((s) => ({
@@ -71,7 +85,9 @@ export class SaleService {
         status: s.status,
         createdAt: s.createdAt.toISOString(),
       })),
-      total: sales.length,
+      total,
+      page,
+      pageSize,
     }
   }
 }
