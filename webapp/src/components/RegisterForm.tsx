@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form'
 import { useNavigate } from '@tanstack/react-router'
-import { registerRequestSchema, type RegisterRequest } from '@duo-mesh/contracts'
+import { registerRequestSchema } from '@duo-mesh/contracts'
 import { useId, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -53,7 +53,7 @@ export function RegisterForm({
       setFieldErrors({})
 
       try {
-        await auth.register({ ...result.data, role } as RegisterRequest)
+        await auth.register(result.data)
         if (role === 'ARTIST') {
           navigate({ to: '/onboarding/artist' })
         } else if (role === 'COLLECTOR') {

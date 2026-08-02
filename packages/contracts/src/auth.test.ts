@@ -32,7 +32,6 @@ describe('auth contracts', () => {
       email: 'user@example.com',
       password: 'password123',
       displayName: 'Jane',
-      role: 'GUEST',
     })
 
     expect(
@@ -46,7 +45,6 @@ describe('auth contracts', () => {
       email: 'user@example.com',
       password: 'password123',
       displayName: undefined,
-      role: 'GUEST',
     })
 
     expect(
@@ -66,7 +64,6 @@ describe('auth contracts', () => {
         email: 'not-an-email',
         password: 'short',
         displayName: 'A',
-        role: 'GUEST',
       }),
     ).toThrow()
 
