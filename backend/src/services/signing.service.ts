@@ -107,16 +107,12 @@ export class SigningService {
     )
   }
 
-  /** Generate an Ed25519 keypair for an artist at onboarding. */
+  /** Generate an Ed25519 keypair for an artist at onboarding or rotation. */
   async generateArtistKeyPair(
     artistId: string,
   ): Promise<{ keyId: string; publicKey: string }> {
-    // Deactivate any existing active key
-    await this.prisma.signingKey.updateMany({
-      where: { ownerType: 'ARTIST', ownerId: artistId, isActive: true },
-      data: { isActive: false, revokedAt: new Date() },
-    })
-
+    // Create new key FIRST — if generation or persistence fails, the old key
+    // remains active (no gap where the artist has zero active keys).
     const kp = await generateEd25519KeyPair()
     const key = await this.prisma.signingKey.create({
       data: {
@@ -136,6 +132,13 @@ export class SigningService {
         data: { encryptedPrivateKey: entry },
       })
     }
+
+    // Deactivate old keys LAST — only after the new one is fully persisted.
+    // If anything above throws, the artist still has their previous active key.
+    await this.prisma.signingKey.updateMany({
+      where: { ownerType: 'ARTIST', ownerId: artistId, isActive: true, id: { not: key.id } },
+      data: { isActive: false, revokedAt: new Date() },
+    })
 
     return { keyId: key.id, publicKey: kp.publicKey }
   }
