@@ -45,7 +45,7 @@ export class SigningService {
       if (await this.keyStore.has(existing.id)) {
         // Key already in keystore — all good
       } else if (process.env.PLATFORM_PRIVATE_KEY_HEX) {
-        // Recover from env var
+        // Recover from env var, persist encrypted form for future cold starts
         await this.keyStore.set(existing.id, process.env.PLATFORM_PRIVATE_KEY_HEX)
         const entry = await this.keyStore.getEntry(existing.id)
         if (entry && !existing.encryptedPrivateKey) {
@@ -54,6 +54,9 @@ export class SigningService {
             data: { encryptedPrivateKey: entry },
           })
         }
+      } else if (existing.encryptedPrivateKey) {
+        // Recover from DB-encrypted key (cold start without env var)
+        await this.keyStore.setEntry(existing.id, existing.encryptedPrivateKey as unknown as StoreEntry)
       } else {
         // Private key lost — deactivate old key and create new one
         console.warn(
