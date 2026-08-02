@@ -3,6 +3,7 @@ import { ArtKeyService } from '../services/art-key.service'
 import { SigningService } from '../services/signing.service'
 import { generateCertificatePdf } from '../services/certificate-pdf'
 import { authGuard, requireRole } from '../guards/auth'
+import { errorResponse } from '../http/errors'
 import type { DbClient } from '../db'
 import { TransparencyLogService } from '../services/transparency-log.service'
 
@@ -21,7 +22,7 @@ export function createArtKeyRoutes() {
   routes.get('/:keyCode/certificate.pdf', async (c) => {
     const svc = c.get('artKeyService')
     const result = await svc.verify(c.req.param('keyCode'))
-    if (!result) return c.json({ error: 'NOT_FOUND', message: 'ArtKey not found' }, 404)
+    if (!result) return c.json(errorResponse('NOT_FOUND', 'ArtKey not found'), 404)
 
     try {
       const pdf = await generateCertificatePdf({
@@ -36,7 +37,7 @@ export function createArtKeyRoutes() {
       })
     } catch (err) {
       console.error('PDF generation failed:', err)
-      return c.json({ error: 'PDF_GENERATION_FAILED', message: 'Could not generate certificate' }, 500)
+      return c.json(errorResponse('PDF_GENERATION_FAILED', 'Could not generate certificate'), 500)
     }
   })
 
@@ -46,7 +47,7 @@ export function createArtKeyRoutes() {
     const signingSvc = c.get('signingService')
 
     const result = await svc.verify(c.req.param('keyCode'))
-    if (!result) return c.json({ error: 'NOT_FOUND', message: 'ArtKey not found' }, 404)
+    if (!result) return c.json(errorResponse('NOT_FOUND', 'ArtKey not found'), 404)
 
     // Get public keys for the export
     const artistKey = await signingSvc.getArtistActivePublicKey(result.artist.id)
@@ -152,9 +153,9 @@ export function createArtKeyRoutes() {
     const artKey = await prisma.artKey.findUnique({
       where: { keyCode: c.req.param('keyCode') },
     })
-    if (!artKey) return c.json({ error: 'NOT_FOUND', message: 'ArtKey not found' }, 404)
+    if (!artKey) return c.json(errorResponse('NOT_FOUND', 'ArtKey not found'), 404)
     if (artKey.revokedAt) {
-      return c.json({ error: 'ALREADY_REVOKED', message: 'ArtKey is already revoked' }, 409)
+      return c.json(errorResponse('ALREADY_REVOKED', 'ArtKey is already revoked'), 409)
     }
 
     const revoked = await prisma.artKey.update({
@@ -183,7 +184,7 @@ export function createArtKeyRoutes() {
   routes.get('/:keyCode', async (c) => {
     const svc = c.get('artKeyService')
     const result = await svc.verify(c.req.param('keyCode'))
-    if (!result) return c.json({ error: 'NOT_FOUND', message: 'ArtKey not found' }, 404)
+    if (!result) return c.json(errorResponse('NOT_FOUND', 'ArtKey not found'), 404)
     return c.json(result)
   })
 

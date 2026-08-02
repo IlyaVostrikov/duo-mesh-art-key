@@ -295,7 +295,7 @@ export class ArtworkService {
 
 export class InvalidFilterError extends Error {
   readonly status = 400
-  readonly code = 'INVALID_FILTER'
+  readonly code = 'BAD_REQUEST'
   constructor(field: string, value: string, allowed: readonly string[]) {
     super(`Invalid filter "${field}": "${value}". Allowed: ${allowed.join(', ')}`)
     this.name = 'InvalidFilterError'

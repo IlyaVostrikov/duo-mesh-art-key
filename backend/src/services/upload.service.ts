@@ -392,7 +392,7 @@ export class UploadService {
 
 export class UploadValidationError extends Error {
   readonly status = 400
-  readonly code = 'VALIDATION'
+  readonly code = 'VALIDATION_ERROR'
   constructor(message: string) {
     super(message)
     this.name = 'UploadValidationError'

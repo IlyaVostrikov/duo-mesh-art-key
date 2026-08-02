@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { authGuard, requireRole, getAuthUser } from '../guards/auth'
+import { errorResponse } from '../http/errors'
 import { UploadValidationError, type UploadService } from '../services/upload.service'
 
 const presignedSchema = z.object({
@@ -34,7 +35,7 @@ export function createUploadRoutes() {
       return c.json({ files, hashes }, 201)
     } catch (err) {
       if (err instanceof UploadValidationError) {
-        return c.json({ error: err.code, message: err.message }, 400)
+        return c.json(errorResponse(err.code, err.message), 400)
       }
       throw err
     }
@@ -48,7 +49,7 @@ export function createUploadRoutes() {
     const parsed = presignedSchema.safeParse(body)
 
     if (!parsed.success) {
-      return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+      return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
     }
 
     try {
@@ -62,10 +63,10 @@ export function createUploadRoutes() {
       return c.json(result, 201)
     } catch (err) {
       if (err instanceof UploadValidationError) {
-        return c.json({ error: err.code, message: err.message }, 400)
+        return c.json(errorResponse(err.code, err.message), 400)
       }
       if (err instanceof Error && err.message.includes('not configured')) {
-        return c.json({ error: 'NOT_CONFIGURED', message: err.message }, 501)
+        return c.json(errorResponse('NOT_CONFIGURED', err.message), 501)
       }
       throw err
     }
@@ -77,11 +78,11 @@ export function createUploadRoutes() {
     const svc = c.get('uploadService')
     const authUser = getAuthUser(c)!
     const parsed = downloadUrlSchema.safeParse(await c.req.json())
-    if (!parsed.success) return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+    if (!parsed.success) return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
 
     // Verify ownership: key must start with uploads/{userId}/ unless admin
     if (authUser.role !== 'ADMIN' && !parsed.data.key.startsWith(`uploads/${authUser.userId}/`)) {
-      return c.json({ error: 'FORBIDDEN', message: 'You do not own this file' }, 403)
+      return c.json(errorResponse('FORBIDDEN', 'You do not own this file'), 403)
     }
 
     try {
@@ -89,7 +90,7 @@ export function createUploadRoutes() {
       return c.json(result, 200)
     } catch (err) {
       if (err instanceof Error && err.message.includes('not configured')) {
-        return c.json({ error: 'NOT_CONFIGURED', message: err.message }, 501)
+        return c.json(errorResponse('NOT_CONFIGURED', err.message), 501)
       }
       throw err
     }
@@ -114,14 +115,14 @@ export function createUploadRoutes() {
 
     // Verify ownership: key must start with uploads/{userId}/ unless admin
     if (authUser.role !== 'ADMIN' && !key.startsWith(`uploads/${authUser.userId}/`)) {
-      return c.json({ error: 'FORBIDDEN', message: 'You do not own this file' }, 403)
+      return c.json(errorResponse('FORBIDDEN', 'You do not own this file'), 403)
     }
 
     try {
       await svc.deleteFile(key)
       return c.json({ ok: true }, 200)
     } catch {
-      return c.json({ error: 'DELETE_FAILED', message: 'Failed to delete file' }, 500)
+      return c.json(errorResponse('DELETE_FAILED', 'Failed to delete file'), 500)
     }
   })
 

@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { createArtworkSchema, updateArtworkSchema } from '@duo-mesh/contracts'
 import { authGuard, requireRole, optionalAuth, getAuthUser } from '../guards/auth'
+import { errorResponse } from '../http/errors'
 import { ArtworkService, InvalidFilterError } from '../services/artwork.service'
 import { ArtistService } from '../services/artist.service'
 
@@ -54,7 +55,7 @@ export function createArtworkRoutes() {
       return c.json(result)
     } catch (err) {
       if (err instanceof InvalidFilterError) {
-        return c.json({ error: err.code, message: err.message }, 400)
+        return c.json(errorResponse(err.code, err.message), 400)
       }
       throw err
     }
@@ -65,7 +66,7 @@ export function createArtworkRoutes() {
     const svc = c.get('artworkService')
     const authUser = getAuthUser(c)
     const artwork = await svc.getById(c.req.param('id'), authUser ? { userId: authUser.userId, role: authUser.role } : undefined)
-    if (!artwork) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
+    if (!artwork) return c.json(errorResponse('NOT_FOUND', 'Artwork not found'), 404)
     return c.json(artwork)
   })
 
@@ -77,12 +78,12 @@ export function createArtworkRoutes() {
     const body = await c.req.json()
     const parsed = createArtworkSchema.safeParse(body)
     if (!parsed.success) {
-      return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+      return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
     }
 
     const artist = await artistSvc.getByUserId(authUser!.userId)
     if (!artist) {
-      return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
+      return c.json(errorResponse('NOT_FOUND', 'Artist profile not found'), 404)
     }
 
     const fileHashes: Record<string, string> | undefined = body.fileHashes ?? undefined
@@ -98,7 +99,7 @@ export function createArtworkRoutes() {
 
     const parsed = updateArtworkSchema.safeParse(body)
     if (!parsed.success) {
-      return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+      return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
     }
     const artwork = await svc.update(c.req.param('id'), parsed.data, authUser!.userId, authUser!.role)
     return c.json(artwork)
@@ -117,7 +118,7 @@ export function createArtworkRoutes() {
     const svc = c.get('artworkService')
     const authUser = getAuthUser(c)
     const body = addImagesSchema.safeParse(await c.req.json())
-    if (!body.success) return c.json({ error: 'VALIDATION', message: body.error.issues }, 400)
+    if (!body.success) return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', body.error.issues), 400)
 
     const artwork = await svc.updateImages(c.req.param('id'), body.data.urls, authUser!.userId, authUser!.role)
     return c.json(artwork)

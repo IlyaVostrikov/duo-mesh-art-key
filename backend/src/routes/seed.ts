@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { errorResponse } from '../http/errors'
 import { runSeed } from '../admin/seed-db'
 import type { DbClient } from '../db'
 
@@ -14,7 +15,7 @@ export function createSeedRoutes() {
   routes.post('/seed-db', async (c) => {
     const token = c.req.header('x-seed-token') ?? c.req.query('token') ?? ''
     if (!token || token !== process.env.SEED_TOKEN) {
-      return c.json({ error: 'UNAUTHORIZED' }, 401)
+      return c.json(errorResponse('UNAUTHORIZED', 'Invalid or missing seed token'), 401)
     }
     const prisma = c.get('prisma')
     const result = await runSeed(prisma)
