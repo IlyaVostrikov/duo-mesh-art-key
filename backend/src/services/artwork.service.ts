@@ -3,6 +3,7 @@ import type { Prisma } from '../generated/prisma/client'
 import { toArtworkDto, toArtworkPublicDto, toArtworkPublicDtoFull, type ArtworkDto, type ArtworkPublicDto, type ArtworkPublicFullDto } from '../dto/artwork.dto'
 import { ArtKeyService } from './art-key.service'
 import type { SigningService } from './signing.service'
+import { NotFoundError, ForbiddenError } from '../http/errors'
 
 /** Artwork statuses visible to unauthenticated users. */
 const PUBLIC_VISIBLE_STATUSES = ['LISTED', 'IN_EXHIBITION'] as const
@@ -157,16 +158,6 @@ export class ArtworkService {
     return toArtworkPublicDtoFull(artwork)
   }
 
-  /** Internal lookup: returns full artwork without visibility check or view increment. */
-  async lookupById(artworkId: string): Promise<ArtworkPublicFullDto | null> {
-    const artwork = await this.prisma.artwork.findUnique({
-      where: { id: artworkId },
-      include: { artist: { include: { user: true, hall: true } }, artKeys: true, provenanceRecords: { include: { toOwner: true, fromOwner: true }, orderBy: { sequence: 'asc' } } },
-    })
-    if (!artwork) return null
-    return toArtworkPublicDtoFull(artwork)
-  }
-
   async create(artistId: string, userId: string, data: {
     title: string
     description?: string
@@ -210,7 +201,18 @@ export class ArtworkService {
     return toArtworkDto(artwork)
   }
 
-  async update(artworkId: string, data: Prisma.ArtworkUncheckedUpdateInput): Promise<ArtworkPublicFullDto> {
+  private async verifyOwnership(artworkId: string, userId: string, role: string): Promise<void> {
+    if (role === 'ADMIN') return
+    const artwork = await this.prisma.artwork.findUnique({
+      where: { id: artworkId },
+      select: { artist: { select: { userId: true } } },
+    })
+    if (!artwork) throw new NotFoundError('Artwork not found')
+    if (artwork.artist.userId !== userId) throw new ForbiddenError('Not your artwork')
+  }
+
+  async update(artworkId: string, data: Prisma.ArtworkUncheckedUpdateInput, userId: string, role: string): Promise<ArtworkPublicFullDto> {
+    await this.verifyOwnership(artworkId, userId, role)
     const artwork = await this.prisma.artwork.update({
       where: { id: artworkId },
       data,
@@ -219,7 +221,8 @@ export class ArtworkService {
     return toArtworkPublicDtoFull(artwork)
   }
 
-  async updateImages(artworkId: string, imageUrls: string[]) {
+  async updateImages(artworkId: string, imageUrls: string[], userId: string, role: string) {
+    await this.verifyOwnership(artworkId, userId, role)
     const artwork = await this.prisma.artwork.update({
       where: { id: artworkId },
       data: { images: { push: imageUrls } },
@@ -227,7 +230,8 @@ export class ArtworkService {
     return toArtworkDto(artwork)
   }
 
-  async delete(artworkId: string) {
+  async delete(artworkId: string, userId: string, role: string) {
+    await this.verifyOwnership(artworkId, userId, role)
     await this.prisma.artwork.delete({ where: { id: artworkId } })
   }
 
