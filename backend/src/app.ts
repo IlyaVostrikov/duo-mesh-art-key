@@ -55,6 +55,7 @@ import { createTransferRoutes } from './routes/transfers'
 import { createPurchaseRoutes } from './routes/purchase'
 import { TransparencyLogService } from './services/transparency-log.service'
 import { createTransparencyRoutes } from './routes/transparency'
+import { createKdfMigrationRoutes } from './routes/kdf-migration'
 
 type AppBindings = {
   Variables: {
@@ -249,6 +250,7 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/sales', createSalesRoutes())
   app.route('/admin', createAdminRoutes())
   app.route('/seed', createSeedRoutes())
+  app.route('/', createKdfMigrationRoutes())
   app.route('/public-keys', createPublicKeyRoutes())
   app.route('/', createTransferRoutes())
   app.route('/', createPurchaseRoutes())

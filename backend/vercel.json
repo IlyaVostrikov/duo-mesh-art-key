@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "bun scripts/vercel-install.mjs",
-  "buildCommand": "bun scripts/build-vercel.mjs",
+  "buildCommand": "echo pre-built",
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
