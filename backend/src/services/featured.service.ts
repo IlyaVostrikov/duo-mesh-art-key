@@ -4,25 +4,7 @@ import { toArtworkPublicDto, type ArtworkPublicDto } from '../dto/artwork.dto'
 import { toArtistPublicDto } from '../dto/artist.dto'
 import crypto from 'node:crypto'
 
-// Artwork slug → artist slug mapping (mirrors seed data structure)
-const ARTWORK_ARTIST: Record<string, string> = {
-  'cosmic-drift': 'elena-volkova', 'silent-shores': 'elena-volkova',
-  'crimson-pulse': 'elena-volkova', 'golden-thread': 'elena-volkova',
-  'storm-front': 'elena-volkova', 'embers-of-form': 'elena-volkova',
-  'neon-nocturne': 'maxim-drozdov', 'data-ghosts': 'maxim-drozdov',
-  'anatomie-du-reve': 'maxim-drozdov', 'synthetic-garden': 'maxim-drozdov',
-  'threshold': 'maxim-drozdov',
-  'staircase-iii': 'anna-sokolova', 'winter-palace': 'anna-sokolova',
-  'found-silence': 'anna-sokolova', 'metro-diptych': 'anna-sokolova',
-  'afterimage': 'anna-sokolova',
-  'letters-never-sent': 'daria-lys', 'map-of-departures': 'daria-lys',
-  'archive-of-rain': 'daria-lys', 'fragments-of-light': 'daria-lys',
-  'bronze-echo': 'viktor-iron', 'scanned-figure': 'viktor-iron',
-  'digital-double': 'viktor-iron', 'frozen-gesture': 'viktor-iron',
-  'lucid-dream': 'kira-nova', 'hybrid-flora': 'kira-nova',
-  'portal-v2': 'kira-nova', 'glitch-portrait': 'kira-nova',
-  'mesh-poem': 'kira-nova',
-}
+const { artworkArtist, artistHall } = FEATURED_CONFIG
 
 function sha256hex(data: string): string {
   return crypto.createHash('sha256').update(data).digest('hex')
@@ -43,23 +25,17 @@ export class FeaturedService {
     artists: ReturnType<typeof toArtistPublicDto>[]
     halls: Array<{ slug: string; title: string; coverImageUrl: string | null; viewCount: number; artworkCount: number; theme: string | null; artist: { id: string; displayName: string | null; avatarUrl: string | null } }>
   }> {
-    const heroArtistSlug = ARTWORK_ARTIST[FEATURED_CONFIG.heroArtworkSlug]
+    const heroArtistSlug = artworkArtist[FEATURED_CONFIG.heroArtworkSlug]
     if (!heroArtistSlug) return { hero: null, works: [], artists: [], halls: [] }
     const heroId = makeDeterministicId(heroArtistSlug, FEATURED_CONFIG.heroArtworkSlug)
 
     const featuredIds = FEATURED_CONFIG.featuredArtworkSlugs
-      .filter((slug) => ARTWORK_ARTIST[slug] !== undefined)
-      .map((slug) => makeDeterministicId(ARTWORK_ARTIST[slug], slug))
+      .filter((slug) => artworkArtist[slug] !== undefined)
+      .map((slug) => makeDeterministicId(artworkArtist[slug], slug))
 
-    const featuredHallSlugs = FEATURED_CONFIG.featuredArtistSlugs.map((slug) => {
-      // Map artist slugs → hall slugs (from seed: elena-volkova → volkova-gallery, etc.)
-      const hallMap: Record<string, string> = {
-        'elena-volkova': 'volkova-gallery', 'maxim-drozdov': 'drozdov-lab',
-        'anna-sokolova': 'sokolova-chamber', 'daria-lys': 'lys-atelier',
-        'viktor-iron': 'iron-forge', 'kira-nova': 'nova-nexus',
-      }
-      return hallMap[slug] ?? `${slug}-hall`
-    })
+    const featuredHallSlugs = FEATURED_CONFIG.featuredArtistSlugs.map(
+      (slug) => artistHall[slug] ?? `${slug}-hall`,
+    )
 
     const [hero, featuredArtworks, featuredArtists, halls] = await Promise.all([
       // Hero artwork — full detail with artist, artKey, provenance
