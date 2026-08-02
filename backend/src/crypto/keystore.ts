@@ -21,6 +21,7 @@ interface StoreFile {
 export class KeyStore {
   private store: StoreFile | null = null
   private encryptionKey: Promise<CryptoKey> | null = null
+  private writeLock: Promise<void> = Promise.resolve()
 
   constructor(
     private storePath: string,
@@ -34,6 +35,13 @@ export class KeyStore {
       false,
       ['encrypt', 'decrypt'],
     )
+  }
+
+  /** Serialize write operations to prevent interleaved load/save races. */
+  private enqueueWrite<T>(fn: () => Promise<T>): Promise<T> {
+    const next = this.writeLock.then(fn, fn)
+    this.writeLock = next.then(() => {}) as Promise<void>
+    return next
   }
 
   private async getKey(): Promise<CryptoKey> {
@@ -57,19 +65,21 @@ export class KeyStore {
   }
 
   async set(keyId: string, privateKeyHex: string): Promise<void> {
-    const store = await this.load()
-    const key = await this.getKey()
-    const iv = crypto.getRandomValues(new Uint8Array(12))
-    const ciphertext = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
-      key,
-      new TextEncoder().encode(privateKeyHex),
-    )
-    store[keyId] = {
-      ciphertext: bytesToBase64(ciphertext),
-      iv: bytesToBase64(iv),
-    }
-    await this.save()
+    return this.enqueueWrite(async () => {
+      const store = await this.load()
+      const key = await this.getKey()
+      const iv = crypto.getRandomValues(new Uint8Array(12))
+      const ciphertext = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        new TextEncoder().encode(privateKeyHex),
+      )
+      store[keyId] = {
+        ciphertext: bytesToBase64(ciphertext),
+        iv: bytesToBase64(iv),
+      }
+      await this.save()
+    })
   }
 
   async get(keyId: string): Promise<string> {
@@ -93,15 +103,19 @@ export class KeyStore {
 
   /** Restore a pre-encrypted entry without re-encrypting (for DB recovery). */
   async setEntry(keyId: string, entry: StoreEntry): Promise<void> {
-    const store = await this.load()
-    store[keyId] = entry
-    await this.save()
+    return this.enqueueWrite(async () => {
+      const store = await this.load()
+      store[keyId] = entry
+      await this.save()
+    })
   }
 
   async delete(keyId: string): Promise<void> {
-    const store = await this.load()
-    delete store[keyId]
-    await this.save()
+    return this.enqueueWrite(async () => {
+      const store = await this.load()
+      delete store[keyId]
+      await this.save()
+    })
   }
 
   async has(keyId: string): Promise<boolean> {
