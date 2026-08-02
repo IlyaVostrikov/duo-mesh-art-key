@@ -23,7 +23,7 @@ export class ArtKeyService {
     if (existing) return existing
 
     const year = new Date().getFullYear()
-    const keyCode = `DUO-${year}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
+    const keyCode = `DUO-${year}-${crypto.randomBytes(6).toString('hex').toUpperCase()}`
     const ownerKey = `X${crypto.randomBytes(4).toString('hex').toUpperCase()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
     const issuedAt = new Date()
 
@@ -87,52 +87,78 @@ export class ArtKeyService {
       }
     }
 
-    const artKey = await this.prisma.artKey.create({
-      data: {
-        artworkId,
-        keyCode,
-        ownerKey,
-        certificateHash,
-        integrityHash,
-        issuedAt,
-        timestampToken,
-        platformSignature,
-        platformSigningKeyId,
-        artistSigningKeyId,
-      },
-    })
+    // Atomic genesis: ArtKey + ProvenanceRecord + TransparencyLog
+    return this.prisma.$transaction(async (tx) => {
+      // Re-check inside transaction to prevent concurrent genesis TOCTOU race
+      const existingInTx = await tx.artKey.findUnique({ where: { artworkId } })
+      if (existingInTx) return existingInTx
 
-    // Genesis provenance record with signature fields
-    await this.prisma.provenanceRecord.create({
-      data: {
-        artworkId,
-        artKeyId: artKey.id,
-        sequence: 0,
-        toUserId: userId,
-        transferType: 'CREATION',
-        recordHash: genesisRecordHash,
-        prevRecordHash: integrityHash,
-        signature,
-        signerPublicKey,
-        signerRole,
-        signingKeyId: artistSigningKeyId,
-      },
-    })
+      try {
+        const artKey = await tx.artKey.create({
+          data: {
+            artworkId,
+            keyCode,
+            ownerKey,
+            certificateHash,
+            integrityHash,
+            issuedAt,
+            timestampToken,
+            platformSignature,
+            platformSigningKeyId,
+            artistSigningKeyId,
+          },
+        })
 
-    // Append to transparency log
-    const tls = new TransparencyLogService(this.prisma)
-    await tls.append({
-      artKeyId: artKey.id,
-      entryType: 'ARTKEY_CREATED',
-      payload: {
-        keyCode: artKey.keyCode,
-        integrityHash,
-        genesisRecordHash,
-        certificateHash: artKey.certificateHash,
-      },
-    })
+        await tx.provenanceRecord.create({
+          data: {
+            artworkId,
+            artKeyId: artKey.id,
+            sequence: 0,
+            toUserId: userId,
+            transferType: 'CREATION',
+            recordHash: genesisRecordHash,
+            prevRecordHash: integrityHash,
+            signature,
+            signerPublicKey,
+            signerRole,
+            signingKeyId: artistSigningKeyId,
+            occurredAt: issuedAt,
+          },
+        })
 
-    return artKey
+        await new TransparencyLogService(tx as unknown as DbClient).append({
+          artKeyId: artKey.id,
+          entryType: 'ARTKEY_CREATED',
+          payload: {
+            keyCode: artKey.keyCode,
+            integrityHash,
+            genesisRecordHash,
+            certificateHash: artKey.certificateHash,
+          },
+        })
+
+        return artKey
+      } catch (err) {
+        // P2002: unique constraint violation — handle based on which field
+        if (
+          err instanceof Error &&
+          'code' in err &&
+          (err as Record<string, unknown>).code === 'P2002'
+        ) {
+          const meta = (err as Record<string, unknown>).meta as { target?: string[] } | undefined
+          if (meta?.target?.includes('artwork_id')) {
+            // Concurrent genesis for the same artworkId — return the winner
+            const winner = await tx.artKey.findUnique({ where: { artworkId } })
+            if (winner) return winner
+            // Conflicting transaction not yet committed — retry
+            throw new Error('ArtKey genesis: concurrent conflict — retry')
+          }
+          // keyCode or ownerKey collision — extremely rare, re-throw for caller retry
+          console.warn('ArtKey genesis: unique constraint collision on field(s)', meta?.target)
+        }
+        throw err
+      }
+    })
   }
 
   async verify(keyCode: string) {
@@ -232,7 +258,7 @@ export class ArtKeyService {
           eventType: rec.transferType,
           fromOwner: rec.fromUserId ?? null,
           toOwner: rec.toUserId,
-          occurredAt: rec.createdAt.toISOString(),
+          occurredAt: rec.occurredAt.toISOString(),
           prevRecordHash: rec.prevRecordHash ?? '',
         }
         const recalculatedHash = hashPayload(payload)
@@ -305,21 +331,31 @@ export class ArtKeyService {
 
     // ── Layer C: Platform co-signature ──
     if (artKey.platformSignature && this.signingService) {
-      const platformKey = await this.signingService.getPlatformActivePublicKey()
-      if (platformKey && provenance.length > 0) {
+      // Use HISTORICAL platform key (by platformSigningKeyId), not current active key.
+      // After rotation, current active key won't verify old signatures.
+      let platformPublicKey: string | null = null
+      if (artKey.platformSigningKeyId) {
+        platformPublicKey = await this.signingService.getPublicKey(artKey.platformSigningKeyId)
+      }
+      // Fallback: records created before platformSigningKeyId existed
+      if (!platformPublicKey) {
+        const activeKey = await this.signingService.getPlatformActivePublicKey()
+        platformPublicKey = activeKey?.publicKey ?? null
+      }
+      if (platformPublicKey && provenance.length > 0) {
         const genesisPayload = {
           artworkId: provenance[0].artworkId,
           sequence: 0,
           eventType: 'CREATION',
           fromOwner: provenance[0].fromUserId ?? null,
           toOwner: provenance[0].toUserId,
-          occurredAt: provenance[0].createdAt.toISOString(),
+          occurredAt: provenance[0].occurredAt.toISOString(),
           prevRecordHash: artKey.integrityHash,
         }
         const platResult = await this.signingService.verifyProvRecordSignature(
           genesisPayload,
           artKey.platformSignature,
-          platformKey.publicKey,
+          platformPublicKey,
         )
         checks.push({
           label: 'platform-co-signature',

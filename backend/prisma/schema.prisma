@@ -308,6 +308,7 @@ model ProvenanceRecord {
   signingKeyId    String?      @map("signing_key_id") @db.Uuid
   notes           String?      @db.Text
   createdAt       DateTime     @default(now()) @map("created_at")
+  occurredAt      DateTime     @default(now()) @map("occurred_at")
 
   artwork    Artwork     @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "provenance_artwork_id_fkey")
   artKey     ArtKey      @relation(fields: [artKeyId], references: [id], onDelete: Cascade, map: "provenance_art_key_id_fkey")
@@ -315,6 +316,7 @@ model ProvenanceRecord {
   toOwner    User        @relation("ToOwner", fields: [toUserId], references: [id], onDelete: Cascade, map: "provenance_to_user_id_fkey")
   signingKey SigningKey? @relation(fields: [signingKeyId], references: [id], onDelete: SetNull, map: "provenance_signing_key_id_fkey")
 
+  @@unique([artKeyId, sequence], map: "provenance_art_key_id_sequence_unique")
   @@index([artworkId, createdAt], map: "provenance_artwork_id_created_at_idx")
   @@index([artworkId, sequence], map: "provenance_artwork_id_sequence_idx")
   @@map("provenance_records")

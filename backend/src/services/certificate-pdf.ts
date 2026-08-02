@@ -246,10 +246,14 @@ function makeCtx(page: PDFPage, f: Fonts, startY: number): Ctx {
 
 // ─── Image loader ───
 
+const FETCH_TIMEOUT_MS = 15_000
+
 async function loadPosterImage(doc: PDFDocument, url: string | null | undefined) {
   if (!url) return null
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
-    const res = await fetch(url)
+    const res = await fetch(url, { signal: controller.signal })
     if (!res.ok) { console.warn('[cert-pdf] poster fetch failed:', res.status, url.slice(0, 80)); return null }
     const buf = Buffer.from(await res.arrayBuffer())
     if (buf.length < 64) { console.warn('[cert-pdf] poster too small:', buf.length); return null }
@@ -261,6 +265,7 @@ async function loadPosterImage(doc: PDFDocument, url: string | null | undefined)
     }
     return await doc.embedPng(buf)
   } catch (e) { console.warn('[cert-pdf] poster load error:', e); return null }
+  finally { clearTimeout(timer) }
 }
 
 // ─── Page 1 ───

@@ -59,28 +59,20 @@ export async function requestTimestamp(
 /**
  * Verify a timestamp token against the original hash.
  *
- * MVP: re-submit the token + hash to the same TSA for verification.
- * Most TSAs don't support token verification via HTTP.
- * Roadmap: full offline verification with TSA certificate pinning.
+ * NOT YET IMPLEMENTED — always throws. No callers exist today.
+ *
+ * Roadmap: full offline verification with ASN.1 parser (e.g. @peculiar/asn1-schema),
+ * TSA certificate chain validation, nonce verification, and hash comparison.
  */
 export async function verifyTimestampToken(
-  _tokenBase64: string,
-  _hashHex: string,
+  tokenBase64: string,
+  hashHex: string,
 ): Promise<{ valid: boolean; timestamp: Date | null }> {
-  // Full RFC 3161 verification requires:
-  // 1. ASN.1 parsing of the SignedData structure
-  // 2. Certificate chain validation (TSA cert → trusted root)
-  // 3. Nonce verification
-  // 4. Hash comparison
-  //
-  // For MVP, we note that the stored timestamp token was issued by a trusted TSA
-  // at the time of genesis creation. Verification against tampering is done
-  // by checking that:
-  //   - The token exists (was issued)
-  //   - The hash chain + signatures are intact
-  //
-  // Roadmap: integrate a full ASN.1 parser and TSA cert store.
-  return { valid: true, timestamp: null }
+  throw new Error(
+    'RFC 3161 timestamp verification is not yet implemented. ' +
+    'Roadmap: integrate a full ASN.1 parser (e.g. @peculiar/asn1-schema) ' +
+    'and TSA certificate store for offline verification.',
+  )
 }
 
 // ── TimeStampReq DER builder (minimal) ──
@@ -175,7 +167,7 @@ function extractGenTime(tokenBytes: Uint8Array): Date {
     return new Date(`${fullYear}-${mo}-${d}T${h}:${mi}:${s}Z`)
   }
 
-  return new Date() // fallback: use current time
+  throw new Error('Failed to extract GenTime from timestamp token')
 }
 
 // ── internal ──

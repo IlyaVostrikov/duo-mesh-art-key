@@ -4,6 +4,7 @@ import { UserRole } from '../generated/prisma/enums'
 import { toArtistDto, toArtistPublicDto } from '../dto/artist.dto'
 import { generateUniqueSlug } from '../lib/slug'
 import type { SigningService } from './signing.service'
+import { NotFoundError, ForbiddenError } from '../http/errors'
 
 export class ArtistService {
   constructor(
@@ -94,13 +95,16 @@ export class ArtistService {
       },
     })
 
-    // Upgrade user role + optionally set avatar
-    const userUpdate: { role: typeof UserRole.ARTIST; avatarUrl?: string } = { role: UserRole.ARTIST }
-    if (data.avatarUrl) userUpdate.avatarUrl = data.avatarUrl
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: userUpdate,
-    })
+    // Upgrade GUEST/COLLECTOR → ARTIST. Never downgrade from ADMIN or existing ARTIST.
+    const currentUser = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
+    const needsRoleUpgrade = currentUser && currentUser.role !== UserRole.ARTIST && currentUser.role !== UserRole.ADMIN
+
+    if (needsRoleUpgrade || data.avatarUrl) {
+      const userUpdate: Prisma.UserUpdateInput = {}
+      if (needsRoleUpgrade) userUpdate.role = UserRole.ARTIST
+      if (data.avatarUrl) userUpdate.avatarUrl = data.avatarUrl
+      await this.prisma.user.update({ where: { id: userId }, data: userUpdate })
+    }
 
     // Generate Ed25519 signing keypair for the artist (MVP: custodial)
     if (this.signingService) {
@@ -120,7 +124,18 @@ export class ArtistService {
     })
   }
 
-  async update(artistId: string, data: { artistStatement?: string; websiteUrl?: string; location?: string; displayName?: string; bio?: string; avatarUrl?: string; socialLinks?: Record<string, string> }) {
+  private async verifyOwnership(artistId: string, userId: string, role: string): Promise<void> {
+    if (role === 'ADMIN') return
+    const artist = await this.prisma.artist.findUnique({
+      where: { id: artistId },
+      select: { userId: true },
+    })
+    if (!artist) throw new NotFoundError('Artist not found')
+    if (artist.userId !== userId) throw new ForbiddenError('Not your profile')
+  }
+
+  async update(artistId: string, data: { artistStatement?: string; websiteUrl?: string; location?: string; displayName?: string; bio?: string; avatarUrl?: string; socialLinks?: Record<string, string> }, userId: string, role: string) {
+    await this.verifyOwnership(artistId, userId, role)
     const artist = await this.prisma.artist.update({
       where: { id: artistId },
       data: {

@@ -2,7 +2,8 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { createArtworkSchema, updateArtworkSchema } from '@duo-mesh/contracts'
 import { authGuard, requireRole, optionalAuth, getAuthUser } from '../guards/auth'
-import { ArtworkService } from '../services/artwork.service'
+import { errorResponse } from '../http/errors'
+import { ArtworkService, InvalidFilterError } from '../services/artwork.service'
 import { ArtistService } from '../services/artist.service'
 
 type ArtworkRouteEnv = {
@@ -28,10 +29,6 @@ const listQuerySchema = z.object({
   q: z.string().optional(),
 })
 
-function isOwnerOrAdmin(artwork: { artistId: string }, artistId: string, role: string): boolean {
-  return artwork.artistId === artistId || role === 'ADMIN'
-}
-
 export function createArtworkRoutes() {
   const routes = new Hono<ArtworkRouteEnv>()
 
@@ -48,15 +45,28 @@ export function createArtworkRoutes() {
     }
 
     const q = listQuerySchema.parse(c.req.query())
-    const result = await svc.list({ ...q, artistId })
-    return c.json(result)
+    try {
+      const result = await svc.list({
+        ...q,
+        artistId,
+        viewerUserId: authUser?.userId,
+        viewerRole: authUser?.role,
+      })
+      return c.json(result)
+    } catch (err) {
+      if (err instanceof InvalidFilterError) {
+        return c.json(errorResponse(err.code, err.message), 400)
+      }
+      throw err
+    }
   })
 
-  // Public: get artwork detail
+  // Public: get artwork detail (visibility-gated)
   routes.get('/:id', optionalAuth(), async (c) => {
     const svc = c.get('artworkService')
-    const artwork = await svc.getById(c.req.param('id'))
-    if (!artwork) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
+    const authUser = getAuthUser(c)
+    const artwork = await svc.getById(c.req.param('id'), authUser ? { userId: authUser.userId, role: authUser.role } : undefined)
+    if (!artwork) return c.json(errorResponse('NOT_FOUND', 'Artwork not found'), 404)
     return c.json(artwork)
   })
 
@@ -68,12 +78,12 @@ export function createArtworkRoutes() {
     const body = await c.req.json()
     const parsed = createArtworkSchema.safeParse(body)
     if (!parsed.success) {
-      return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+      return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
     }
 
     const artist = await artistSvc.getByUserId(authUser!.userId)
     if (!artist) {
-      return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
+      return c.json(errorResponse('NOT_FOUND', 'Artist profile not found'), 404)
     }
 
     const fileHashes: Record<string, string> | undefined = body.fileHashes ?? undefined
@@ -84,64 +94,33 @@ export function createArtworkRoutes() {
   // Artist: update artwork
   routes.patch('/:id', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
     const svc = c.get('artworkService')
-    const artistSvc = c.get('artistService')
     const authUser = getAuthUser(c)
     const body = await c.req.json()
 
-    const artist = await artistSvc.getByUserId(authUser!.userId)
-    if (!artist) return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
-
-    const existing = await svc.getById(c.req.param('id'))
-    if (!existing) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
-    if (!isOwnerOrAdmin(existing, artist.id, authUser!.role)) {
-      return c.json({ error: 'FORBIDDEN', message: 'Not your artwork' }, 403)
-    }
-
     const parsed = updateArtworkSchema.safeParse(body)
     if (!parsed.success) {
-      return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+      return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
     }
-    const artwork = await svc.update(c.req.param('id'), parsed.data)
+    const artwork = await svc.update(c.req.param('id'), parsed.data, authUser!.userId, authUser!.role)
     return c.json(artwork)
   })
 
   // Artist: delete artwork
   routes.delete('/:id', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
     const svc = c.get('artworkService')
-    const artistSvc = c.get('artistService')
     const authUser = getAuthUser(c)
-
-    const artist = await artistSvc.getByUserId(authUser!.userId)
-    if (!artist) return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
-
-    const existing = await svc.getById(c.req.param('id'))
-    if (!existing) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
-    if (!isOwnerOrAdmin(existing, artist.id, authUser!.role)) {
-      return c.json({ error: 'FORBIDDEN', message: 'Not your artwork' }, 403)
-    }
-
-    await svc.delete(c.req.param('id'))
+    await svc.delete(c.req.param('id'), authUser!.userId, authUser!.role)
     return c.body(null, 204)
   })
 
   // Artist: add images to artwork (presigned URL confirmation)
   routes.post('/:id/images', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
     const svc = c.get('artworkService')
-    const artistSvc = c.get('artistService')
     const authUser = getAuthUser(c)
     const body = addImagesSchema.safeParse(await c.req.json())
-    if (!body.success) return c.json({ error: 'VALIDATION', message: body.error.issues }, 400)
+    if (!body.success) return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', body.error.issues), 400)
 
-    const artist = await artistSvc.getByUserId(authUser!.userId)
-    if (!artist) return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
-
-    const existing = await svc.getById(c.req.param('id'))
-    if (!existing) return c.json({ error: 'NOT_FOUND', message: 'Artwork not found' }, 404)
-    if (!isOwnerOrAdmin(existing, artist.id, authUser!.role)) {
-      return c.json({ error: 'FORBIDDEN', message: 'Not your artwork' }, 403)
-    }
-
-    const artwork = await svc.updateImages(c.req.param('id'), body.data.urls)
+    const artwork = await svc.updateImages(c.req.param('id'), body.data.urls, authUser!.userId, authUser!.role)
     return c.json(artwork)
   })
 

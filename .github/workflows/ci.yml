@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   validate:
@@ -27,11 +27,27 @@ jobs:
       - name: Contract tests
         run: bun run test:contracts
 
+      - name: Verifier tests
+        run: bun run test:verifier
+
       - name: Webapp client tests
         run: bun run test:webapp
 
       - name: Backend tests
         run: bun run test:backend
+
+      - name: Check serverless bundle freshness
+        run: |
+          bun run --cwd backend prisma:generate
+          cp backend/api/index.js backend/api/index.js.committed
+          bun run backend/scripts/build-vercel.mjs
+          if ! diff -q backend/api/index.js.committed backend/api/index.js; then
+            echo "ERROR: Committed serverless bundle (backend/api/index.js) is out of date."
+            echo "Run: bun run backend/scripts/build-vercel.mjs"
+            echo "Then commit the regenerated bundle."
+            exit 1
+          fi
+          echo "Serverless bundle is up to date."
 
       - name: Install Playwright browser
         run: bun run --cwd webapp e2e:install

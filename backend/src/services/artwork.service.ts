@@ -1,9 +1,22 @@
 import type { DbClient } from '../db'
 import type { Prisma } from '../generated/prisma/client'
-import type { ArtworkStatus, ArtworkCategory, MediaType, EditionType } from '../generated/prisma/enums'
 import { toArtworkDto, toArtworkPublicDto, toArtworkPublicDtoFull, type ArtworkDto, type ArtworkPublicDto, type ArtworkPublicFullDto } from '../dto/artwork.dto'
 import { ArtKeyService } from './art-key.service'
 import type { SigningService } from './signing.service'
+import { NotFoundError, ForbiddenError } from '../http/errors'
+
+/** Artwork statuses visible to unauthenticated users. */
+const PUBLIC_VISIBLE_STATUSES = ['LISTED', 'IN_EXHIBITION'] as const
+
+const VALID_STATUSES = ['DRAFT', 'LISTED', 'IN_EXHIBITION', 'SOLD', 'ARCHIVED'] as const
+const VALID_CATEGORIES = ['DIGITAL', 'PHYSICAL', 'HYBRID'] as const
+const VALID_MEDIA_TYPES = ['IMAGE', 'VIDEO', '3D_MODEL', 'AUDIO'] as const
+const VALID_EDITION_TYPES = ['UNIQUE', 'LIMITED', 'OPEN'] as const
+const VALID_SORT = ['newest', 'oldest', 'price_asc', 'price_desc', 'popular'] as const
+
+function isVisibleToPublic(status: string): boolean {
+  return (PUBLIC_VISIBLE_STATUSES as readonly string[]).includes(status)
+}
 
 export class ArtworkService {
   private artKeyService: ArtKeyService
@@ -13,6 +26,12 @@ export class ArtworkService {
     private signingService?: SigningService,
   ) {
     this.artKeyService = new ArtKeyService(prisma, signingService)
+  }
+
+  // ── Visibility predicate shared across all public queries ──
+
+  private publicVisibilityFilter(): Prisma.ArtworkWhereInput {
+    return { status: { in: [...PUBLIC_VISIBLE_STATUSES] } }
   }
 
   async list(params: {
@@ -28,9 +47,50 @@ export class ArtworkService {
     sort?: string
     q?: string
     artistId?: string
+    viewerUserId?: string
+    viewerRole?: string
   }): Promise<{ artworks: ArtworkPublicDto[]; total: number; page: number; pageSize: number }> {
-    const { page = 1, pageSize = 20, category, mediaType, status, style, priceMin, priceMax, editionType, sort = 'newest', q, artistId } = params
-    const where: Prisma.ArtworkWhereInput = { status: status ? (status as ArtworkStatus) : (artistId ? undefined : { not: 'DRAFT' }) }
+    const { page = 1, pageSize = 20, category, mediaType, status, style, priceMin, priceMax, editionType, sort = 'newest', q, artistId, viewerUserId, viewerRole } = params
+
+    // Validate enum values — invalid filters return 400 instead of Prisma error
+    if (status && !(VALID_STATUSES as readonly string[]).includes(status)) {
+      throw new InvalidFilterError('status', status, [...VALID_STATUSES])
+    }
+    if (category && !(VALID_CATEGORIES as readonly string[]).includes(category)) {
+      throw new InvalidFilterError('category', category, [...VALID_CATEGORIES])
+    }
+    if (mediaType && !(VALID_MEDIA_TYPES as readonly string[]).includes(mediaType)) {
+      throw new InvalidFilterError('mediaType', mediaType, [...VALID_MEDIA_TYPES])
+    }
+    if (editionType && !(VALID_EDITION_TYPES as readonly string[]).includes(editionType)) {
+      throw new InvalidFilterError('editionType', editionType, [...VALID_EDITION_TYPES])
+    }
+    if (!(VALID_SORT as readonly string[]).includes(sort)) {
+      throw new InvalidFilterError('sort', sort, [...VALID_SORT])
+    }
+
+    const where: Prisma.ArtworkWhereInput = {}
+
+    // Determine once whether viewer can bypass the public-visibility filter
+    let canBypassVisibility = false
+    if (artistId && viewerUserId) {
+      const ownerCheck = await this.prisma.artist.findUnique({
+        where: { id: artistId },
+        select: { userId: true },
+      })
+      canBypassVisibility = ownerCheck?.userId === viewerUserId || viewerRole === 'ADMIN'
+    }
+
+    if (status) {
+      if (!isVisibleToPublic(status) && !canBypassVisibility) {
+        throw new InvalidFilterError('status', status, [...PUBLIC_VISIBLE_STATUSES])
+      }
+      where.status = status as Prisma.ArtworkWhereInput['status']
+    }
+
+    if (!canBypassVisibility && !status) {
+      Object.assign(where, this.publicVisibilityFilter())
+    }
 
     if (artistId) where.artistId = artistId
     if (q) {
@@ -39,10 +99,10 @@ export class ArtworkService {
         { description: { contains: q, mode: 'insensitive' } },
       ]
     }
-    if (category) where.category = category as ArtworkCategory
-    if (mediaType) where.mediaType = mediaType as MediaType
+    if (category) where.category = category as Prisma.ArtworkWhereInput['category']
+    if (mediaType) where.mediaType = mediaType as Prisma.ArtworkWhereInput['mediaType']
     if (style) where.styleTags = { has: style }
-    if (editionType) where.editionType = editionType as EditionType
+    if (editionType) where.editionType = editionType as Prisma.ArtworkWhereInput['editionType']
     if (priceMin !== undefined || priceMax !== undefined) {
       where.price = {}
       if (priceMin !== undefined) where.price.gte = priceMin
@@ -77,15 +137,23 @@ export class ArtworkService {
     }
   }
 
-  async getById(artworkId: string): Promise<ArtworkPublicFullDto | null> {
+  /** Public access: returns artwork if publicly visible, increments view count. */
+  async getById(artworkId: string, opts?: { userId?: string; role?: string }): Promise<ArtworkPublicFullDto | null> {
     const artwork = await this.prisma.artwork.findUnique({
       where: { id: artworkId },
       include: { artist: { include: { user: true, hall: true } }, artKeys: true, provenanceRecords: { include: { toOwner: true, fromOwner: true }, orderBy: { sequence: 'asc' } } },
     })
     if (!artwork) return null
 
-    // Increment view count
-    await this.prisma.artwork.update({ where: { id: artworkId }, data: { viewCount: { increment: 1 } } })
+    // Visibility gate: only publicly visible artworks (or owner/admin override)
+    const isOwner = opts?.userId && artwork.artist.userId === opts.userId
+    const isAdmin = opts?.role === 'ADMIN'
+    if (!isOwner && !isAdmin && !isVisibleToPublic(artwork.status)) return null
+
+    // Increment view count (only for public access, not owner/admin self-view)
+    if (!isOwner && !isAdmin) {
+      await this.prisma.artwork.update({ where: { id: artworkId }, data: { viewCount: { increment: 1 } } })
+    }
 
     return toArtworkPublicDtoFull(artwork)
   }
@@ -133,7 +201,18 @@ export class ArtworkService {
     return toArtworkDto(artwork)
   }
 
-  async update(artworkId: string, data: Prisma.ArtworkUncheckedUpdateInput): Promise<ArtworkPublicFullDto> {
+  private async verifyOwnership(artworkId: string, userId: string, role: string): Promise<void> {
+    if (role === 'ADMIN') return
+    const artwork = await this.prisma.artwork.findUnique({
+      where: { id: artworkId },
+      select: { artist: { select: { userId: true } } },
+    })
+    if (!artwork) throw new NotFoundError('Artwork not found')
+    if (artwork.artist.userId !== userId) throw new ForbiddenError('Not your artwork')
+  }
+
+  async update(artworkId: string, data: Prisma.ArtworkUncheckedUpdateInput, userId: string, role: string): Promise<ArtworkPublicFullDto> {
+    await this.verifyOwnership(artworkId, userId, role)
     const artwork = await this.prisma.artwork.update({
       where: { id: artworkId },
       data,
@@ -142,7 +221,8 @@ export class ArtworkService {
     return toArtworkPublicDtoFull(artwork)
   }
 
-  async updateImages(artworkId: string, imageUrls: string[]) {
+  async updateImages(artworkId: string, imageUrls: string[], userId: string, role: string) {
+    await this.verifyOwnership(artworkId, userId, role)
     const artwork = await this.prisma.artwork.update({
       where: { id: artworkId },
       data: { images: { push: imageUrls } },
@@ -150,13 +230,14 @@ export class ArtworkService {
     return toArtworkDto(artwork)
   }
 
-  async delete(artworkId: string) {
+  async delete(artworkId: string, userId: string, role: string) {
+    await this.verifyOwnership(artworkId, userId, role)
     await this.prisma.artwork.delete({ where: { id: artworkId } })
   }
 
   async search(query: string, page = 1, pageSize = 20) {
     const where: Prisma.ArtworkWhereInput = {
-      status: { not: 'DRAFT' },
+      ...this.publicVisibilityFilter(),
       OR: [
         { title: { contains: query, mode: 'insensitive' } },
         { description: { contains: query, mode: 'insensitive' } },
@@ -209,5 +290,14 @@ export class ArtworkService {
       total,
       page,
     }
+  }
+}
+
+export class InvalidFilterError extends Error {
+  readonly status = 400
+  readonly code = 'BAD_REQUEST'
+  constructor(field: string, value: string, allowed: readonly string[]) {
+    super(`Invalid filter "${field}": "${value}". Allowed: ${allowed.join(', ')}`)
+    this.name = 'InvalidFilterError'
   }
 }

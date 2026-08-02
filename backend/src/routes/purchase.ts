@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { authGuard } from '../guards/auth'
+import { errorResponse } from '../http/errors'
 
 /**
  * Purchase endpoint — DISABLED for security (P0-12).
@@ -19,10 +20,7 @@ export function createPurchaseRoutes() {
   const routes = new Hono()
 
   routes.post('/art-keys/:keyCode/purchase', authGuard(), async (c) => {
-    return c.json({
-      error: 'NOT_IMPLEMENTED',
-      message: 'Purchase functionality requires payment integration and is temporarily disabled.',
-    }, 501)
+    return c.json(errorResponse('NOT_IMPLEMENTED', 'Purchase functionality requires payment integration and is temporarily disabled.'), 501)
   })
 
   return routes

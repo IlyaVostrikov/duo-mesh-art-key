@@ -7,6 +7,9 @@ const ALLOWED_IMAGE = new Set(['jpg', 'jpeg', 'png', 'webp', 'svg'])
 const ALLOWED_TEXTURE = new Set(['bin', 'hdr', 'exr', 'ktx2'])
 const MAX_FILES_PER_REQUEST = 50
 const MAX_ZIP_ENTRIES = 200
+const MAX_ZIP_COMPRESSED_BYTES = 100 * 1024 * 1024    // 100 MB — archive on disk
+const MAX_ZIP_UNCOMPRESSED_BYTES = 500 * 1024 * 1024  // 500 MB — total after extraction
+const MAX_ZIP_COMPRESSION_RATIO = 100                  // reject if uncompressed > 100× compressed
 
 function sanitizeFilename(name: string): string {
   return name
@@ -17,6 +20,44 @@ function sanitizeFilename(name: string): string {
 
 function extension(filename: string): string {
   return filename.split('.').pop()?.toLowerCase() ?? ''
+}
+
+/** Read ZIP central directory to get entry count and total uncompressed size WITHOUT decompressing. */
+function readZipMetadata(buffer: Uint8Array): { entryCount: number; totalUncompressed: number } {
+  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+  const fileSize = buffer.length
+
+  // Search backwards from end for EOCD signature (max 65535-byte comment + 22-byte record)
+  let eocdOffset = -1
+  const searchStart = Math.max(0, fileSize - 65535 - 22)
+  for (let i = fileSize - 22; i >= searchStart; i--) {
+    if (view.getUint32(i, true) === 0x06054b50) {
+      eocdOffset = i
+      break
+    }
+  }
+  if (eocdOffset === -1) throw new UploadValidationError('Invalid ZIP: EOCD signature not found')
+
+  const entryCount = view.getUint16(eocdOffset + 10, true)
+  const cdOffset = view.getUint32(eocdOffset + 16, true)
+
+  let totalUncompressed = 0
+  let pos = cdOffset
+  for (let i = 0; i < entryCount; i++) {
+    if (pos + 46 > fileSize) throw new UploadValidationError('Invalid ZIP: central directory truncated')
+    if (view.getUint32(pos, true) !== 0x02014b50) {
+      throw new UploadValidationError('Invalid ZIP: central directory entry signature not found')
+    }
+    totalUncompressed += view.getUint32(pos + 24, true)
+    const fileNameLen = view.getUint16(pos + 28, true)
+    const extraLen = view.getUint16(pos + 30, true)
+    const commentLen = view.getUint16(pos + 32, true)
+    const entrySize = 46 + fileNameLen + extraLen + commentLen
+    if (entrySize > fileSize - pos) throw new UploadValidationError('Invalid ZIP: central directory entry overflows')
+    pos += entrySize
+  }
+
+  return { entryCount, totalUncompressed }
 }
 
 function assertExt(ext: string, fileName: string) {
@@ -137,13 +178,39 @@ export class UploadService {
     datePath: string,
     zipFile: File,
   ): Promise<{ files: Array<{ name: string; url: string; size: number; type: string }>; written: string[]; hashes: Record<string, string> }> {
+    const compressedSize = zipFile.size
+
+    // Layer 1: reject overly large compressed archives
+    if (compressedSize > MAX_ZIP_COMPRESSED_BYTES) {
+      const maxMB = Math.round(MAX_ZIP_COMPRESSED_BYTES / 1024 / 1024)
+      throw new UploadValidationError(`ZIP archive too large (max ${maxMB} MB)`)
+    }
+
     const buffer = new Uint8Array(await zipFile.arrayBuffer())
+
+    // Pre-validate using ZIP central directory metadata — runs BEFORE decompression
+    const meta = readZipMetadata(buffer)
+    if (meta.entryCount > MAX_ZIP_ENTRIES) {
+      throw new UploadValidationError(`Too many files in zip (max ${MAX_ZIP_ENTRIES})`)
+    }
+    if (meta.totalUncompressed > MAX_ZIP_UNCOMPRESSED_BYTES) {
+      const maxMB = Math.round(MAX_ZIP_UNCOMPRESSED_BYTES / 1024 / 1024)
+      throw new UploadValidationError(`ZIP uncompressed size too large (max ${maxMB} MB)`)
+    }
+    if (compressedSize > 0 && meta.totalUncompressed / compressedSize > MAX_ZIP_COMPRESSION_RATIO) {
+      throw new UploadValidationError(
+        `Suspicious compression ratio detected (${Math.round(meta.totalUncompressed / compressedSize)}:1). Archive rejected.`,
+      )
+    }
+
     const extracted = unzipSync(buffer)
+
     const files: Array<{ name: string; url: string; size: number; type: string }> = []
     const written: string[] = []
     const hashes: Record<string, string> = {}
 
     const entries = Object.entries(extracted)
+    // Belt-and-suspenders: catch metadata/actual mismatch in crafted ZIPs
     if (entries.length > MAX_ZIP_ENTRIES) {
       throw new UploadValidationError(`Too many files in zip (max ${MAX_ZIP_ENTRIES})`)
     }
@@ -153,63 +220,69 @@ export class UploadService {
     const bundleDir = join(this.baseDir, userId, datePath, bundleUuid)
     await mkdir(bundleDir, { recursive: true })
 
-    for (const [filename, data] of entries) {
-      // Skip directories (fflate includes them as zero-length entries)
-      if (data.length === 0 || filename.endsWith('/')) continue
+    try {
+      for (const [filename, data] of entries) {
+        // Skip directories (fflate includes them as zero-length entries)
+        if (data.length === 0 || filename.endsWith('/')) continue
 
-      const ext = extension(filename)
-      if (!ext) continue
+        const ext = extension(filename)
+        if (!ext) continue
 
-      // Only extract allowed 3D, image, and texture files
-      const is3D = ALLOWED_3D.has(ext)
-      const isImage = ALLOWED_IMAGE.has(ext)
-      const isTexture = ALLOWED_TEXTURE.has(ext)
-      if (!is3D && !isImage && !isTexture) continue
+        // Only extract allowed 3D, image, and texture files
+        const is3D = ALLOWED_3D.has(ext)
+        const isImage = ALLOWED_IMAGE.has(ext)
+        const isTexture = ALLOWED_TEXTURE.has(ext)
+        if (!is3D && !isImage && !isTexture) continue
 
-      if (files.length >= MAX_FILES_PER_REQUEST) {
-        throw new UploadValidationError(`Too many valid files in zip (max ${MAX_FILES_PER_REQUEST})`)
+        if (files.length >= MAX_FILES_PER_REQUEST) {
+          throw new UploadValidationError(`Too many valid files in zip (max ${MAX_FILES_PER_REQUEST})`)
+        }
+
+        const maxSize = isImage ? this.maxImageBytes : this.max3DBytes
+        if (data.length > maxSize) {
+          const maxMB = Math.round(maxSize / 1024 / 1024)
+          throw new UploadValidationError(`File too large in zip: ${filename} (max ${maxMB} MB)`)
+        }
+
+        // Sanitize each path component, preserving directory structure
+        const sanitizedPath = filename
+          .replace(/\\/g, '/')           // normalize Windows backslashes
+          .split('/')
+          .map((seg) => sanitizeFilename(seg))
+          .join('/')
+
+        const key = `${userId}/${datePath}/${bundleUuid}/${sanitizedPath}`
+        const filePath = join(bundleDir, ...sanitizedPath.split('/'))
+
+        await mkdir(join(bundleDir, ...sanitizedPath.split('/').slice(0, -1)), { recursive: true })
+        await Bun.write(filePath, data)
+        written.push(filePath)
+
+        const hasher = new Bun.CryptoHasher('sha256')
+        hasher.update(data)
+        hashes[sanitizedPath] = hasher.digest('hex') as string
+
+        const mimeType =
+          ext === 'glb' ? 'model/gltf-binary' :
+          ext === 'gltf' ? 'model/gltf+json' :
+          ext === 'bin' ? 'application/octet-stream' :
+          ext === 'hdr' ? 'image/vnd.radiance' :
+          isImage ? `image/${ext === 'jpg' ? 'jpeg' : ext}` :
+          'application/octet-stream'
+
+        files.push({ name: filename, url: `/api/uploads/${key}`, size: data.length, type: mimeType })
       }
 
-      const maxSize = isImage ? this.maxImageBytes : this.max3DBytes
-      if (data.length > maxSize) {
-        const maxMB = Math.round(maxSize / 1024 / 1024)
-        throw new UploadValidationError(`File too large in zip: ${filename} (max ${maxMB} MB)`)
+      if (files.length === 0) {
+        throw new UploadValidationError('No valid 3D or image files found in zip. Supported: .glb, .gltf, .blend, .obj, .fbx, .stl, .usdz, .bin, .jpg, .png, .webp, .hdr')
       }
 
-      // Sanitize each path component, preserving directory structure
-      const sanitizedPath = filename
-        .replace(/\\/g, '/')           // normalize Windows backslashes
-        .split('/')
-        .map((seg) => sanitizeFilename(seg))
-        .join('/')
-
-      const key = `${userId}/${datePath}/${bundleUuid}/${sanitizedPath}`
-      const filePath = join(bundleDir, ...sanitizedPath.split('/'))
-
-      await mkdir(join(bundleDir, ...sanitizedPath.split('/').slice(0, -1)), { recursive: true })
-      await Bun.write(filePath, data)
-      written.push(filePath)
-
-      const hasher = new Bun.CryptoHasher('sha256')
-      hasher.update(data)
-      hashes[sanitizedPath] = hasher.digest('hex') as string
-
-      const mimeType =
-        ext === 'glb' ? 'model/gltf-binary' :
-        ext === 'gltf' ? 'model/gltf+json' :
-        ext === 'bin' ? 'application/octet-stream' :
-        ext === 'hdr' ? 'image/vnd.radiance' :
-        isImage ? `image/${ext === 'jpg' ? 'jpeg' : ext}` :
-        'application/octet-stream'
-
-      files.push({ name: filename, url: `/api/uploads/${key}`, size: data.length, type: mimeType })
+      return { files, written, hashes }
+    } catch (err) {
+      // Clean up partial extraction on any error
+      await Promise.allSettled(written.map((p) => unlink(p).catch(() => {})))
+      throw err
     }
-
-    if (files.length === 0) {
-      throw new UploadValidationError('No valid 3D or image files found in zip. Supported: .glb, .gltf, .blend, .obj, .fbx, .stl, .usdz, .bin, .jpg, .png, .webp, .hdr')
-    }
-
-    return { files, written, hashes }
   }
 
   // ── Presigned upload (Spaces/S3) ──
@@ -319,7 +392,7 @@ export class UploadService {
 
 export class UploadValidationError extends Error {
   readonly status = 400
-  readonly code = 'VALIDATION'
+  readonly code = 'VALIDATION_ERROR'
   constructor(message: string) {
     super(message)
     this.name = 'UploadValidationError'

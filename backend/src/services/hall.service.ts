@@ -2,13 +2,27 @@ import type { DbClient } from '../db'
 import { Prisma } from '../generated/prisma/client'
 import { toHallDto, toHallPublicDto } from '../dto/hall.dto'
 import { generateUniqueSlug } from '../lib/slug'
+import { NotFoundError, ForbiddenError } from '../http/errors'
 
 export class HallService {
   constructor(private prisma: DbClient) {}
 
-  async getBySlug(slug: string) {
+  private async verifyOwnership(artistId: string, userId: string, role: string): Promise<void> {
+    if (role === 'ADMIN') return
+    const artist = await this.prisma.artist.findUnique({
+      where: { id: artistId },
+      select: { userId: true },
+    })
+    if (!artist) throw new NotFoundError('Artist not found')
+    if (artist.userId !== userId) throw new ForbiddenError('Not your hall')
+  }
+
+  async getBySlug(slug: string, opts?: { publishedOnly?: boolean }) {
+    const where: { slug: string; isPublished?: boolean } = { slug }
+    if (opts?.publishedOnly) where.isPublished = true
+
     const hall = await this.prisma.exhibitionHall.findUnique({
-      where: { slug },
+      where,
       include: {
         artist: { include: { user: true } },
       },
@@ -23,9 +37,12 @@ export class HallService {
     return toHallPublicDto({ ...hall, artworks })
   }
 
-  async getByArtistId(artistId: string) {
+  async getByArtistId(artistId: string, opts?: { publishedOnly?: boolean }) {
+    const where: { artistId: string; isPublished?: boolean } = { artistId }
+    if (opts?.publishedOnly) where.isPublished = true
+
     return this.prisma.exhibitionHall.findUnique({
-      where: { artistId },
+      where,
       include: { artist: { include: { user: true } } },
     })
   }
@@ -56,7 +73,8 @@ export class HallService {
     customization?: Record<string, unknown>
     theme?: string
     isPublished?: boolean
-  }) {
+  }, userId: string, role: string) {
+    await this.verifyOwnership(artistId, userId, role)
     const hall = await this.prisma.exhibitionHall.update({
       where: { artistId },
       data: {

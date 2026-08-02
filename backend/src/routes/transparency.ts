@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { errorResponse } from '../http/errors'
 import type { TransparencyLogService } from '../services/transparency-log.service'
 import type { ArtKeyService } from '../services/art-key.service'
 
@@ -19,13 +20,13 @@ export function createTransparencyRoutes() {
   const routes = new Hono<TransparencyRouteEnv>()
 
   // Public: get transparency log for a specific ArtKey
-  routes.get('/transparency/:keyCode', async (c) => {
+  routes.get('/:keyCode', async (c) => {
     const tls = c.get('transparencyLogService')
     const artKeySvc = c.get('artKeyService')
 
     const verification = await artKeySvc.verify(c.req.param('keyCode'))
     if (!verification) {
-      return c.json({ error: 'NOT_FOUND', message: 'ArtKey not found' }, 404)
+      return c.json(errorResponse('NOT_FOUND', 'ArtKey not found'), 404)
     }
 
     const entries = await tls.getByArtKey(verification.artKey.id)
@@ -46,7 +47,7 @@ export function createTransparencyRoutes() {
   })
 
   // Public: get global transparency log (all ArtKeys)
-  routes.get('/transparency', async (c) => {
+  routes.get('/', async (c) => {
     const tls = c.get('transparencyLogService')
     const parsed = pageSchema.safeParse(c.req.query())
     const { page, pageSize } = parsed.success ? parsed.data : { page: 1, pageSize: 50 }

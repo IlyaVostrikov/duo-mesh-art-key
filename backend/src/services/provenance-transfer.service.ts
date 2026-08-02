@@ -26,7 +26,13 @@ export class ProvenanceTransferService {
   ): Promise<{
     record: { id: string; sequence: number; recordHash: string; signature: string | null; signerPublicKey: string | null; signerRole: string | null }
   }> {
-    const db = tx ?? this.prisma
+    // Self-wrap in a transaction when the caller doesn't provide one,
+    // so the sequence read and record insert are atomic.
+    if (!tx) {
+      return this.prisma.$transaction((trx) => this.createTransfer(params, trx as unknown as DbClient))
+    }
+
+    const db = tx
 
     // Find the latest sequence number
     const lastRecord = await db.provenanceRecord.findFirst({
@@ -73,6 +79,7 @@ export class ProvenanceTransferService {
         signerPublicKey,
         signerRole: params.signerRole,
         signingKeyId: params.signerKeyId,
+        occurredAt,
       },
     })
 

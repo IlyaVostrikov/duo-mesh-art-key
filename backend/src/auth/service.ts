@@ -26,6 +26,11 @@ type UserRecord = {
   createdAt: Date
 }
 
+// Dummy bcrypt hash used for timing-safe login to prevent email enumeration.
+// When no user is found, password verification runs against this hash so the
+// bcrypt cost is identical regardless of whether the email exists.
+const DUMMY_BCRYPT_HASH = '$2b$12$L8Jx5mN3pQ7rS9tV1wX3yZ5aB8cD2eF4gH6iJ0kL1mN3oP5qR7sT9u'
+
 export class AuthService {
   constructor(
     private readonly db: DbClient,
@@ -51,7 +56,7 @@ export class AuthService {
           email: input.email,
           passwordHash,
           displayName: input.displayName,
-          role: input.role,
+          role: 'GUEST',
         },
       })
       .catch((error: unknown) => {
@@ -70,12 +75,14 @@ export class AuthService {
       where: { email: input.email },
     })
 
-    if (!user) {
-      throw new AppError(401, 'UNAUTHORIZED', 'Invalid email or password')
-    }
+    // Always run bcrypt verification against a valid-format hash to prevent
+    // timing-based email enumeration. When the user doesn't exist, verify
+    // against a dummy hash so the cost is indistinguishable from a real
+    // (but wrong) password attempt.
+    const hashToCheck = user?.passwordHash ?? DUMMY_BCRYPT_HASH
+    const passwordMatches = await verifyPassword(input.password, hashToCheck)
 
-    const passwordMatches = await verifyPassword(input.password, user.passwordHash)
-    if (!passwordMatches) {
+    if (!user || !passwordMatches) {
       throw new AppError(401, 'UNAUTHORIZED', 'Invalid email or password')
     }
 
@@ -159,6 +166,14 @@ export class AuthService {
       select: { id: true, role: true },
     })
     if (!user) return null
+
+    // Verify the session is still active (not revoked, not expired)
+    const session = await this.db.authSession.findUnique({
+      where: { id: payload.sessionId },
+      select: { revokedAt: true, expiresAt: true },
+    })
+    if (!session || session.revokedAt || session.expiresAt <= new Date()) return null
+
     return { userId: user.id, role: user.role, sessionId: payload.sessionId }
   }
 

@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { createArtistSchema, updateArtistSchema } from '@duo-mesh/contracts'
 import { authGuard, requireRole, optionalAuth, getAuthUser } from '../guards/auth'
+import { errorResponse, ForbiddenError, NotFoundError } from '../http/errors'
 import { ArtistService } from '../services/artist.service'
 import { HallService } from '../services/hall.service'
 import { toHallDto } from '../dto/hall.dto'
@@ -42,17 +43,17 @@ export function createArtistRoutes() {
     // Check user doesn't already have an artist profile
     const existing = await svc.getByUserId(authUser!.userId)
     if (existing) {
-      return c.json({ error: 'CONFLICT', message: 'Artist profile already exists' }, 409)
+      return c.json(errorResponse('CONFLICT', 'Artist profile already exists'), 409)
     }
 
     const body = await c.req.json()
     const parsed = createArtistSchema.safeParse(body)
     if (!parsed.success) {
-      return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+      return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
     }
 
     const artist = await svc.create(authUser!.userId, parsed.data)
-    if (!artist) return c.json({ error: 'INTERNAL', message: 'Failed to create artist profile' }, 500)
+    if (!artist) return c.json(errorResponse('INTERNAL_ERROR', 'Failed to create artist profile'), 500)
     return c.json(sanitizeMe(artist), 201)
   })
 
@@ -62,7 +63,7 @@ export function createArtistRoutes() {
     const hallSvc = c.get('hallService')
     const authUser = getAuthUser(c)
     const raw = await artistSvc.getByUserId(authUser!.userId)
-    if (!raw) return c.json({ error: 'NOT_FOUND', message: 'Artist profile not found' }, 404)
+    if (!raw) return c.json(errorResponse('NOT_FOUND', 'Artist profile not found'), 404)
 
     // Auto-create hall if missing (e.g. artist created before hall auto-creation was added)
     if (!raw.hall) {
@@ -85,7 +86,7 @@ export function createArtistRoutes() {
     const artistId = c.req.param('id')
     const authUser = getAuthUser(c)
     const artist = await svc.getById(artistId, authUser?.userId)
-    if (!artist) return c.json({ error: 'NOT_FOUND', message: 'Artist not found' }, 404)
+    if (!artist) return c.json(errorResponse('NOT_FOUND', 'Artist not found'), 404)
     return c.json(artist)
   })
 
@@ -93,17 +94,18 @@ export function createArtistRoutes() {
     const svc = c.get('artistService')
     const artistId = c.req.param('id')
     const authUser = getAuthUser(c)
-    const artist = await svc.getById(artistId, authUser?.userId)
-    if (!artist) return c.json({ error: 'NOT_FOUND', message: 'Artist not found' }, 404)
-    if (artist.userId !== authUser?.userId && authUser?.role !== 'ADMIN') {
-      return c.json({ error: 'FORBIDDEN', message: 'Not your profile' }, 403)
-    }
     const body = await c.req.json()
     const parsed = updateArtistSchema.safeParse(body)
     if (!parsed.success) {
-      return c.json({ error: 'VALIDATION', message: parsed.error.issues }, 400)
+      return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
     }
-    return c.json(await svc.update(artistId, parsed.data))
+    try {
+      return c.json(await svc.update(artistId, parsed.data, authUser?.userId ?? '', authUser?.role ?? 'GUEST'))
+    } catch (err) {
+      if (err instanceof ForbiddenError) return c.json(errorResponse('FORBIDDEN', err.message), 403)
+      if (err instanceof NotFoundError) return c.json(errorResponse('NOT_FOUND', err.message), 404)
+      throw err
+    }
   })
 
   routes.get('/:id/artworks', async (c) => {
@@ -114,8 +116,8 @@ export function createArtistRoutes() {
 
   routes.get('/:id/hall', async (c) => {
     const hallSvc = c.get('hallService')
-    const hall = await hallSvc.getByArtistId(c.req.param('id'))
-    if (!hall) return c.json({ error: 'NOT_FOUND', message: 'Hall not found' }, 404)
+    const hall = await hallSvc.getByArtistId(c.req.param('id'), { publishedOnly: true })
+    if (!hall) return c.json(errorResponse('NOT_FOUND', 'Hall not found'), 404)
     return c.json(toHallDto(hall))
   })
 

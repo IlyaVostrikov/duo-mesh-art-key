@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { authGuard, requireRole, getAuthUser } from '../guards/auth'
+import { errorResponse } from '../http/errors'
 import type { AdminService } from '../services/admin.service'
 
 type AdminRouteEnv = {
@@ -39,7 +40,7 @@ export function createAdminRoutes() {
     const svc = c.get('adminService')
     const authUser = getAuthUser(c)
     const body = setRoleSchema.safeParse(await c.req.json())
-    if (!body.success) return c.json({ error: 'VALIDATION', message: body.error.issues }, 400)
+    if (!body.success) return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', body.error.issues), 400)
     return c.json(await svc.setUserRole(c.req.param('userId'), body.data.role, authUser!.userId))
   })
 
@@ -47,7 +48,7 @@ export function createAdminRoutes() {
   routes.patch('/artists/:artistId/verify', async (c) => {
     const svc = c.get('adminService')
     const body = verifyArtistSchema.safeParse(await c.req.json())
-    if (!body.success) return c.json({ error: 'VALIDATION', message: body.error.issues }, 400)
+    if (!body.success) return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', body.error.issues), 400)
     return c.json(await svc.verifyArtist(c.req.param('artistId'), body.data.verified))
   })
 
@@ -62,7 +63,7 @@ export function createAdminRoutes() {
   routes.patch('/artworks/:artworkId/status', async (c) => {
     const svc = c.get('adminService')
     const body = setArtworkStatusSchema.safeParse(await c.req.json())
-    if (!body.success) return c.json({ error: 'VALIDATION', message: body.error.issues }, 400)
+    if (!body.success) return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', body.error.issues), 400)
     return c.json(await svc.setArtworkStatus(c.req.param('artworkId'), body.data.status))
   })
 
