@@ -1,13 +1,15 @@
 import { readFile, writeFile } from 'node:fs/promises'
-import { sha256Hex } from './hash'
 
 /**
  * Encrypted private-key store backed by a JSON file on disk.
  *
  * MVP custodial model: keys are encrypted at rest with AES-256-GCM.
- * The encryption key is derived as SHA-256(SECRET_STORE_KEY).
+ * The encryption key is derived via PBKDF2(SECRET_STORE_KEY, salt, 600k iter).
+ * The salt lives in a file next to the keystore: <storePath>.salt
  * Roadmap: non-custodial (keys in browser, server only stores public keys).
  */
+
+const PBKDF2_ITERATIONS = 600_000
 
 export interface StoreEntry {
   ciphertext: string // base64
@@ -25,12 +27,29 @@ export class KeyStore {
 
   constructor(
     private storePath: string,
-    secretStoreKey: string,
-  ) {
-    const keyBytes = hexToBytes(sha256Hex(secretStoreKey))
-    this.encryptionKey = crypto.subtle.importKey(
+    private secretStoreKey: string,
+  ) {}
+
+  private async deriveKey(): Promise<CryptoKey> {
+    const saltPath = this.storePath.replace(/\.json$/, '.salt')
+    const saltHex = await readFile(saltPath, 'utf-8').catch(() => {
+      throw new Error(
+        `Keystore salt file not found at ${saltPath}. ` +
+        'Run the KDF migration script first: bun run scripts/migrate-kdf.ts',
+      )
+    })
+    const salt = hexToBytes(saltHex.trim())
+
+    const keyMaterial = await crypto.subtle.importKey(
       'raw',
-      keyBytes,
+      new TextEncoder().encode(this.secretStoreKey),
+      'PBKDF2',
+      false,
+      ['deriveKey'],
+    )
+    return crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+      keyMaterial,
       { name: 'AES-GCM', length: 256 },
       false,
       ['encrypt', 'decrypt'],
@@ -45,7 +64,9 @@ export class KeyStore {
   }
 
   private async getKey(): Promise<CryptoKey> {
-    return this.encryptionKey!
+    if (this.encryptionKey) return this.encryptionKey
+    this.encryptionKey = this.deriveKey()
+    return this.encryptionKey
   }
 
   private async load(): Promise<StoreFile> {

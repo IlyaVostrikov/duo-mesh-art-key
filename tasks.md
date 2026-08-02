@@ -80,53 +80,57 @@
 ### ~~P1-06: Hardcoded featured-маппинги~~ ✅ (2567cba)
 **Файл:** `backend/src/services/featured.service.ts:8-25, 56-61`
 
-### P1-07: Нет пагинации в sale.service.ts
+### ~~P1-07: Нет пагинации в sale.service.ts~~ ✅ (3e047a8)
 **Файл:** `backend/src/services/sale.service.ts:6-46, 49-76`
 
-### P1-08: Keystore concurrency race
+### ~~P1-08: Keystore concurrency race~~ ✅ (ba3371e)
 **Файл:** `backend/src/crypto/keystore.ts:43-72`
 
-### P1-09: Transfer error handler: `as 200` type assertion
+### ~~P1-09: Transfer error handler: `as 200` type assertion~~ ✅ (d08d162)
 **Файл:** `backend/src/routes/transfers.ts:153`
 
-### P1-10: Inquiry на непубличные artwork'ы
+### ~~P1-10: Inquiry на непубличные artwork'ы~~ ✅ (d08d162)
 **Файл:** `backend/src/routes/inquiries.ts:28-31`
 
-### P1-11: Hall view count роняет весь запрос при ошибке
+### ~~P1-11: Hall view count роняет весь запрос при ошибке~~ ✅ (d08d162)
 **Файл:** `backend/src/routes/halls.ts:25-31`
 
-### P1-12: SHA-256 как одноразовый KDF для keystore
+### ~~P1-12: SHA-256 как одноразовый KDF для keystore~~ ✅ (pending commit)
 **Файл:** `backend/src/crypto/keystore.ts:29-31`
+**Исправлено:** PBKDF2 с 600K итераций + случайная соль в `keystore.salt`. Миграционный скрипт: `backend/scripts/migrate-kdf.ts`. Перед деплоем запустить `bun run scripts/migrate-kdf.ts --dry-run`, затем без флага.
 
-### P1-13: extractGenTime молча возвращает new Date() при ошибке
+### ~~P1-13: extractGenTime молча возвращает new Date() при ошибке~~ ✅ (d08d162)
 **Файл:** `backend/src/crypto/timestamp.ts:151-179`
 
-### P1-14: Утечка email через timing side-channel при логине
+### ~~P1-14: Утечка email через timing side-channel при логине~~ ✅ (d08d162)
 **Файл:** `backend/src/auth/service.ts:68-83`
 
 ---
 
 ## P2 — Желательно
 
-### P2-01: Неверный комментарий о размере приватного ключа
+### ~~P2-01: Неверный комментарий о размере приватного ключа~~ ✅ (d08d162)
 **Файл:** `backend/src/crypto/keys.ts:5-6`
 
-### P2-02: Keystore file race на concurrent writes
-**Файл:** `backend/src/crypto/keystore.ts:43-73` (низкий практический риск из-за однопоточности JS)
+### ~~P2-02: Keystore file race на concurrent writes~~ ✅ (ba3371e — исправлено вместе с P1-08)
+**Файл:** `backend/src/crypto/keystore.ts:43-73`
 
-### P2-03: Опечатка в имени переменной `provenanceTransferSvc`
+### ~~P2-03: Опечатка в имени переменной `provenanceTransferSvc`~~ ✅ (d08d162)
 **Файл:** `backend/src/routes/transfers.ts:43`
 
 ---
 
 ## Статистика
 
-| Приоритет | Всего |
-|-----------|-------|
-| P0 | 10 |
-| P1 | 14 |
-| P2 | 3 |
-| **Итого** | **27** |
+| Приоритет | Всего | Готово | Отложено |
+|-----------|-------|--------|----------|
+| P0 | 10 | 10 | 0 |
+| P1 | 14 | 14 | 0 |
+| P2 | 3 | 3 | 0 |
+| **Итого** | **27** | **27** | **0** |
+
+**Финал (2026-08-02):** 27/27 задач закрыто. 18 коммитов на ветке `fix/auth-routes-stage-g`.
+P1-12 (SHA-256 KDF): PBKDF2 + соль + скрипт миграции. Перед деплоем запустить миграцию.
 
 ## Процесс
 
