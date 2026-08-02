@@ -1,6 +1,7 @@
 /**
  * Build script for Vercel deployment.
  *
+ * 0. Runs KDF migration (SHA-256 → PBKDF2) if salt doesn't exist
  * 1. Generates Prisma client
  * 2. Bundles api/index.ts → api/index.js with esbuild
  *
@@ -12,7 +13,7 @@
  */
 
 import { build } from 'esbuild'
-import { mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -23,14 +24,13 @@ const apiDir = resolve(backendRoot, 'api')
 const entry = resolve(backendRoot, 'src/vercel-entry.ts')
 const outfile = resolve(apiDir, 'index.js')
 
-// 1. Generate Prisma client
+// 1. Generate Prisma client (needed by migration script)
 console.log('→ Generating Prisma client...')
 const genResult = spawnSync('bun', ['run', 'prisma:generate'], {
   cwd: backendRoot,
   stdio: 'inherit',
   env: {
     ...process.env,
-    // Dummy URL for generation — real URL comes from Vercel env vars at runtime
     DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql://localhost:5432/dummy',
   },
 })
@@ -39,7 +39,27 @@ if (genResult.status !== 0) {
   process.exit(genResult.status ?? 1)
 }
 
-// 2. Bundle with esbuild
+// 2. Run KDF migration if salt file doesn't exist yet (P1-12)
+const saltPath = resolve(backendRoot, 'data', 'keystore.salt')
+
+if (process.env.SECRET_STORE_KEY && process.env.DATABASE_URL && !existsSync(saltPath)) {
+  mkdirSync(resolve(backendRoot, 'data'), { recursive: true })
+  console.log('→ Running KDF migration: SHA-256 → PBKDF2...')
+  const migResult = spawnSync('bun', ['run', 'scripts/migrate-kdf.ts'], {
+    cwd: backendRoot,
+    stdio: 'inherit',
+    env: { ...process.env },
+  })
+  if (migResult.status !== 0) {
+    console.error('KDF migration failed')
+    process.exit(migResult.status ?? 1)
+  }
+  console.log('→ KDF migration complete')
+} else {
+  console.log('→ KDF migration skipped (salt exists or missing env vars)')
+}
+
+// 3. Bundle with esbuild
 console.log('→ Bundling backend for Vercel...')
 
 try {
