@@ -49,7 +49,12 @@ export function createArtworkRoutes() {
 
     const q = listQuerySchema.parse(c.req.query())
     try {
-      const result = await svc.list({ ...q, artistId })
+      const result = await svc.list({
+        ...q,
+        artistId,
+        viewerUserId: authUser?.userId,
+        viewerRole: authUser?.role,
+      })
       return c.json(result)
     } catch (err) {
       if (err instanceof InvalidFilterError) {

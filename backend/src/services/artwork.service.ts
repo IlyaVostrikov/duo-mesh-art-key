@@ -46,8 +46,10 @@ export class ArtworkService {
     sort?: string
     q?: string
     artistId?: string
+    viewerUserId?: string
+    viewerRole?: string
   }): Promise<{ artworks: ArtworkPublicDto[]; total: number; page: number; pageSize: number }> {
-    const { page = 1, pageSize = 20, category, mediaType, status, style, priceMin, priceMax, editionType, sort = 'newest', q, artistId } = params
+    const { page = 1, pageSize = 20, category, mediaType, status, style, priceMin, priceMax, editionType, sort = 'newest', q, artistId, viewerUserId, viewerRole } = params
 
     // Validate enum values — invalid filters return 400 instead of Prisma error
     if (status && !(VALID_STATUSES as readonly string[]).includes(status)) {
@@ -67,13 +69,27 @@ export class ArtworkService {
     }
 
     const where: Prisma.ArtworkWhereInput = {}
+
+    // Determine once whether viewer can bypass the public-visibility filter
+    let canBypassVisibility = false
+    if (artistId && viewerUserId) {
+      const ownerCheck = await this.prisma.artist.findUnique({
+        where: { id: artistId },
+        select: { userId: true },
+      })
+      canBypassVisibility = ownerCheck?.userId === viewerUserId || viewerRole === 'ADMIN'
+    }
+
     if (status) {
+      if (!isVisibleToPublic(status) && !canBypassVisibility) {
+        throw new InvalidFilterError('status', status, [...PUBLIC_VISIBLE_STATUSES])
+      }
       where.status = status as Prisma.ArtworkWhereInput['status']
-    } else if (!artistId) {
-      // Public listing: only show published artworks
+    }
+
+    if (!canBypassVisibility && !status) {
       Object.assign(where, this.publicVisibilityFilter())
     }
-    // When artistId is set, show all statuses (owner viewing their own work)
 
     if (artistId) where.artistId = artistId
     if (q) {
