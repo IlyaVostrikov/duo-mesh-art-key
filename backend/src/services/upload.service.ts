@@ -22,6 +22,44 @@ function extension(filename: string): string {
   return filename.split('.').pop()?.toLowerCase() ?? ''
 }
 
+/** Read ZIP central directory to get entry count and total uncompressed size WITHOUT decompressing. */
+function readZipMetadata(buffer: Uint8Array): { entryCount: number; totalUncompressed: number } {
+  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+  const fileSize = buffer.length
+
+  // Search backwards from end for EOCD signature (max 65535-byte comment + 22-byte record)
+  let eocdOffset = -1
+  const searchStart = Math.max(0, fileSize - 65535 - 22)
+  for (let i = fileSize - 22; i >= searchStart; i--) {
+    if (view.getUint32(i, true) === 0x06054b50) {
+      eocdOffset = i
+      break
+    }
+  }
+  if (eocdOffset === -1) throw new UploadValidationError('Invalid ZIP: EOCD signature not found')
+
+  const entryCount = view.getUint16(eocdOffset + 10, true)
+  const cdOffset = view.getUint32(eocdOffset + 16, true)
+
+  let totalUncompressed = 0
+  let pos = cdOffset
+  for (let i = 0; i < entryCount; i++) {
+    if (pos + 46 > fileSize) throw new UploadValidationError('Invalid ZIP: central directory truncated')
+    if (view.getUint32(pos, true) !== 0x02014b50) {
+      throw new UploadValidationError('Invalid ZIP: central directory entry signature not found')
+    }
+    totalUncompressed += view.getUint32(pos + 24, true)
+    const fileNameLen = view.getUint16(pos + 28, true)
+    const extraLen = view.getUint16(pos + 30, true)
+    const commentLen = view.getUint16(pos + 32, true)
+    const entrySize = 46 + fileNameLen + extraLen + commentLen
+    if (entrySize > fileSize - pos) throw new UploadValidationError('Invalid ZIP: central directory entry overflows')
+    pos += entrySize
+  }
+
+  return { entryCount, totalUncompressed }
+}
+
 function assertExt(ext: string, fileName: string) {
   const isImage = ALLOWED_IMAGE.has(ext)
   const is3D = ALLOWED_3D.has(ext)
@@ -149,6 +187,22 @@ export class UploadService {
     }
 
     const buffer = new Uint8Array(await zipFile.arrayBuffer())
+
+    // Pre-validate using ZIP central directory metadata — runs BEFORE decompression
+    const meta = readZipMetadata(buffer)
+    if (meta.entryCount > MAX_ZIP_ENTRIES) {
+      throw new UploadValidationError(`Too many files in zip (max ${MAX_ZIP_ENTRIES})`)
+    }
+    if (meta.totalUncompressed > MAX_ZIP_UNCOMPRESSED_BYTES) {
+      const maxMB = Math.round(MAX_ZIP_UNCOMPRESSED_BYTES / 1024 / 1024)
+      throw new UploadValidationError(`ZIP uncompressed size too large (max ${maxMB} MB)`)
+    }
+    if (compressedSize > 0 && meta.totalUncompressed / compressedSize > MAX_ZIP_COMPRESSION_RATIO) {
+      throw new UploadValidationError(
+        `Suspicious compression ratio detected (${Math.round(meta.totalUncompressed / compressedSize)}:1). Archive rejected.`,
+      )
+    }
+
     const extracted = unzipSync(buffer)
 
     const files: Array<{ name: string; url: string; size: number; type: string }> = []
@@ -156,25 +210,9 @@ export class UploadService {
     const hashes: Record<string, string> = {}
 
     const entries = Object.entries(extracted)
+    // Belt-and-suspenders: catch metadata/actual mismatch in crafted ZIPs
     if (entries.length > MAX_ZIP_ENTRIES) {
       throw new UploadValidationError(`Too many files in zip (max ${MAX_ZIP_ENTRIES})`)
-    }
-
-    // Layer 2: total uncompressed budget — sum BEFORE writing anything to disk
-    let totalUncompressed = 0
-    for (const [, data] of entries) {
-      totalUncompressed += data.length
-    }
-    if (totalUncompressed > MAX_ZIP_UNCOMPRESSED_BYTES) {
-      const maxMB = Math.round(MAX_ZIP_UNCOMPRESSED_BYTES / 1024 / 1024)
-      throw new UploadValidationError(`ZIP uncompressed size too large (max ${maxMB} MB)`)
-    }
-
-    // Layer 3: compression ratio guard (catches ZIP bombs with extreme ratios)
-    if (compressedSize > 0 && totalUncompressed / compressedSize > MAX_ZIP_COMPRESSION_RATIO) {
-      throw new UploadValidationError(
-        `Suspicious compression ratio detected (${Math.round(totalUncompressed / compressedSize)}:1). Archive rejected.`,
-      )
     }
 
     // Single bundle UUID so relative paths between extracted files resolve
