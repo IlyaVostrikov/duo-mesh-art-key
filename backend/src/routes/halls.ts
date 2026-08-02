@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { updateHallSchema } from '@duo-mesh/contracts'
 import { authGuard, requireRole, optionalAuth, getAuthUser } from '../guards/auth'
-import { errorResponse } from '../http/errors'
+import { errorResponse, ForbiddenError, NotFoundError } from '../http/errors'
 import { HallService } from '../services/hall.service'
 import { ArtistService } from '../services/artist.service'
 
@@ -43,17 +43,14 @@ export function createHallRoutes() {
     const hall = await svc.getBySlug(c.req.param('slug'))
     if (!hall) return c.json(errorResponse('NOT_FOUND', 'Hall not found'), 404)
 
-    // Admins can edit any hall; artists can only edit their own
-    if (authUser.role !== 'ADMIN') {
-      const artistSvc = c.get('artistService')
-      const artist = await artistSvc.getByUserId(authUser.userId)
-      if (!artist || artist.id !== hall.artistId) {
-        return c.json(errorResponse('FORBIDDEN', 'You can only edit your own hall'), 403)
-      }
+    try {
+      const updated = await svc.update(hall.artistId, parsed.data, authUser.userId, authUser.role)
+      return c.json(updated)
+    } catch (err) {
+      if (err instanceof ForbiddenError) return c.json(errorResponse('FORBIDDEN', err.message), 403)
+      if (err instanceof NotFoundError) return c.json(errorResponse('NOT_FOUND', err.message), 404)
+      throw err
     }
-
-    const updated = await svc.update(hall.artistId, parsed.data)
-    return c.json(updated)
   })
 
   return routes
