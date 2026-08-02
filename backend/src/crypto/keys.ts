@@ -1,8 +1,8 @@
 const ED25519_ALG = { name: 'Ed25519' } as const
 
 export interface Ed25519KeyPair {
-  publicKey: string // hex-encoded, 32 bytes → 64 chars
-  privateKey: string // hex-encoded, 32 bytes → 64 chars (seed only via raw export)
+  publicKey: string // hex-encoded, 32 bytes (raw SPKI) → 64 chars
+  privateKey: string // hex-encoded, 48 bytes (PKCS#8 DER) → 96 chars
 }
 
 /** Generate a fresh Ed25519 keypair. */

@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { createInquirySchema } from '@duo-mesh/contracts'
-import { authGuard, requireRole, getAuthUser } from '../guards/auth'
+import { authGuard, requireRole, getAuthUser, optionalAuth } from '../guards/auth'
 import { errorResponse } from '../http/errors'
 import type { InquiryService } from '../services/inquiry.service'
 import type { ArtistService } from '../services/artist.service'
@@ -17,7 +17,7 @@ type InquiryRouteEnv = {
 export function createInquiryRoutes() {
   const routes = new Hono<InquiryRouteEnv>()
 
-  routes.post('/', async (c) => {
+  routes.post('/', optionalAuth(), async (c) => {
     const svc = c.get('inquiryService')
     const body = await c.req.json()
     const parsed = createInquirySchema.safeParse(body)
@@ -25,9 +25,13 @@ export function createInquiryRoutes() {
       return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
     }
 
-    // Verify artwork exists and is publicly visible
+    // Verify artwork exists and is visible to the caller
     const artworkSvc = c.get('artworkService')
-    const artwork = await artworkSvc.getById(parsed.data.artworkId)
+    const authUser = getAuthUser(c)
+    const artwork = await artworkSvc.getById(parsed.data.artworkId, {
+      userId: authUser?.userId,
+      role: authUser?.role,
+    })
     if (!artwork) {
       return c.json(errorResponse('NOT_FOUND', 'Artwork not found'), 404)
     }

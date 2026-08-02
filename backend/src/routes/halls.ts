@@ -27,7 +27,7 @@ export function createHallRoutes() {
     const svc = c.get('hallService')
     const hall = await svc.getBySlug(c.req.param('slug'), { publishedOnly: true })
     if (!hall) return c.json(errorResponse('NOT_FOUND', 'Hall not found'), 404)
-    await svc.incrementViewCount(c.req.param('slug'))
+    svc.incrementViewCount(c.req.param('slug')).catch(() => { /* fire-and-forget */ })
     return c.json(hall)
   })
 

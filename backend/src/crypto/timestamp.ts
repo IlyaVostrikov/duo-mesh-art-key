@@ -167,7 +167,7 @@ function extractGenTime(tokenBytes: Uint8Array): Date {
     return new Date(`${fullYear}-${mo}-${d}T${h}:${mi}:${s}Z`)
   }
 
-  return new Date() // fallback: use current time
+  throw new Error('Failed to extract GenTime from timestamp token')
 }
 
 // ── internal ──

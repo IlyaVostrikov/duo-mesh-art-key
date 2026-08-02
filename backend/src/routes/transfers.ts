@@ -7,6 +7,7 @@ import type { SigningService } from '../services/signing.service'
 import type { ApiErrorCode } from '@duo-mesh/contracts'
 import type { DbClient } from '../db'
 import { errorResponse } from '../http/errors'
+import type { StatusCode } from 'hono/utils/http-status'
 import { TransparencyLogService } from '../services/transparency-log.service'
 
 const transferSchema = z.object({
@@ -40,7 +41,7 @@ export function createTransferRoutes() {
       }
 
       const prisma = c.get('prisma')
-      const provenanceTransferSvc = c.get('provenanceTransferService')
+      const provenanceTransferService = c.get('provenanceTransferService')
 
       // 1. Find ArtKey by keyCode
       const artKey = await prisma.artKey.findUnique({
@@ -108,7 +109,7 @@ export function createTransferRoutes() {
           })
 
           // Create provenance record
-          const { record } = await provenanceTransferSvc.createTransfer(
+          const { record } = await provenanceTransferService.createTransfer(
             {
               artworkId: artKey.artworkId,
               artKeyId: artKey.id,
@@ -151,7 +152,7 @@ export function createTransferRoutes() {
         }, 200)
       } catch (err) {
         if (err instanceof TransactionError) {
-          return c.json(errorResponse(err.code, err.message), err.status as 200)
+          return c.json(errorResponse(err.code, err.message), err.status as StatusCode)
         }
         // Unique constraint violation = concurrent transfer race
         if (
