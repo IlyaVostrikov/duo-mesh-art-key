@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { createArtistSchema, updateArtistSchema } from '@duo-mesh/contracts'
 import { authGuard, requireRole, optionalAuth, getAuthUser } from '../guards/auth'
-import { errorResponse } from '../http/errors'
+import { errorResponse, ForbiddenError, NotFoundError } from '../http/errors'
 import { ArtistService } from '../services/artist.service'
 import { HallService } from '../services/hall.service'
 import { toHallDto } from '../dto/hall.dto'
@@ -94,17 +94,18 @@ export function createArtistRoutes() {
     const svc = c.get('artistService')
     const artistId = c.req.param('id')
     const authUser = getAuthUser(c)
-    const artist = await svc.getById(artistId, authUser?.userId)
-    if (!artist) return c.json(errorResponse('NOT_FOUND', 'Artist not found'), 404)
-    if (artist.userId !== authUser?.userId && authUser?.role !== 'ADMIN') {
-      return c.json(errorResponse('FORBIDDEN', 'Not your profile'), 403)
-    }
     const body = await c.req.json()
     const parsed = updateArtistSchema.safeParse(body)
     if (!parsed.success) {
       return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
     }
-    return c.json(await svc.update(artistId, parsed.data))
+    try {
+      return c.json(await svc.update(artistId, parsed.data, authUser?.userId ?? '', authUser?.role ?? 'GUEST'))
+    } catch (err) {
+      if (err instanceof ForbiddenError) return c.json(errorResponse('FORBIDDEN', err.message), 403)
+      if (err instanceof NotFoundError) return c.json(errorResponse('NOT_FOUND', err.message), 404)
+      throw err
+    }
   })
 
   routes.get('/:id/artworks', async (c) => {
