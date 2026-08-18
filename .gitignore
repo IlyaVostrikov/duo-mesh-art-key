@@ -39,3 +39,6 @@ backend/.prisma-generate.lock
 *.swo
 .vercel
 .env*
+
+# Knowledge graph (generated, large files)
+graphify-out/
