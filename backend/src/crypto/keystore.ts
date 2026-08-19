@@ -25,17 +25,22 @@ export class KeyStore {
   constructor(
     private storePath: string,
     private secretStoreKey: string,
+    private saltHexOverride?: string,
   ) {}
 
   private async deriveKey(): Promise<CryptoKey> {
+    const saltHex = this.saltHexOverride ?? (await this.readSaltFile())
+    return derivePbkdf2Key(this.secretStoreKey, hexToBytes(saltHex.trim()))
+  }
+
+  private async readSaltFile(): Promise<string> {
     const saltPath = this.storePath.replace(/\.json$/, '.salt')
-    const saltHex = await readFile(saltPath, 'utf-8').catch(() => {
+    return readFile(saltPath, 'utf-8').catch(() => {
       throw new Error(
         `Keystore salt file not found at ${saltPath}. ` +
         'Run the KDF migration script first: bun run scripts/migrate-kdf.ts',
       )
     })
-    return derivePbkdf2Key(this.secretStoreKey, hexToBytes(saltHex.trim()))
   }
 
   /** Serialize write operations to prevent interleaved load/save races. */

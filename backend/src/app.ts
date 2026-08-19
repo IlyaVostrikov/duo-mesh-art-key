@@ -104,6 +104,7 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
   const keyStore = new KeyStore(
     resolve(dataDir, 'keystore.json'),
     env.SECRET_STORE_KEY,
+    process.env.KEYSTORE_SALT,
   )
   const signingService = new SigningService(prisma, keyStore)
 
