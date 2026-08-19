@@ -4,7 +4,7 @@
 // with a PBKDF2-derived key instead of the old SHA-256-derived key.
 //
 // Usage:
-//   bun run scripts/migrate-kdf.ts [--dry-run]
+//   bun run scripts/migrate-kdf.ts [--dry-run] [--force]
 //
 // Prerequisites:
 //   SECRET_STORE_KEY  — the secret used for key derivation
@@ -13,14 +13,24 @@
 //
 // Dry run decrypts everything with the old key and reports without writing.
 
+import { config } from 'dotenv'
 import { readFile, writeFile, copyFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { PrismaClient } from '../src/generated/prisma/client'
+import { createPrisma } from '../src/db'
+import { Prisma } from '../src/generated/prisma/client'
+import { derivePbkdf2Key, decryptString, encryptString, hexToBytes, bytesToHex } from '../src/crypto/aes-gcm'
 
 // ── Config ──
 
 const DRY_RUN = process.argv.includes('--dry-run')
-const PBKDF2_ITERATIONS = 600_000
+const FORCE = process.argv.includes('--force')
+
+const ENV_PATH = resolve(import.meta.dir ?? __dirname, '../.env')
+// Load backend/.env explicitly so SECRET_STORE_KEY / DATABASE_URL are set
+// regardless of the caller's CWD (Bun only auto-loads .env relative to CWD).
+try {
+  config({ path: ENV_PATH })
+} catch { /* no .env — the caller must supply secrets via the environment */ }
 
 const SECRET = process.env.SECRET_STORE_KEY
 if (!SECRET) {
@@ -44,22 +54,6 @@ interface StoreFile {
 
 // ── Crypto helpers ──
 
-function hexToBytes(hex: string): Uint8Array {
-  return new Uint8Array([...Buffer.from(hex, 'hex')])
-}
-
-function bytesToBase64(bytes: ArrayBuffer | Uint8Array): string {
-  return Buffer.from(new Uint8Array(bytes)).toString('base64')
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  return new Uint8Array([...Buffer.from(b64, 'base64')])
-}
-
-function bytesToHex(bytes: ArrayBuffer | Uint8Array): string {
-  return Buffer.from(new Uint8Array(bytes)).toString('hex')
-}
-
 /** Old KDF: SHA-256(SECRET) → raw AES-256-GCM key. */
 async function oldDeriveKey(secret: string): Promise<CryptoKey> {
   const hasher = new Bun.CryptoHasher('sha256')
@@ -74,46 +68,6 @@ async function oldDeriveKey(secret: string): Promise<CryptoKey> {
   )
 }
 
-/** New KDF: PBKDF2(SECRET, salt, 600K iter, SHA-256) → AES-256-GCM key. */
-async function newDeriveKey(secret: string, salt: Uint8Array): Promise<CryptoKey> {
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    'PBKDF2',
-    false,
-    ['deriveKey'],
-  )
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt'],
-  )
-}
-
-async function decrypt(key: CryptoKey, entry: StoreEntry): Promise<string> {
-  const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: base64ToBytes(entry.iv) },
-    key,
-    base64ToBytes(entry.ciphertext),
-  )
-  return new TextDecoder().decode(plaintext)
-}
-
-async function encrypt(key: CryptoKey, plaintext: string): Promise<StoreEntry> {
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
-    key,
-    new TextEncoder().encode(plaintext),
-  )
-  return {
-    ciphertext: bytesToBase64(ciphertext),
-    iv: bytesToBase64(iv),
-  }
-}
-
 // ── Main ──
 
 async function main() {
@@ -123,10 +77,33 @@ async function main() {
   console.log('Deriving old key (SHA-256)...')
   const oldKey = await oldDeriveKey(SECRET!)
 
-  const salt = crypto.getRandomValues(new Uint8Array(32))
+  // Reuse the committed salt if present (idempotent), otherwise generate fresh.
+  let salt: Uint8Array<ArrayBuffer>
+  let saltIsFresh = false
+  try {
+    const existingSaltHex = (await readFile(SALT_PATH, 'utf-8')).trim()
+    if (/^[0-9a-f]{64}$/i.test(existingSaltHex)) {
+      salt = hexToBytes(existingSaltHex)
+      console.log(`Reusing existing salt from ${SALT_PATH}`)
+    } else {
+      salt = crypto.getRandomValues(new Uint8Array(32))
+      saltIsFresh = true
+    }
+  } catch {
+    salt = crypto.getRandomValues(new Uint8Array(32))
+    saltIsFresh = true
+  }
   console.log(`Salt (hex): ${bytesToHex(salt)}`)
   console.log('Deriving new key (PBKDF2, 600K iterations)...')
-  const newKey = await newDeriveKey(SECRET!, salt)
+  const newKey = await derivePbkdf2Key(SECRET!, salt)
+
+  // Persist a freshly generated salt BEFORE re-encrypting anything: if we crash
+  // mid-migration the salt is already on disk, so the re-encrypted entries stay
+  // decryptable. (A reused salt is already on disk.)
+  if (!DRY_RUN && saltIsFresh) {
+    await writeFile(SALT_PATH, bytesToHex(salt) + '\n')
+    console.log(`Writing salt → ${SALT_PATH} (persisted before re-encryption)`)
+  }
 
   // 2. Migrate keystore.json
   console.log(`\n── Keystore: ${KEYSTORE_PATH}`)
@@ -146,99 +123,161 @@ async function main() {
   }
 
   let keystoreOk = 0
-  let keystoreFail = 0
+  let keystoreSkipped = 0
+  let alreadyPbkdf2 = 0
 
   for (const [keyId, entry] of entries) {
     try {
-      const plaintext = await decrypt(oldKey, entry)
+      const plaintext = await decryptString(oldKey, entry)
       if (!DRY_RUN) {
-        store[keyId] = await encrypt(newKey, plaintext)
+        store[keyId] = await encryptString(newKey, plaintext)
       }
       console.log(`  ✅ ${keyId.slice(0, 8)}... — decrypted OK (${plaintext.length} chars)`)
       keystoreOk++
-    } catch (err) {
-      console.error(`  ❌ ${keyId.slice(0, 8)}... — FAILED:`, (err as Error).message)
-      keystoreFail++
+      continue
+    } catch {
+      // old KDF failed — try the new KDF below
+    }
+
+    try {
+      await decryptString(newKey, entry)
+      console.log(`  ⏭  ${keyId.slice(0, 8)}... — already PBKDF2, skipping`)
+      alreadyPbkdf2++
+    } catch {
+      console.warn(`  ⚠  ${keyId.slice(0, 8)}... — unknown KDF/secret (orphaned?), left untouched`)
+      keystoreSkipped++
     }
   }
 
   // 3. Migrate DB signing_keys
   console.log('\n── Database: signing_keys.encryptedPrivateKey')
   const dbUrl = process.env.DATABASE_URL
+  let dbOk = 0
+  let dbSkipped = 0
   if (!dbUrl) {
-    console.log('  DATABASE_URL not set — skipping DB migration.')
+    if (!DRY_RUN) {
+      console.error('\n❌ ABORT: DATABASE_URL is not set.')
+      console.error('   signing_keys.encrypted_private_key may still be under the old SHA-256 KDF;')
+      console.error('   skipping the DB migration would brick the backend on restart.')
+      console.error('   Set DATABASE_URL (or run with --dry-run to inspect without writing).')
+      process.exit(1)
+    }
+    console.log('  DATABASE_URL not set — skipping DB migration (dry run).')
   } else {
-    const prisma = new PrismaClient()
-    let dbOk = 0
-    let dbFail = 0
+    const prisma = createPrisma(dbUrl)
 
     try {
       const keys = await prisma.signingKey.findMany({
-        where: { encryptedPrivateKey: { not: null } },
+        where: { encryptedPrivateKey: { not: Prisma.DbNull } },
         select: { id: true, encryptedPrivateKey: true },
       })
       console.log(`  Rows with encryptedPrivateKey: ${keys.length}`)
+
+      const toUpdate: { id: string; newEntry: StoreEntry }[] = []
 
       for (const key of keys) {
         const entry = key.encryptedPrivateKey as StoreEntry | null
         if (!entry?.ciphertext || !entry?.iv) {
           console.error(`  ❌ ${key.id.slice(0, 8)}... — invalid entry format, skipping`)
-          dbFail++
+          dbSkipped++
           continue
         }
         try {
-          const plaintext = await decrypt(oldKey, entry)
+          const plaintext = await decryptString(oldKey, entry)
           if (!DRY_RUN) {
-            const newEntry = await encrypt(newKey, plaintext)
-            await prisma.signingKey.update({
-              where: { id: key.id },
-              data: { encryptedPrivateKey: newEntry },
-            })
+            toUpdate.push({ id: key.id, newEntry: await encryptString(newKey, plaintext) })
           }
           console.log(`  ✅ ${key.id.slice(0, 8)}... — decrypted OK (${plaintext.length} chars)`)
           dbOk++
-        } catch (err) {
-          console.error(`  ❌ ${key.id.slice(0, 8)}... — FAILED:`, (err as Error).message)
-          dbFail++
+        } catch {
+          // old KDF failed — maybe already migrated?
+          try {
+            await decryptString(newKey, entry)
+            console.log(`  ⏭  ${key.id.slice(0, 8)}... — already PBKDF2, skipping`)
+            alreadyPbkdf2++
+          } catch {
+            console.warn(`  ⚠  ${key.id.slice(0, 8)}... — unknown KDF/secret, left untouched`)
+            dbSkipped++
+          }
         }
+      }
+
+      // Apply all DB re-encryptions atomically — a crash mid-way leaves either the
+      // old or the new KDF for every row, never a mixed state. The DB is written
+      // here, BEFORE the keystore file below: a crash in that window leaves DB
+      // new-PBKDF2 but keystore old-SHA-256, which the new code can't decrypt
+      // (ensureKeys' sync is guarded by has(), so stale keystore entries are never
+      // overwritten from DB). Re-running this script recovers — keystore entries
+      // are still old-KDF and get migrated; DB rows are detected already-PBKDF2.
+      // (Keystore-first was rejected: the DB is the durable source of truth for
+      // Vercel cold starts, so it must be migrated before the ephemeral keystore.)
+      if (!DRY_RUN && toUpdate.length > 0) {
+        await prisma.$transaction(
+          toUpdate.map(({ id, newEntry }) =>
+            prisma.signingKey.update({
+              where: { id },
+              data: { encryptedPrivateKey: newEntry as unknown as Prisma.InputJsonValue },
+            }),
+          ),
+        )
+        console.log(`  Applied ${toUpdate.length} DB re-encryptions atomically`)
       }
     } finally {
       await prisma.$disconnect()
     }
 
-    if (dbFail > 0) {
-      console.error(`\nDB: ${dbOk} OK, ${dbFail} FAILED`)
+    console.log(`\nDB: ${dbOk} OK, ${dbSkipped} skipped`)
+  }
+
+  // Safety: if there is data but nothing was decryptable with EITHER the old or
+  // new KDF, SECRET_STORE_KEY is almost certainly wrong. Abort rather than
+  // silently "succeeding" — matches rotate-secret's hard abort. No data has been
+  // written yet (only a fresh salt, which is harmless and reused on the next
+  // correct run).
+  const totalDbRows = dbOk + dbSkipped
+  if (keystoreOk === 0 && dbOk === 0 && alreadyPbkdf2 === 0 && (entries.length > 0 || totalDbRows > 0)) {
+    console.error('\n❌ ABORT: no entries decrypted with either the old or new KDF.')
+    console.error('   SECRET_STORE_KEY is likely wrong. Nothing was migrated.')
+    process.exit(1)
+  }
+
+  // Any entry that failed BOTH KDFs is orphaned (encrypted under an unknown
+  // secret). Silently "completing" would leave that key un-decryptable with the
+  // new PBKDF2 key → signing breaks on restart. Fail fast unless --force.
+  if (keystoreSkipped > 0 || dbSkipped > 0) {
+    if (FORCE) {
+      console.warn(`\n⚠  ${keystoreSkipped + dbSkipped} orphaned entr${keystoreSkipped + dbSkipped === 1 ? 'y' : 'ies'} left untouched (--force).`)
     } else {
-      console.log(`\nDB: ${dbOk} OK`)
+      console.error('\n❌ ABORT: some entries could not be decrypted with either KDF.')
+      console.error(`   Keystore skipped: ${keystoreSkipped}; DB skipped: ${dbSkipped}.`)
+      console.error('   These entries are encrypted under an unknown secret — investigate before migrating.')
+      console.error('   Pass --force to migrate only the decryptable entries and leave orphans untouched.')
+      process.exit(1)
     }
   }
 
   // 4. Write results
   if (DRY_RUN) {
-    console.log(`\n🔍 Dry run complete. Keystore: ${keystoreOk} OK, ${keystoreFail} failed.`)
-    if (keystoreFail > 0) process.exit(1)
+    console.log(`\n🔍 Dry run complete. Keystore: ${keystoreOk} to migrate, ${keystoreSkipped} skipped.`)
     console.log('Run without --dry-run to apply migration.')
     return
   }
 
-  if (keystoreFail > 0) {
-    console.error('\n❌ Some keystore entries failed to decrypt. Aborting.')
-    console.error('   Fix the failing entries before retrying.')
-    process.exit(1)
+  if (keystoreOk === 0 && dbOk === 0) {
+    console.log('\nNothing to migrate — no keystore or DB entries were decryptable with the old KDF.')
+    return
   }
 
   // Backup original keystore
   const bak = KEYSTORE_PATH + '.bak'
   console.log(`\nBacking up keystore → ${bak}`)
-  await copyFile(KEYSTORE_PATH, bak)
+  await copyFile(KEYSTORE_PATH, bak).catch((err) => {
+    console.warn(`  ⚠  Keystore backup failed (${(err as Error).message}) — continuing without ${bak}`)
+  })
 
   // Write updated keystore
   console.log('Writing updated keystore...')
   await writeFile(KEYSTORE_PATH, JSON.stringify(store, null, 2))
-
-  // Write salt file
-  console.log(`Writing salt → ${SALT_PATH}`)
-  await writeFile(SALT_PATH, bytesToHex(salt) + '\n')
 
   console.log('\n✅ Migration complete.')
   console.log('   Deploy the updated keystore.ts code now.')

@@ -12,51 +12,17 @@ import { resolve } from 'node:path'
 import { errorResponse } from '../http/errors'
 import { rateLimiter } from '../http/rate-limiter'
 import type { DbClient } from '../db'
+import { Prisma } from '../generated/prisma/client'
+import { derivePbkdf2Key, decryptString, encryptString, hexToBytes } from '../crypto/aes-gcm'
+import type { EncryptedEntry } from '../crypto/aes-gcm'
 
-const PBKDF2_ITERATIONS = 600_000
-
-function hexToBytes(hex: string): Uint8Array {
-  return new Uint8Array([...Buffer.from(hex, 'hex')])
-}
-function bytesToBase64(bytes: ArrayBuffer | Uint8Array): string {
-  return Buffer.from(new Uint8Array(bytes)).toString('base64')
-}
-function base64ToBytes(b64: string): Uint8Array {
-  return new Uint8Array([...Buffer.from(b64, 'base64')])
-}
-
-interface StoreEntry {
-  ciphertext: string
-  iv: string
-}
-
+/** Old KDF: SHA-256(SECRET) → raw AES-256-GCM key (legacy, pre-PBKDF2). */
 async function oldDeriveKey(secret: string): Promise<CryptoKey> {
   const hasher = new Bun.CryptoHasher('sha256')
   hasher.update(secret)
   const hashHex = hasher.digest('hex') as string
   return crypto.subtle.importKey('raw', hexToBytes(hashHex),
     { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'])
-}
-
-async function newDeriveKey(secret: string, salt: Uint8Array): Promise<CryptoKey> {
-  const keyMaterial = await crypto.subtle.importKey('raw',
-    new TextEncoder().encode(secret), 'PBKDF2', false, ['deriveKey'])
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
-    keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'])
-}
-
-async function decrypt(key: CryptoKey, entry: StoreEntry): Promise<string> {
-  const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: base64ToBytes(entry.iv) }, key, base64ToBytes(entry.ciphertext))
-  return new TextDecoder().decode(plaintext)
-}
-
-async function encrypt(key: CryptoKey, plaintext: string): Promise<StoreEntry> {
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv }, key, new TextEncoder().encode(plaintext))
-  return { ciphertext: bytesToBase64(ciphertext), iv: bytesToBase64(iv) }
 }
 
 export function createKdfMigrationRoutes() {
@@ -75,7 +41,7 @@ export function createKdfMigrationRoutes() {
 
       const secret = process.env.SECRET_STORE_KEY
       if (!secret) {
-        return c.json(errorResponse('NOT_CONFIGURED', 'SECRET_STORE_KEY not set'), 500)
+        return c.json(errorResponse('INTERNAL_ERROR', 'SECRET_STORE_KEY not set'), 500)
       }
 
       // Read committed salt
@@ -90,47 +56,55 @@ export function createKdfMigrationRoutes() {
       console.log('→ Running KDF migration (DB only)...')
       const salt = hexToBytes(saltHex)
       const oldKey = await oldDeriveKey(secret)
-      const newKey = await newDeriveKey(secret, salt)
+      const newKey = await derivePbkdf2Key(secret, salt)
 
       const prisma = c.get('prisma')
       const keys = await prisma.signingKey.findMany({
-        where: { encryptedPrivateKey: { not: null } },
+        where: { encryptedPrivateKey: { not: Prisma.DbNull } },
         select: { id: true, encryptedPrivateKey: true },
       })
 
       let ok = 0
+      let already = 0
       let fail = 0
       const errors: string[] = []
 
       for (const key of keys) {
-        const entry = key.encryptedPrivateKey as StoreEntry | null
+        const entry = key.encryptedPrivateKey as EncryptedEntry | null
         if (!entry?.ciphertext || !entry?.iv) {
           fail++
           errors.push(`${key.id.slice(0, 8)}: invalid format`)
           continue
         }
         try {
-          const plaintext = await decrypt(oldKey, entry)
-          const newEntry = await encrypt(newKey, plaintext)
+          const plaintext = await decryptString(oldKey, entry)
+          const newEntry = await encryptString(newKey, plaintext)
           await prisma.signingKey.update({
             where: { id: key.id },
-            data: { encryptedPrivateKey: newEntry },
+            data: { encryptedPrivateKey: newEntry as unknown as Prisma.InputJsonValue },
           })
           ok++
-        } catch (err) {
-          fail++
-          errors.push(`${key.id.slice(0, 8)}: ${(err as Error).message}`)
+        } catch {
+          // Old KDF failed — the row may already be under PBKDF2 from a prior run.
+          try {
+            await decryptString(newKey, entry)
+            already++
+          } catch {
+            fail++
+            errors.push(`${key.id.slice(0, 8)}: unknown KDF/secret`)
+          }
         }
       }
 
       const result = {
         success: fail === 0,
         message: fail === 0
-          ? `Migration complete: ${ok} keys re-encrypted with PBKDF2`
-          : `Partial migration: ${ok} OK, ${fail} FAILED`,
+          ? `Migration complete: ${ok} keys re-encrypted with PBKDF2${already > 0 ? `, ${already} already migrated` : ''}`
+          : `Partial migration: ${ok} OK, ${already} already migrated, ${fail} FAILED`,
         saltPrefix: saltHex.slice(0, 16) + '...',
         total: keys.length,
         ok,
+        already,
         fail,
         errors: errors.length > 0 ? errors : undefined,
       }
