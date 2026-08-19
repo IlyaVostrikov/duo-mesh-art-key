@@ -6,6 +6,7 @@ import type { ProvenanceTransferService } from '../services/provenance-transfer.
 import type { SigningService } from '../services/signing.service'
 import type { ApiErrorCode } from '@duo-mesh/contracts'
 import type { DbClient } from '../db'
+import { isUniqueConstraintOn } from '../db-errors'
 import { errorResponse } from '../http/errors'
 import type { StatusCode } from 'hono/utils/http-status'
 import { TransparencyLogService } from '../services/transparency-log.service'
@@ -154,13 +155,10 @@ export function createTransferRoutes() {
         if (err instanceof TransactionError) {
           return c.json(errorResponse(err.code, err.message), err.status as StatusCode)
         }
-        // P2002 unique constraint violation = concurrent transfer race
-        if (
-          err instanceof Error &&
-          'code' in err &&
-          err.code === 'P2002' &&
-          (err as { meta?: { target?: unknown } }).meta?.target === 'artKeyId'
-        ) {
+        // P2002 on the (artKeyId, sequence) unique index = concurrent transfer
+        // race. The composite target never equals the scalar 'artKeyId', so this
+        // must match the driver-specific composite shape (see db-errors.ts).
+        if (isUniqueConstraintOn(err, 'ProvenanceRecord', ['artKeyId', 'sequence'])) {
           return c.json(
             errorResponse('CONFLICT', 'Another transfer was processed concurrently. Please retry.'),
             409,

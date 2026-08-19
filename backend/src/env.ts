@@ -54,6 +54,7 @@ const envSchema = z.object({
   SPACES_ACCESS_KEY_ID: optionalStringSchema,
   SPACES_SECRET_ACCESS_KEY: optionalStringSchema,
   SECRET_STORE_KEY: z.string().min(32).default('dev-secret-store-key-change-in-production-!!!'),
+  DATA_DIR: optionalStringSchema,
   TSA_URL: z.string().url().optional(),
   UPLOAD_MAX_3D_BYTES: z.coerce.number().int().positive().default(100 * 1024 * 1024),
   UPLOAD_MAX_IMAGE_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),

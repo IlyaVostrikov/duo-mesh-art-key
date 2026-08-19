@@ -105,12 +105,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       accessToken,
       isBootstrapping,
       isAuthenticated: Boolean(meQuery.data?.user),
+      api,
       register,
       login,
       logout,
       refreshToken,
     }),
-    [accessToken, isBootstrapping, login, logout, meQuery.data?.user, refreshToken, register],
+    [accessToken, api, isBootstrapping, login, logout, meQuery.data?.user, refreshToken, register],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -35,6 +35,7 @@ import { FeaturedService } from './services/featured.service'
 import { AdminService } from './services/admin.service'
 import { SaleService } from './services/sale.service'
 import { FollowService } from './services/follow.service'
+import { CollectionService } from './services/collection.service'
 import { InquiryService } from './services/inquiry.service'
 import { UploadService } from './services/upload.service'
 import { ProvenanceTransferService } from './services/provenance-transfer.service'
@@ -43,6 +44,7 @@ import { createArtworkRoutes } from './routes/artworks'
 import { createHallRoutes } from './routes/halls'
 import { createArtKeyRoutes } from './routes/art-keys'
 import { createFollowRoutes } from './routes/follows'
+import { createCollectionRoutes } from './routes/collection'
 import { createSearchRoutes } from './routes/search'
 import { createInquiryRoutes } from './routes/inquiries'
 import { createUploadRoutes } from './routes/uploads'
@@ -68,6 +70,7 @@ type AppBindings = {
     adminService: AdminService
     saleService: SaleService
     followService: FollowService
+    collectionService: CollectionService
     inquiryService: InquiryService
     uploadService: UploadService
     signingService: SigningService
@@ -95,7 +98,7 @@ function resolveDataDir(): string {
 
 export async function createApp({ env, prisma }: CreateAppOptions) {
   // ── Crypto infra ──
-  const dataDir = resolveDataDir()
+  const dataDir = env.DATA_DIR ?? resolveDataDir()
   mkdirSync(dataDir, { recursive: true })
 
   const keyStore = new KeyStore(
@@ -114,6 +117,7 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
   const adminService = new AdminService(prisma)
   const saleService = new SaleService(prisma)
   const followService = new FollowService(prisma)
+  const collectionService = new CollectionService(prisma)
   const inquiryService = new InquiryService(prisma)
   const transparencyLogService = new TransparencyLogService(prisma)
   const storageService = createStorageServiceFromEnv(env)
@@ -162,6 +166,7 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
     c.set('adminService', adminService)
     c.set('saleService', saleService)
     c.set('followService', followService)
+    c.set('collectionService', collectionService)
     c.set('inquiryService', inquiryService)
     c.set('transparencyLogService', transparencyLogService)
     c.set('uploadService', uploadService)
@@ -243,6 +248,7 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/halls', createHallRoutes())
   app.route('/art-keys', createArtKeyRoutes())
   app.route('/follows', createFollowRoutes())
+  app.route('/collection', createCollectionRoutes())
   app.route('/search', createSearchRoutes())
   app.route('/inquiries', createInquiryRoutes())
   app.route('/uploads', createUploadRoutes())

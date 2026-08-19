@@ -4,14 +4,15 @@ import { toArtworkDto, toArtworkPublicDto, toArtworkPublicDtoFull, type ArtworkD
 import { ArtKeyService } from './art-key.service'
 import type { SigningService } from './signing.service'
 import { NotFoundError, ForbiddenError } from '../http/errors'
+import { artworkCategorySchema, editionTypeSchema, mediaTypeSchema, artworkStatusSchema } from '@duo-mesh/contracts'
 
 /** Artwork statuses visible to unauthenticated users. */
-const PUBLIC_VISIBLE_STATUSES = ['LISTED', 'IN_EXHIBITION'] as const
+export const PUBLIC_VISIBLE_STATUSES = ['LISTED', 'IN_EXHIBITION'] as const
 
-const VALID_STATUSES = ['DRAFT', 'LISTED', 'IN_EXHIBITION', 'SOLD', 'ARCHIVED'] as const
-const VALID_CATEGORIES = ['DIGITAL', 'PHYSICAL', 'HYBRID'] as const
-const VALID_MEDIA_TYPES = ['IMAGE', 'VIDEO', '3D_MODEL', 'AUDIO'] as const
-const VALID_EDITION_TYPES = ['UNIQUE', 'LIMITED', 'OPEN'] as const
+const VALID_STATUSES = artworkStatusSchema.options
+const VALID_CATEGORIES = artworkCategorySchema.options
+const VALID_MEDIA_TYPES = mediaTypeSchema.options
+const VALID_EDITION_TYPES = editionTypeSchema.options
 const VALID_SORT = ['newest', 'oldest', 'price_asc', 'price_desc', 'popular'] as const
 
 function isVisibleToPublic(status: string): boolean {

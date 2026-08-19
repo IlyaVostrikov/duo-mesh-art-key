@@ -58,14 +58,15 @@ export class ArtKeyService {
     let platformSigningKeyId: string | null = null
 
     if (this.signingService) {
-      const artistKey = await this.signingService.getArtistActivePublicKey(artistId)
-      if (artistKey) {
-        const signed = await this.signingService.signProvRecord(genesisPayload, artistKey.keyId, 'ARTIST')
-        signature = signed.signature
-        signerPublicKey = signed.signerPublicKey
-        signerRole = 'ARTIST'
-        artistSigningKeyId = artistKey.keyId
-      }
+      // Never leave the genesis record signed platform-only: create the artist's
+      // key on first use if onboarding predates key generation (P1-5). Uses the
+      // non-retiring path so a concurrent first-use can't deactivate the winner.
+      const artistKey = await this.signingService.getOrCreateArtistKey(artistId)
+      const signed = await this.signingService.signProvRecord(genesisPayload, artistKey.keyId, 'ARTIST')
+      signature = signed.signature
+      signerPublicKey = signed.signerPublicKey
+      signerRole = 'ARTIST'
+      artistSigningKeyId = artistKey.keyId
 
       // Platform co-signature
       const platformKey = await this.signingService.getPlatformActivePublicKey()

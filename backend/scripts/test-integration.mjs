@@ -64,9 +64,9 @@ if (process.env.TEST_SKIP_DOCKER !== '1') {
     cwd: repositoryRoot,
     env,
   })
-  await waitForComposePostgres('postgres_test', 'web_app_demo_test', env)
+  await waitForComposePostgres('postgres_test', 'duo_mesh_test', env)
 }
 
 run('bun', ['run', 'prisma:generate'], { env })
 run('bun', ['run', 'prisma:deploy'], { env })
-run('bun', ['test', 'src/auth/auth.integration.test.ts'], { env })
+run('bun', ['test', 'src/auth/auth.integration.test.ts', 'src/services/collection.service.test.ts', 'src/services/signing.service.test.ts'], { env })
