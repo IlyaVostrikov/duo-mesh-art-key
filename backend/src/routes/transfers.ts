@@ -8,7 +8,7 @@ import type { ApiErrorCode } from '@duo-mesh/contracts'
 import type { DbClient } from '../db'
 import { isUniqueConstraintOn } from '../db-errors'
 import { errorResponse } from '../http/errors'
-import type { StatusCode } from 'hono/utils/http-status'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { TransparencyLogService } from '../services/transparency-log.service'
 
 const transferSchema = z.object({
@@ -103,11 +103,22 @@ export function createTransferRoutes() {
             throw new TransactionError('CONFLICT', 'Recipient is already the owner')
           }
 
-          // Get artist's signing key for the provenance record
+          // Get artist's signing key for the provenance record; fall back to the
+          // platform key when the artist has none configured.
           const artistSigningKey = await tx.signingKey.findFirst({
             where: { ownerType: 'ARTIST', ownerId: artKey.artwork.artistId, isActive: true },
             select: { id: true },
           })
+          const platformSigningKey = artistSigningKey
+            ? null
+            : await tx.signingKey.findFirst({
+                where: { ownerType: 'PLATFORM', isActive: true },
+                select: { id: true },
+              })
+          const signerKey = artistSigningKey ?? platformSigningKey
+          if (!signerKey) {
+            throw new TransactionError('INTERNAL_ERROR', 'No signing key available for provenance', 500)
+          }
 
           // Create provenance record
           const { record } = await provenanceTransferService.createTransfer(
@@ -118,7 +129,7 @@ export function createTransferRoutes() {
               toUserId,
               transferType: 'TRANSFER',
               notes,
-              signerKeyId: artistSigningKey?.id ?? null,
+              signerKeyId: signerKey.id,
               signerRole: artistSigningKey ? 'ARTIST' : 'PLATFORM',
             },
             tx as unknown as DbClient,
@@ -153,7 +164,7 @@ export function createTransferRoutes() {
         }, 200)
       } catch (err) {
         if (err instanceof TransactionError) {
-          return c.json(errorResponse(err.code, err.message), err.status as StatusCode)
+          return c.json(errorResponse(err.code, err.message), err.status)
         }
         // P2002 on the (artKeyId, sequence) unique index = concurrent transfer
         // race. The composite target never equals the scalar 'artKeyId', so this
@@ -176,7 +187,7 @@ class TransactionError extends Error {
   constructor(
     public code: ApiErrorCode,
     message: string,
-    public status: number = 409,
+    public status: ContentfulStatusCode = 409,
   ) {
     super(message)
     this.name = 'TransactionError'

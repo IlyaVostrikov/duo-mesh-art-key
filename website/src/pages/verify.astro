@@ -118,28 +118,19 @@ import PageFooter from "../components/PageFooter.astro";
     result.innerHTML = '<p style="font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;opacity:.5;padding:2rem 0;text-align:center">Проверка ключа...</p>'
 
     try {
-      const data = await window.api.artworks.verifyKey(code)
-      const s = data.status ?? 'unknown'
+      const data = await window.api.artKeys.verify(code)
 
-      if (s === 'unknown' || !data.artwork) {
-        result.innerHTML = `<div style="text-align:center;padding:clamp(24px,4vw,40px);border:1px solid color-mix(in oklab,var(--ink) 10%,transparent)">
-          <p style="font-family:var(--serif);font-size:1.3rem;margin-bottom:.5rem;opacity:.4">Не найдено</p>
-          <p style="font-family:var(--sans);font-size:.8rem;opacity:.5">Код ${escapeHtml(code)} не найден в реестре DUO MESH.<br>Проверьте правильность кода или обратитесь к художнику.</p>
-        </div>`
-        return
-      }
-
-      const isVerified = s === 'valid'
+      const isVerified = data.verified === true
       const statusLabel = isVerified ? 'Подлинно' : 'Целостность нарушена'
       const statusColor = isVerified ? '#155724' : '#7a1a1a'
       const statusBg = isVerified ? 'rgba(40,167,69,.08)' : 'rgba(220,53,69,.08)'
       const statusBorder = isVerified ? 'rgba(40,167,69,.2)' : 'rgba(220,53,69,.2)'
 
       const title = data.artwork?.title ?? '—'
-      const artist = data.artwork?.artist?.displayName ?? '—'
+      const artist = data.artist?.displayName ?? '—'
       const issued = data.artKey?.issuedAt ? new Date(data.artKey.issuedAt).toLocaleDateString('ru-RU') : '—'
       const hash = data.artKey?.integrityHash ?? '—'
-      const chainLen = data.chainLength ?? data.provenance?.length ?? 0
+      const chainLen = data.provenance?.length ?? 0
       const keyCode = data.artKey?.keyCode ?? code
 
       result.innerHTML = `
@@ -167,7 +158,15 @@ import PageFooter from "../components/PageFooter.astro";
           </div>
         </div>`
     } catch (err) {
-      result.innerHTML = `<p style="font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:#7a1a1a;text-align:center;padding:1.5rem 0">Ошибка загрузки: ${escapeHtml((err as Error).message)}</p>`
+      const msg = (err as Error).message ?? ''
+      if (msg.includes('404')) {
+        result.innerHTML = `<div style="text-align:center;padding:clamp(24px,4vw,40px);border:1px solid color-mix(in oklab,var(--ink) 10%,transparent)">
+          <p style="font-family:var(--serif);font-size:1.3rem;margin-bottom:.5rem;opacity:.4">Не найдено</p>
+          <p style="font-family:var(--sans);font-size:.8rem;opacity:.5">Код ${escapeHtml(code)} не найден в реестре DUO MESH.<br>Проверьте правильность кода или обратитесь к художнику.</p>
+        </div>`
+        return
+      }
+      result.innerHTML = `<p style="font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:#7a1a1a;text-align:center;padding:1.5rem 0">Ошибка загрузки: ${escapeHtml(msg)}</p>`
     }
   })
 

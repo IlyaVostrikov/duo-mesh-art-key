@@ -9,6 +9,11 @@ export const apiErrorCodeSchema = z.enum([
   'VALIDATION_ERROR',
   'RATE_LIMITED',
   'INTERNAL_ERROR',
+  'NOT_IMPLEMENTED',
+  'NOT_CONFIGURED',
+  'DELETE_FAILED',
+  'ALREADY_REVOKED',
+  'PDF_GENERATION_FAILED',
 ])
 
 export const apiErrorSchema = z.object({

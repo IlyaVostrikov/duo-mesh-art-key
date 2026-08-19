@@ -8,7 +8,7 @@ import { secureHeaders } from 'hono/secure-headers'
 const isVercel = Boolean(process.env.VERCEL)
 
 // Bun-only: serveStatic for local uploads; on Vercel, uploads go via S3/Spaces
-let serveStatic: ReturnType<typeof import('hono/bun').serveStatic> | null = null
+let serveStatic: typeof import('hono/bun').serveStatic | null = null
 if (!isVercel) {
   try {
     const bunMod = await import('hono/bun')

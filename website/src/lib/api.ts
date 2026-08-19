@@ -36,7 +36,7 @@ export interface ArtworkPublic {
 export interface ArtworkList { artworks: ArtworkPublic[]; total: number; page: number; pageSize: number }
 export interface ArtistList { artists: ArtistPublic[]; total: number; page: number; pageSize: number }
 export interface HallPublic { id: string; slug: string; title: string; description: string | null; coverImageUrl: string | null; theme: string | null; isPublished: boolean; viewCount: number; artist: { id: string; displayName: string | null; avatarUrl: string | null }; artworks: { id: string; title: string; images: string[]; category: string; price: string | null; currency: string; status: string }[] }
-export interface ArtKeyVerification { artKey: { keyCode: string; ownerKey: string; artwork: { id: string; title: string; artistName: string | null } }; provenance: { transferType: string; toOwnerName: string | null; createdAt: string }[]; isValid: boolean; currentOwner: string | null }
+export interface ArtKeyVerification { artKey: { keyCode: string; ownerKey: string; integrityHash: string; issuedAt: string }; artwork: { title: string } | null; artist: { displayName: string | null } | null; provenance: { transferType: string; toOwnerName: string | null; createdAt: string }[]; verified: boolean; currentOwner: string | null }
 export interface SearchResult { artworks: { id: string; title: string; artistName: string | null; images: string[]; category: string; price: string | null }[]; artists: { id: string; displayName: string | null; avatarUrl: string | null; hallSlug: string | null }[]; total: number; page: number }
 
 export const api = {
