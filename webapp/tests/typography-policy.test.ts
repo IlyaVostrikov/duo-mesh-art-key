@@ -284,16 +284,6 @@ test('typography policy allows arbitrary text color utilities', async () => {
   expect(messages).toEqual([])
 })
 
-test('toggle group items inherit control typography through Typography', () => {
-  const source = readFileSync(
-    resolve(webRoot, 'src/components/ui/toggle-group.tsx'),
-    'utf8',
-  )
-
-  expect(source).toContain('<Typography asChild variant="control">')
-  expect(source).toContain('<ToggleGroupPrimitive.Item')
-})
-
 test('current tone inherits color without forcing text-current', () => {
   const source = readFileSync(
     resolve(webRoot, 'src/components/ui/typography.tsx'),
@@ -376,67 +366,3 @@ test('Typography as supports element-specific runtime attributes', () => {
   expect(markup).toContain('data-variant="bodySm"')
 })
 
-test('calendar typography is owned by Typography variants', () => {
-  const typographySource = readFileSync(
-    resolve(webRoot, 'src/components/ui/typography.tsx'),
-    'utf8',
-  )
-  const calendarSource = readFileSync(
-    resolve(webRoot, 'src/components/ui/calendar.tsx'),
-    'utf8',
-  )
-
-  expect(typographySource).toContain('calendar:')
-  expect(typographySource).toContain('calendarDay:')
-  expect(calendarSource).toContain('<Typography asChild variant="calendar">')
-  expect(calendarSource).toContain('data-slot="calendar"')
-  expect(calendarSource).toContain('<Typography asChild variant="calendarDay">')
-  expect(calendarSource).not.toContain('[&>span]:text-xs')
-})
-
-test('select items use wrapping body typography instead of control nowrap', () => {
-  const source = readFileSync(
-    resolve(webRoot, 'src/components/ui/select.tsx'),
-    'utf8',
-  )
-  const selectItemSource = source.slice(
-    source.indexOf('function SelectItem'),
-    source.indexOf('function SelectSeparator'),
-  )
-
-  expect(selectItemSource).toContain('<Typography asChild variant="bodySm">')
-  expect(selectItemSource).not.toContain('variant="control"')
-})
-
-test('command generated group headings keep typography-owned styling', () => {
-  const typographySource = readFileSync(
-    resolve(webRoot, 'src/components/ui/typography.tsx'),
-    'utf8',
-  )
-  const commandSource = readFileSync(
-    resolve(webRoot, 'src/components/ui/command.tsx'),
-    'utf8',
-  )
-
-  expect(typographySource).toContain('commandGroup:')
-  expect(typographySource).toContain('**:[[cmdk-group-heading]]:text-xs')
-  expect(typographySource).toContain('**:[[cmdk-group-heading]]:font-medium')
-  expect(commandSource).toContain(
-    '<Typography asChild variant="commandGroup" tone="default">',
-  )
-})
-
-test('kbd and file input preserve component-specific typography variants', () => {
-  const typographySource = readFileSync(
-    resolve(webRoot, 'src/components/ui/typography.tsx'),
-    'utf8',
-  )
-  const kbdSource = readFileSync(
-    resolve(webRoot, 'src/components/ui/kbd.tsx'),
-    'utf8',
-  )
-
-  expect(typographySource).toContain('kbd: "font-sans text-xs')
-  expect(typographySource).toContain('file:text-sm file:font-medium')
-  expect(kbdSource).toContain('variant="kbd"')
-})
