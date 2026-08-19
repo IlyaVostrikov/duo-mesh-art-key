@@ -51,7 +51,7 @@ export class SigningService {
         if (entry && !existing.encryptedPrivateKey) {
           await this.prisma.signingKey.update({
             where: { id: existing.id },
-            data: { encryptedPrivateKey: entry },
+            data: { encryptedPrivateKey: entry as any },
           })
         }
       } else if (existing.encryptedPrivateKey) {
@@ -87,19 +87,19 @@ export class SigningService {
       if (entry) {
         await this.prisma.signingKey.update({
           where: { id: key.id },
-          data: { encryptedPrivateKey: entry },
+          data: { encryptedPrivateKey: entry as any },
         })
       }
     }
 
     // 3. Sync all keys from DB into the keystore (cold-start recovery)
-    const dbKeys = await this.prisma.signingKey.findMany({
-      where: { encryptedPrivateKey: { not: null } },
-      select: { id: true, encryptedPrivateKey: true },
-    })
+    //    Uses raw SQL — Prisma JSONB columns don't accept { not: null } in where filters.
+    const dbKeys = await this.prisma.$queryRawUnsafe<Array<{ id: string; encrypted_private_key: unknown }>>(
+      `SELECT id, encrypted_private_key FROM signing_keys WHERE encrypted_private_key IS NOT NULL`,
+    )
     for (const dbKey of dbKeys) {
       if (!(await this.keyStore.has(dbKey.id))) {
-        await this.keyStore.setEntry(dbKey.id, dbKey.encryptedPrivateKey as unknown as StoreEntry)
+        await this.keyStore.setEntry(dbKey.id, dbKey.encrypted_private_key as unknown as StoreEntry)
       }
     }
 
@@ -132,7 +132,7 @@ export class SigningService {
     if (entry) {
       await this.prisma.signingKey.update({
         where: { id: key.id },
-        data: { encryptedPrivateKey: entry },
+        data: { encryptedPrivateKey: entry as any },
       })
     }
 
