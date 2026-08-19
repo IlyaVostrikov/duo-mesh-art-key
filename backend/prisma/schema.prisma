@@ -308,7 +308,7 @@ model ProvenanceRecord {
   signingKeyId    String?      @map("signing_key_id") @db.Uuid
   notes           String?      @db.Text
   createdAt       DateTime     @default(now()) @map("created_at")
-  occurredAt      DateTime     @default(now()) @map("occurred_at")
+  occurredAt      DateTime     @default(now()) @map("occurred_at") @db.Timestamptz
 
   artwork    Artwork     @relation(fields: [artworkId], references: [id], onDelete: Cascade, map: "provenance_artwork_id_fkey")
   artKey     ArtKey      @relation(fields: [artKeyId], references: [id], onDelete: Cascade, map: "provenance_art_key_id_fkey")
@@ -432,6 +432,7 @@ model Collection {
   collector Collector          @relation(fields: [collectorId], references: [id], onDelete: Cascade, map: "collections_collector_id_fkey")
   items     CollectionArtwork[]
 
+  @@unique([collectorId, title], map: "collections_collector_id_title_key")
   @@index([collectorId], map: "collections_collector_id_idx")
   @@map("collections")
 }
