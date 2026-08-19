@@ -1,0 +1,53 @@
+id,severity,area,title,status,depends_on
+P0-01,P0,provenance,"Signed and verified timestamps differ",OPEN,
+P0-02,P0,export,"Export replaces signed owner IDs with names",OPEN,P0-01
+P0-03,P0,key-management,"Private key matches pinned verifier trust root",OPEN,
+P0-04,P0,secrets,"Production accepts known SECRET_STORE_KEY placeholder",OPEN,
+P0-05,P0,storage-integrity,"Backend trusts client-provided file hashes",OPEN,
+P0-06,P0,website-security,"Stored XSS through innerHTML",OPEN,
+P0-07,P0,website-routing,"Dynamic pages generate only dummy view path",OPEN,
+P0-08,P0,website-contract,"Verify page calls wrong method and response shape",OPEN,
+P0-09,P0,website-contract,"Hall page reads missing images field",OPEN,
+P0-10,P0,storage-authorization,"Download and delete lack object ownership checks",OPEN,
+P0-11,P0,serverless-storage,"Cold-start fallback keeps leading slash",OPEN,P0-10
+P0-12,P0,purchase,"Sale and ownership complete without payment confirmation",OPEN,
+P0-13,P0,concurrency,"Concurrent transfers can fork provenance",OPEN,P0-01
+P0-14,P0,retention,"Hard delete cascades through immutable history",OPEN,
+P1-01,P1,transactions,"Artwork and ArtKey issuance is not atomic",OPEN,P0-01
+P1-02,P1,verification,"Missing proof may still be treated as valid",OPEN,P0-01
+P1-03,P1,key-rotation,"Historical records use current active key",OPEN,P0-01
+P1-04,P1,database,"Runtime ALTER TABLE and fail-open startup",OPEN,
+P1-05,P1,cleanup,"Cleanup deletes by age without DB reference check",OPEN,P0-10
+P1-06,P1,zip,"Unbounded unzip and partial-file leaks",OPEN,P0-10
+P1-07,P1,uploads,"Conflicting size limits and ZIP behavior",OPEN,P0-05
+P1-08,P1,visibility,"Draft archived and unpublished visibility is inconsistent",OPEN,
+P1-09,P1,auth,"Auth rate limiter path does not match mounted routes",OPEN,
+P1-10,P1,routing,"Transparency route has duplicated prefix",OPEN,
+P1-11,P1,sessions,"Most guards do not enforce session revocation",OPEN,
+P1-12,P1,abuse,"Public inquiry endpoint lacks abuse protection",OPEN,P1-08
+P1-13,P1,validation,"Invalid enum filters can produce 500",OPEN,
+P1-14,P1,analytics,"Internal lookups increment public view count",OPEN,
+P1-15,P1,seo,"Astro public content is client-rendered",OPEN,P0-07
+P1-16,P1,navigation,"Production registration CTA points to localhost",OPEN,
+P1-17,P1,contracts,"Website has two drifting API clients",OPEN,P0-08
+P1-18,P1,contracts,"Webapp bypasses shared API client and contracts",OPEN,
+P1-19,P1,build,"Committed serverless bundle can drift from sources",OPEN,
+P1-20,P1,dependencies,"Backend does not declare direct fflate dependency",OPEN,
+P1-21,P1,dependencies,"Build script does not declare esbuild",OPEN,
+P1-22,P1,ci,"CI does not run on default master branch",OPEN,
+P1-23,P1,tests,"Backend auth test misses await and uses wrong path",OPEN,P1-22
+P1-24,P1,e2e,"Webapp auth E2E targets obsolete UI",OPEN,P1-22
+P1-25,P1,tests,"Verifier tests are omitted from root suite",OPEN,P1-22
+P1-26,P1,e2e,"Website lacks route contract and XSS tests",OPEN,P0-06
+P2-01,P2,docs,"Root README still describes template",OPEN,
+P2-02,P2,docs,"Deployment docs do not reflect current infrastructure",OPEN,
+P2-03,P2,docs,"Local database names are inconsistent",OPEN,
+P2-04,P2,naming,"Refresh cookie retains template name",OPEN,
+P2-05,P2,environment,"Website local development can fall back to production API",OPEN,
+P2-06,P2,performance,"GET requests add unnecessary JSON Content-Type",OPEN,
+P2-07,P2,product,"Saved page is a permanent visible stub",OPEN,
+P2-08,P2,ux,"Following optimistic delete ignores failed response",OPEN,
+P2-09,P2,dependencies,"Astro Node adapter is installed but not configured",OPEN,P0-07
+P2-10,P2,architecture,"Website and webapp duplicate public surfaces",OPEN,
+P2-11,P2,crypto,"Canonical JSON is not recursively canonical",OPEN,P0-01
+P2-12,P2,transparency,"Transparency log has no external anchor",OPEN,P0-13
