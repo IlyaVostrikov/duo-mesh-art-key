@@ -202,8 +202,24 @@ function m(ctx: Ctx, text: string, x: number, y: number, size: number, ink?: Ink
 function sc(ctx: Ctx, text: string, y: number, size: number, ink?: Ink) { s(ctx, text, ctx.x + (ctx.w - ctx.f.sans.widthOfTextAtSize(text, size)) / 2, y, size, ink) }
 function mc(ctx: Ctx, text: string, y: number, size: number, ink?: Ink) { m(ctx, text, ctx.x + (ctx.w - ctx.f.mono.widthOfTextAtSize(text, size)) / 2, y, size, ink) }
 
-function textBlockHeight(font: PDFFont, size: number): number {
-  return font.heightAtSize(size)
+function fitSize(font: PDFFont, text: string, maxWidth: number, baseSize: number, minSize = 6): number {
+  let size = baseSize
+  while (size > minSize && font.widthOfTextAtSize(text, size) > maxWidth) size -= 0.5
+  return size
+}
+
+function wrapLines(ctx: Ctx, text: string, size: number, maxWidth: number): string[] {
+  const lines: string[] = []
+  let line = ''
+  for (const w of text.split(' ')) {
+    const test = line ? `${line} ${w}` : w
+    if (ctx.f.sans.widthOfTextAtSize(test, size) > maxWidth && line) {
+      lines.push(line)
+      line = w
+    } else { line = test }
+  }
+  if (line) lines.push(line)
+  return lines
 }
 
 // ─── Page shell ───
@@ -250,11 +266,15 @@ const FETCH_TIMEOUT_MS = 15_000
 
 async function loadPosterImage(doc: PDFDocument, url: string | null | undefined) {
   if (!url) return null
+  // Posters are stored as root-relative paths (/assets/posters/*) and served by the
+  // webapp, not the backend — resolve them against the webapp origin before fetching.
+  const base = CERTIFICATE_BASE.replace(/\/+$/, '')
+  const absoluteUrl = url.startsWith('/') ? `${base}${url}` : url
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
-    const res = await fetch(url, { signal: controller.signal })
-    if (!res.ok) { console.warn('[cert-pdf] poster fetch failed:', res.status, url.slice(0, 80)); return null }
+    const res = await fetch(absoluteUrl, { signal: controller.signal })
+    if (!res.ok) { console.warn('[cert-pdf] poster fetch failed:', res.status, absoluteUrl.slice(0, 80)); return null }
     const buf = Buffer.from(await res.arrayBuffer())
     if (buf.length < 64) { console.warn('[cert-pdf] poster too small:', buf.length); return null }
     if (buf[0] === 0x89 && buf[1] === 0x50) return await doc.embedPng(buf)
@@ -263,7 +283,8 @@ async function loadPosterImage(doc: PDFDocument, url: string | null | undefined)
       console.warn('[cert-pdf] WebP not supported by pdf-lib')
       return null
     }
-    return await doc.embedPng(buf)
+    console.warn('[cert-pdf] unsupported poster format (not PNG/JPG) — rendering placeholder:', absoluteUrl.slice(0, 80))
+    return null
   } catch (e) { console.warn('[cert-pdf] poster load error:', e); return null }
   finally { clearTimeout(timer) }
 }
@@ -295,8 +316,8 @@ function drawTitle(ctx: Ctx) {
   mc(ctx, 'Доказуемая подлинность произведения', ctx.y, 7.5, I3)
   ctx.gap(16)
   sc(ctx, 'Сертификат', ctx.y, 22)
-  sc(ctx, 'подлинности', ctx.y - 28, 22)
-  sc(ctx, 'Certificate of Authenticity', ctx.y - 52, 9, I3)
+  sc(ctx, 'подлинности', ctx.y - 30, 22)
+  sc(ctx, 'Certificate of Authenticity', ctx.y - 64, 9, I3)
   ctx.gap(60); ctx.gap(16); hl(ctx); ctx.gap(8)
 }
 
@@ -350,7 +371,8 @@ async function drawBody(
   let ry = y0
   function reg(lab: string, val: string, valSize: number, muted = false) {
     m(ctx, lab, c2, ry, 7.5, I3)
-    s(ctx, val, c2, ry - 12, valSize, muted ? I3 : I1)
+    const fit = fitSize(ctx.f.sans, val, c2w, valSize, 8)
+    s(ctx, val, c2, ry - 12, fit, muted ? I3 : I1)
     ry -= 36
     if (ry > fy + 14) ln(ctx, c2, ry + 8, c2 + c2w, ry + 8, 0.5, IS)
   }
@@ -380,16 +402,19 @@ function drawCrypto(ctx: Ctx, keyCode: string, hash: string) {
   page.drawCircle({ x: kx + 12, y: ky + 7, size: 12, borderColor: C.onNoir, borderWidth: 1.5, opacity: 0.85 })
   ln(ctx, kx + 15, ky + 9, kx + 22, ky + 3, 1.5, { c: C.onNoir, o: 0.85 })
 
-  m(ctx, keyCode, lx + 34, y0 - 44, 14, ON)
-
-  const dx = x + w * 0.44
+  const dx = x + w * 0.5
   ln(ctx, dx, y0 - bh + 16, dx, y0 - 16, 0.75, ONH)
+
+  const keyX = lx + 34
+  const keySize = fitSize(ctx.f.mono, keyCode, dx - keyX - 14, 14, 9)
+  m(ctx, keyCode, keyX, y0 - 44, keySize, ON)
 
   const hx = dx + 20
   m(ctx, 'SHA-256 Integrity Hash', hx, y0 - 8, 7.5, ON3)
   const split = 36
-  m(ctx, hash.slice(0, split), hx, y0 - 30, 9, ON)
-  m(ctx, hash.slice(split),     hx, y0 - 46, 9, ON)
+  const hashSize = fitSize(ctx.f.mono, hash.slice(0, split), x + w - hx - 4, 9, 6)
+  m(ctx, hash.slice(0, split), hx, y0 - 30, hashSize, ON)
+  m(ctx, hash.slice(split),     hx, y0 - 46, hashSize, ON)
 
   ctx.y = y0 - bh - 16
   ctx.gap(26)
@@ -412,29 +437,22 @@ function drawGuarantee(ctx: Ctx) {
     ['03 — Проверка',    'Подтверждение за секунды',          'Один скан кода ниже открывает живую provenance-историю работы. Подлинность можно проверить в любой точке мира, не доверяя на слово.'],
   ]
 
-  let maxH = 0
+  let minLy = y0
   for (let i = 0; i < 3; i++) {
     const cx = ctx.x + i * (cw + cg)
     const [num, h3, body] = cols[i]
 
     m(ctx, num, cx, y0, 7.5, I3)
-    s(ctx, h3, cx, y0 - 14, 12, I1)
 
-    let line = '', ly = y0 - 32
-    for (const w of body.split(' ')) {
-      const test = line ? `${line} ${w}` : w
-      if (ctx.f.sans.widthOfTextAtSize(test, 10) > cw && line) {
-        s(ctx, line, cx, ly, 10, I2)
-        line = w
-        ly -= 16
-      } else { line = test }
-    }
-    if (line) s(ctx, line, cx, ly, 10, I2)
-    const colH = y0 - (ly - textBlockHeight(ctx.f.sans, 10))
-    if (colH > maxH) maxH = colH
+    let ly = y0 - 16
+    for (const l of wrapLines(ctx, h3, 12, cw)) { s(ctx, l, cx, ly, 12, I1); ly -= 17 }
+    ly -= 6
+    for (const l of wrapLines(ctx, body, 10, cw)) { s(ctx, l, cx, ly, 10, I2); ly -= 16 }
+
+    if (ly < minLy) minLy = ly
   }
 
-  ctx.gap(maxH + 14)
+  ctx.gap((y0 - minLy) + 14)
   ctx.gap(20); hl(ctx); ctx.gap(8)
 }
 
@@ -464,7 +482,7 @@ function drawProvenance(ctx: Ctx) {
     m(ctx, n.hash, nx - fu.mono.widthOfTextAtSize(n.hash, 7) / 2, ty + 18, 7, I3)
     page.drawCircle({ x: nx, y: ty, size: R, borderColor: C.ink, borderWidth: 1.4, opacity: n.live ? 1 : O.i3, color: C.sheet })
     s(ctx, n.role, nx - fu.sans.widthOfTextAtSize(n.role, 10.5) / 2, ty - R - 12, 10.5, I1)
-    s(ctx, n.sub,  nx - fu.sans.widthOfTextAtSize(n.sub, 8)  / 2, ty - R - 24, 8, I3)
+    s(ctx, n.sub,  nx - fu.sans.widthOfTextAtSize(n.sub, 8)  / 2, ty - R - 30, 8, I3)
   }
 
   ctx.gap(60)
@@ -504,7 +522,7 @@ function drawSignatures(ctx: Ctx, artistName: string) {
   ln(ctx, x, sy, x + colW, sy, 1, I1)
   m(ctx, 'Художник / Artist', x, sy - 10, 7.5, I3)
   s(ctx, artistName,          x, sy - 22, 11, I1)
-  m(ctx, 'genesis-ключ · автор', x, sy - 34, 8, I3)
+  m(ctx, 'genesis-ключ · автор', x, sy - 38, 8, I3)
 
   const sx2 = x + colW + 20 + (w - 2 * colW - 40) / 2
   const scy = sy - 8
@@ -519,7 +537,7 @@ function drawSignatures(ctx: Ctx, artistName: string) {
   ln(ctx, rx - colW, sy, rx, sy, 1, I1)
   m(ctx, 'Реестр / Registry', rx - fu.mono.widthOfTextAtSize('Реестр / Registry', 7.5), sy - 10, 7.5, I3)
   s(ctx, 'DUO MESH',           rx - fu.sans.widthOfTextAtSize('DUO MESH', 11),           sy - 22, 11, I1)
-  m(ctx, 'provenance authority', rx - fu.mono.widthOfTextAtSize('provenance authority', 8), sy - 34, 8, I3)
+  m(ctx, 'provenance authority', rx - fu.mono.widthOfTextAtSize('provenance authority', 8), sy - 38, 8, I3)
 
   ctx.gap(60)
 }
@@ -538,7 +556,7 @@ function drawClosing(ctx: Ctx) {
   m(ctx, '© 2026 DUO MESH', x + w - fu.mono.widthOfTextAtSize('© 2026 DUO MESH', 8), ctx.y, 8, I3)
 }
 
-async function generateCertificatePdfWithPdfLib(result: CertPdfInput): Promise<Buffer> {
+export async function generateCertificatePdfWithPdfLib(result: CertPdfInput): Promise<Buffer> {
   const { artKey, artwork, artist } = result
   const verifyUrl = `${VERIFY_BASE}/verify/${encodeURIComponent(artKey.keyCode)}`
   const issuedDate = new Date(artKey.issuedAt).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })
