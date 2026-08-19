@@ -27,6 +27,16 @@ bun-debug.log*
 # Local uploads
 backend/uploads/
 
+# Encrypted keystore at rest + rotation backups + salt (never commit)
+backend/data/keystore.json*
+backend/data/keystore.salt
+
+# Large hero/scan media artifacts (not for git)
+public/
+website/public/hero/
+Help ai agents/*.zip
+Help ai agents/*extracted/
+
 # Prisma generated client
 backend/src/generated/prisma/
 backend/.prisma-generate.lock
@@ -39,3 +49,6 @@ backend/.prisma-generate.lock
 *.swo
 .vercel
 .env*
+
+# Knowledge graph (generated, large files)
+graphify-out/

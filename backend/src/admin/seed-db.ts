@@ -4,6 +4,7 @@
  */
 import crypto from 'node:crypto'
 import type { DbClient } from '../db'
+import { hashPassword } from '../auth/passwords'
 
 // ── Helpers ──
 
@@ -42,12 +43,6 @@ function computeRecordHash(record: {
   occurredAt: string; prevRecordHash: string
 }): string {
   return sha256hex(canonicalJSON(record))
-}
-
-function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16)
-  const key = crypto.scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 })
-  return `$2b$10$${salt.toString('base64').replace(/=+$/, '')}${key.toString('base64').replace(/=+$/, '')}`
 }
 
 const YEAR = new Date().getFullYear()
@@ -222,10 +217,10 @@ export async function runSeed(prisma: DbClient): Promise<{ artworks: number; art
   for (const c of COLLECTORS) {
     await prisma.user.upsert({
       where: { email: c.email },
-      update: { displayName: c.displayName },
+      update: { displayName: c.displayName, passwordHash: await hashPassword('password123') },
       create: {
         email: c.email,
-        passwordHash: hashPassword('password123'),
+        passwordHash: await hashPassword('password123'),
         displayName: c.displayName,
         role: 'COLLECTOR',
       },
@@ -237,10 +232,10 @@ export async function runSeed(prisma: DbClient): Promise<{ artworks: number; art
 
     const user = await prisma.user.upsert({
       where: { email: artistData.email },
-      update: { displayName: artistData.displayName, role: 'ARTIST' },
+      update: { displayName: artistData.displayName, role: 'ARTIST', passwordHash: await hashPassword('password123') },
       create: {
         email: artistData.email,
-        passwordHash: hashPassword('password123'),
+        passwordHash: await hashPassword('password123'),
         displayName: artistData.displayName,
         role: 'ARTIST',
         bio: `${artistData.bioRu}\n\n---\n\n${artistData.bioEn}`,

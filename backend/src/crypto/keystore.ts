@@ -1,4 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
+import { derivePbkdf2Key, encryptString, decryptString, hexToBytes } from './aes-gcm'
+import type { EncryptedEntry } from './aes-gcm'
 
 /**
  * Encrypted private-key store backed by a JSON file on disk.
@@ -9,12 +11,7 @@ import { readFile, writeFile } from 'node:fs/promises'
  * Roadmap: non-custodial (keys in browser, server only stores public keys).
  */
 
-const PBKDF2_ITERATIONS = 600_000
-
-export interface StoreEntry {
-  ciphertext: string // base64
-  iv: string // base64
-}
+export type StoreEntry = EncryptedEntry
 
 interface StoreFile {
   [keyId: string]: StoreEntry
@@ -28,38 +25,31 @@ export class KeyStore {
   constructor(
     private storePath: string,
     private secretStoreKey: string,
+    private saltHexOverride?: string,
   ) {}
 
   private async deriveKey(): Promise<CryptoKey> {
+    const saltHex = this.saltHexOverride ?? (await this.readSaltFile())
+    return derivePbkdf2Key(this.secretStoreKey, hexToBytes(saltHex.trim()))
+  }
+
+  private async readSaltFile(): Promise<string> {
     const saltPath = this.storePath.replace(/\.json$/, '.salt')
-    const saltHex = await readFile(saltPath, 'utf-8').catch(() => {
+    return readFile(saltPath, 'utf-8').catch(() => {
       throw new Error(
         `Keystore salt file not found at ${saltPath}. ` +
         'Run the KDF migration script first: bun run scripts/migrate-kdf.ts',
       )
     })
-    const salt = hexToBytes(saltHex.trim())
-
-    const keyMaterial = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(this.secretStoreKey),
-      'PBKDF2',
-      false,
-      ['deriveKey'],
-    )
-    return crypto.subtle.deriveKey(
-      { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
-      keyMaterial,
-      { name: 'AES-GCM', length: 256 },
-      false,
-      ['encrypt', 'decrypt'],
-    )
   }
 
   /** Serialize write operations to prevent interleaved load/save races. */
   private enqueueWrite<T>(fn: () => Promise<T>): Promise<T> {
     const next = this.writeLock.then(fn, fn)
-    this.writeLock = next.then(() => {}) as Promise<void>
+    // The lock chain must always resolve: a rejected op (e.g. missing key) must
+    // not leave `writeLock` as a rejected promise, which would surface as an
+    // unhandled rejection and poison subsequent queued writes.
+    this.writeLock = next.then(() => {}, () => {}) as Promise<void>
     return next
   }
 
@@ -67,6 +57,11 @@ export class KeyStore {
     if (this.encryptionKey) return this.encryptionKey
     this.encryptionKey = this.deriveKey()
     return this.encryptionKey
+  }
+
+  /** Pre-derive the encryption key so the first sign/verify doesn't block on PBKDF2. */
+  async warmKey(): Promise<void> {
+    await this.getKey()
   }
 
   private async load(): Promise<StoreFile> {
@@ -89,16 +84,7 @@ export class KeyStore {
     return this.enqueueWrite(async () => {
       const store = await this.load()
       const key = await this.getKey()
-      const iv = crypto.getRandomValues(new Uint8Array(12))
-      const ciphertext = await crypto.subtle.encrypt(
-        { name: 'AES-GCM', iv },
-        key,
-        new TextEncoder().encode(privateKeyHex),
-      )
-      store[keyId] = {
-        ciphertext: bytesToBase64(ciphertext),
-        iv: bytesToBase64(iv),
-      }
+      store[keyId] = await encryptString(key, privateKeyHex)
       await this.save()
     })
   }
@@ -109,12 +95,7 @@ export class KeyStore {
       const entry = store[keyId]
       if (!entry) throw new Error(`KeyStore: key ${keyId} not found`)
       const key = await this.getKey()
-      const plaintext = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: base64ToBytes(entry.iv) },
-        key,
-        base64ToBytes(entry.ciphertext),
-      )
-      return new TextDecoder().decode(plaintext)
+      return decryptString(key, entry)
     })
   }
 
@@ -145,18 +126,4 @@ export class KeyStore {
     const store = await this.load()
     return keyId in store
   }
-}
-
-// ── helpers ──
-
-function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
-  return new Uint8Array([...Buffer.from(hex, 'hex')])
-}
-
-function bytesToBase64(bytes: ArrayBuffer | Uint8Array): string {
-  return Buffer.from(new Uint8Array(bytes)).toString('base64')
-}
-
-function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
-  return new Uint8Array([...Buffer.from(b64, 'base64')])
 }

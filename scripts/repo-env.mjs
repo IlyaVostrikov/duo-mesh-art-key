@@ -10,7 +10,7 @@ export const defaultPostgresTestPort =
   process.env.POSTGRES_TEST_PORT ?? String(30000 + (Number.parseInt(repositoryHash.slice(0, 6), 16) % 20000))
 
 export function defaultTestDatabaseUrl(port = defaultPostgresTestPort) {
-  return `postgresql://superuser:superpassword@localhost:${port}/web_app_demo_test?schema=public`
+  return `postgresql://superuser:superpassword@localhost:${port}/duo_mesh_test?schema=public`
 }
 
 export function postgresPortFromDatabaseUrl(databaseUrl) {

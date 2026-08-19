@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FileUpload } from '@/components/ui/file-upload'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-import { apiBaseUrl } from '@/lib/api'
+import { apiBaseUrl, ApiRequestError } from '@/lib/api'
 import { uploadFile } from '@/lib/upload'
 
 const THEMES: { value: string; label: string }[] = [
@@ -51,13 +51,19 @@ export function DashboardHallSettings() {
     let cancelled = false
     setLoading(true)
 
-    fetch(`${apiBaseUrl}/api/artists/me`, {
-      headers: { Authorization: `Bearer ${auth.accessToken}` },
-    })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(r.status === 404 ? 'NO_PROFILE' : `HTTP ${r.status}`)
-        return r.json()
-      })
+    auth.api.requestJson<{
+      id: string
+      hall: {
+        id: string
+        slug: string
+        title: string
+        description: string | null
+        coverImageUrl: string | null
+        theme: string | null
+        isPublished: boolean
+        viewCount: number
+      } | null
+    }>('/api/artists/me')
       .then((artist) => {
         if (cancelled) return
         const h = artist.hall
@@ -93,11 +99,15 @@ export function DashboardHallSettings() {
           }
         }
       })
-      .catch((err) => { if (!cancelled) setError(err.message) })
+      .catch((err) => {
+        if (cancelled) return
+        if (err instanceof ApiRequestError && err.status === 404) setError('NO_PROFILE')
+        else setError(err instanceof Error ? err.message : String(err))
+      })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [auth.accessToken])
+  }, [auth.accessToken, auth.api])
 
   const uploadCover = async (file: File): Promise<string | null> => {
     const result = await uploadFile(file, auth.accessToken!)
@@ -127,15 +137,10 @@ export function DashboardHallSettings() {
       body.theme = theme
       body.isPublished = hall.isPublished
 
-      const res = await fetch(`${apiBaseUrl}/api/halls/${hall.slug}`, {
+      await auth.api.requestJson(`/api/halls/${hall.slug}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.accessToken!}` },
-        body: JSON.stringify(body),
+        body,
       })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.message ?? `HTTP ${res.status}`)
-      }
 
       // Update local state
       setHall({ ...hall, coverImageUrl, theme })

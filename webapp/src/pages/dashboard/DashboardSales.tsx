@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { useAuth } from '@/lib/use-auth'
-import { apiBaseUrl } from '@/lib/api'
 import { DashboardLayout } from './DashboardLayout'
 
 interface SaleRecord {
@@ -15,7 +14,7 @@ interface SaleRecord {
 }
 
 export function DashboardSales() {
-  const { accessToken } = useAuth()
+  const { accessToken, api } = useAuth()
   const [sales, setSales] = useState<SaleRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -24,17 +23,11 @@ export function DashboardSales() {
     if (!accessToken) return
     setLoading(true)
     setError(null)
-    fetch(`${apiBaseUrl}/api/sales/artist`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json()
-      })
+    api.requestJson<{ sales?: SaleRecord[] }>('/api/sales/artist')
       .then((data) => setSales(data.sales ?? []))
       .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка загрузки'))
       .finally(() => setLoading(false))
-  }, [accessToken])
+  }, [accessToken, api])
 
   const totalRevenue = sales
     .filter((s) => s.status === 'COMPLETED')

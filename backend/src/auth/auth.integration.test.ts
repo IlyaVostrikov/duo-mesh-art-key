@@ -1,4 +1,7 @@
-import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
 
 import { createApp } from '../app'
 import { createPrisma } from '../db'
@@ -9,6 +12,8 @@ const databaseUrl = process.env.TEST_DATABASE_URL
 const maybeDescribe = databaseUrl ? describe : describe.skip
 
 maybeDescribe('auth API integration', () => {
+  const dataDir = mkdtempSync(join(tmpdir(), 'duo-mesh-test-'))
+
   const env: AppEnv = {
     PORT: 3000,
     DATABASE_URL: databaseUrl!,
@@ -24,9 +29,14 @@ maybeDescribe('auth API integration', () => {
     SPACES_DOWNLOAD_URL_TTL_SECONDS: 300,
     SPACES_PUBLIC_CACHE_CONTROL: 'public, max-age=31536000, immutable',
     SECRET_STORE_KEY: 'test-secret-store-key-32-chars-min!!!',
+    DATA_DIR: dataDir,
   }
   const prisma = createPrisma(databaseUrl!)
-  const app = createApp({ env, prisma })
+  let app: Awaited<ReturnType<typeof createApp>>
+
+  beforeAll(async () => {
+    app = await createApp({ env, prisma })
+  })
 
   beforeEach(async () => {
     await prisma.authSession.deleteMany()
@@ -35,10 +45,11 @@ maybeDescribe('auth API integration', () => {
 
   afterAll(async () => {
     await prisma.$disconnect()
+    rmSync(dataDir, { recursive: true, force: true })
   })
 
   test('registers, reads me, refreshes, and logs out', async () => {
-    const register = await app.request('/api/auth/register', {
+    const register = await app.request('/auth/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,14 +68,14 @@ maybeDescribe('auth API integration', () => {
     expect(registerBody.accessToken).toBeString()
     expect(registerBody.refreshToken).toBeString()
 
-    const me = await app.request('/api/auth/me', {
+    const me = await app.request('/auth/me', {
       headers: {
         Authorization: `Bearer ${registerBody.accessToken}`,
       },
     })
     expect(me.status).toBe(200)
 
-    const refresh = await app.request('/api/auth/refresh', {
+    const refresh = await app.request('/auth/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -78,7 +89,7 @@ maybeDescribe('auth API integration', () => {
     expect(refreshBody.refreshToken).toBeString()
     expect(refreshBody.refreshToken).not.toBe(registerBody.refreshToken)
 
-    const staleRefresh = await app.request('/api/auth/refresh', {
+    const staleRefresh = await app.request('/auth/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -88,7 +99,7 @@ maybeDescribe('auth API integration', () => {
     })
     expect(staleRefresh.status).toBe(401)
 
-    const logout = await app.request('/api/auth/logout', {
+    const logout = await app.request('/auth/logout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -97,7 +108,7 @@ maybeDescribe('auth API integration', () => {
     })
     expect(logout.status).toBe(204)
 
-    const revokedRefresh = await app.request('/api/auth/refresh', {
+    const revokedRefresh = await app.request('/auth/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -109,7 +120,7 @@ maybeDescribe('auth API integration', () => {
   })
 
   test('allows only one concurrent refresh rotation for the same token', async () => {
-    const register = await app.request('/api/auth/register', {
+    const register = await app.request('/auth/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -123,7 +134,7 @@ maybeDescribe('auth API integration', () => {
     const registerBody = await register.json()
 
     const refreshRequests = await Promise.all([
-      app.request('/api/auth/refresh', {
+      app.request('/auth/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +142,7 @@ maybeDescribe('auth API integration', () => {
         },
         body: JSON.stringify({ refreshToken: registerBody.refreshToken }),
       }),
-      app.request('/api/auth/refresh', {
+      app.request('/auth/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +167,7 @@ maybeDescribe('auth API integration', () => {
   })
 
   test('web auth uses an HttpOnly refresh cookie instead of response body refresh token', async () => {
-    const register = await app.request('/api/auth/register', {
+    const register = await app.request('/auth/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -176,7 +187,7 @@ maybeDescribe('auth API integration', () => {
     expect(setCookie).toContain('HttpOnly')
     expect(setCookie).toContain('SameSite=Lax')
 
-    const refresh = await app.request('/api/auth/refresh', {
+    const refresh = await app.request('/auth/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -193,7 +204,7 @@ maybeDescribe('auth API integration', () => {
   })
 
   test('production web auth allows exact CORS origin and cross-site refresh cookie', async () => {
-    const productionApp = createApp({
+    const productionApp = await createApp({
       env: {
         ...env,
         CORS_ORIGINS: ['https://web.example.com'],
@@ -201,7 +212,7 @@ maybeDescribe('auth API integration', () => {
       },
       prisma,
     })
-    const register = await productionApp.request('/api/auth/register', {
+    const register = await productionApp.request('/auth/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -227,7 +238,7 @@ maybeDescribe('auth API integration', () => {
   })
 
   test('production cookie auth rejects untrusted refresh and logout origins', async () => {
-    const productionApp = createApp({
+    const productionApp = await createApp({
       env: {
         ...env,
         CORS_ORIGINS: ['https://web.example.com'],
@@ -235,7 +246,7 @@ maybeDescribe('auth API integration', () => {
       },
       prisma,
     })
-    const register = await productionApp.request('/api/auth/register', {
+    const register = await productionApp.request('/auth/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -249,7 +260,7 @@ maybeDescribe('auth API integration', () => {
     })
     const cookie = register.headers.get('set-cookie')!.split(';')[0]
 
-    const noOriginRefresh = await productionApp.request('/api/auth/refresh', {
+    const noOriginRefresh = await productionApp.request('/auth/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -262,7 +273,7 @@ maybeDescribe('auth API integration', () => {
     expect(noOriginRefresh.status).toBe(403)
     expect(noOriginBody.error.code).toBe('FORBIDDEN')
 
-    const untrustedLogout = await productionApp.request('/api/auth/logout', {
+    const untrustedLogout = await productionApp.request('/auth/logout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -276,7 +287,7 @@ maybeDescribe('auth API integration', () => {
     expect(untrustedLogout.status).toBe(403)
     expect(untrustedLogoutBody.error.code).toBe('FORBIDDEN')
 
-    const allowedRefresh = await productionApp.request('/api/auth/refresh', {
+    const allowedRefresh = await productionApp.request('/auth/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -290,10 +301,10 @@ maybeDescribe('auth API integration', () => {
   })
 
   test('guards me and returns stable validation errors', async () => {
-    const unauthorizedMe = await app.request('/api/auth/me')
+    const unauthorizedMe = await app.request('/auth/me')
     expect(unauthorizedMe.status).toBe(401)
 
-    const invalidRegister = await app.request('/api/auth/register', {
+    const invalidRegister = await app.request('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -315,20 +326,20 @@ maybeDescribe('auth API integration', () => {
       password: 'password123',
     }
 
-    await app.request('/api/auth/register', {
+    await app.request('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
 
-    const duplicate = await app.request('/api/auth/register', {
+    const duplicate = await app.request('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
     expect(duplicate.status).toBe(409)
 
-    const invalidLogin = await app.request('/api/auth/login', {
+    const invalidLogin = await app.request('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -346,12 +357,12 @@ maybeDescribe('auth API integration', () => {
     }
 
     const [first, second] = await Promise.all([
-      app.request('/api/auth/register', {
+      app.request('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       }),
-      app.request('/api/auth/register', {
+      app.request('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

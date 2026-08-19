@@ -3,7 +3,6 @@ import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/lib/use-auth'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { AnimatedCounter } from '@/components/motion/AnimatedCounter'
-import { apiBaseUrl } from '@/lib/api'
 import { UserAvatar } from '@/components/ui/user-avatar'
 
 interface FollowedArtist {
@@ -28,18 +27,14 @@ export function FollowingPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${apiBaseUrl}/api/follows`, {
-        headers: { Authorization: `Bearer ${auth.accessToken}` },
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
+      const data = await auth.api.requestJson<{ artists?: FollowedArtist[] }>('/api/follows')
       setArtists(data.artists ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
-  }, [auth.accessToken])
+  }, [auth.accessToken, auth.api])
 
   useEffect(() => {
     fetchFollowing()
@@ -50,10 +45,7 @@ export function FollowingPage() {
     // Optimistic remove
     setArtists((prev) => prev.filter((a) => a.id !== artistId))
     try {
-      await fetch(`${apiBaseUrl}/api/follows/${artistId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${auth.accessToken}` },
-      })
+      await auth.api.requestJson(`/api/follows/${artistId}`, { method: 'DELETE' })
     } catch {
       // Revert on failure
       fetchFollowing()

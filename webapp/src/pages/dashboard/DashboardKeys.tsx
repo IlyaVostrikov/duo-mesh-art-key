@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/use-auth'
-import { apiBaseUrl } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
@@ -29,27 +28,25 @@ export function DashboardKeys() {
     if (!auth.accessToken) return
     let cancelled = false
 
-    fetch(`${apiBaseUrl}/api/artists/me`, {
-      headers: { Authorization: `Bearer ${auth.accessToken}` },
-    })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        const artist = await r.json()
+    auth.api.requestJson<{ id: string; displayName: string | null }>('/api/artists/me')
+      .then(async (artist) => {
         if (cancelled) return
 
-        const keysResp = await fetch(`${apiBaseUrl}/api/public-keys/artist/${artist.id}`)
-        if (keysResp.ok) {
-          const keys = await keysResp.json()
-          if (!cancelled) setData({ ...artist, signingKeys: keys.keys ?? [] })
-        } else {
-          if (!cancelled) setData({ ...artist, signingKeys: [] })
+        try {
+          const keys = await auth.api.requestJson<{ keys?: ArtistKeys['signingKeys'] }>(
+            `/api/public-keys/artist/${artist.id}`,
+            { auth: false },
+          )
+          if (!cancelled) setData({ id: artist.id, displayName: artist.displayName ?? '', signingKeys: keys.keys ?? [] })
+        } catch {
+          if (!cancelled) setData({ id: artist.id, displayName: artist.displayName ?? '', signingKeys: [] })
         }
       })
-      .catch((err) => { if (!cancelled) setError(err.message) })
+      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : String(err)) })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [auth.accessToken])
+  }, [auth.accessToken, auth.api])
 
   return (
     <DashboardLayout>

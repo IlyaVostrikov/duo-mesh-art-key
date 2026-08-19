@@ -1,4 +1,7 @@
-import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
 
 import { createApp } from './app'
 import { createPrisma } from './db'
@@ -9,6 +12,8 @@ const databaseUrl = process.env.TEST_DATABASE_URL
 const maybeDescribe = databaseUrl ? describe : describe.skip
 
 maybeDescribe('contact-artist inquiry loop', () => {
+  const dataDir = mkdtempSync(join(tmpdir(), 'duo-mesh-test-'))
+
   const env: AppEnv = {
     PORT: 3000,
     DATABASE_URL: databaseUrl!,
@@ -24,9 +29,14 @@ maybeDescribe('contact-artist inquiry loop', () => {
     SPACES_DOWNLOAD_URL_TTL_SECONDS: 300,
     SPACES_PUBLIC_CACHE_CONTROL: 'public, max-age=31536000, immutable',
     SECRET_STORE_KEY: 'test-secret-store-key-32-chars-min!!!',
+    DATA_DIR: dataDir,
   }
   const prisma = createPrisma(databaseUrl!)
-  const app = createApp({ env, prisma })
+  let app: Awaited<ReturnType<typeof createApp>>
+
+  beforeAll(async () => {
+    app = await createApp({ env, prisma })
+  })
 
   let artistUserId: string
   let artistId: string
@@ -44,7 +54,7 @@ maybeDescribe('contact-artist inquiry loop', () => {
     await prisma.user.deleteMany()
 
     // Register artist user
-    const register = await app.request('/api/auth/register', {
+    const register = await app.request('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -94,11 +104,12 @@ maybeDescribe('contact-artist inquiry loop', () => {
     await prisma.authSession.deleteMany()
     await prisma.user.deleteMany()
     await prisma.$disconnect()
+    rmSync(dataDir, { recursive: true, force: true })
   })
 
   test('полный путь: submit → Inquiry → Notification → dashboard', async () => {
     // [2][3] Анонимный посетитель отправляет inquiry
-    const res = await app.request('/api/inquiries', {
+    const res = await app.request('/inquiries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -123,7 +134,7 @@ maybeDescribe('contact-artist inquiry loop', () => {
     expect(notif!.userId).toBe(artistUserId)
 
     // [5] Dashboard художника видит inquiry
-    const dash = await app.request('/api/inquiries', {
+    const dash = await app.request('/inquiries', {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
     expect(dash.status).toBe(200)

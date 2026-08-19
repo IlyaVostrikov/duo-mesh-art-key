@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.0 (2026-08-19)
+
+E2E audit remediation — crypto hardening, collection save/unsave, keystore test isolation.
+
+### Crypto & key management
+- PBKDF2 keystore (`aes-gcm.ts`, `keystore.ts`) with 600k-iteration key derivation
+- KDF migration, artist-key backfill, and secret-rotation scripts
+- Prisma P2002 unique-constraint detection helper (`db-errors.ts`)
+
+### Collection
+- Save/unsave artwork endpoints with title-uniqueness dedupe
+- Contracts + webapp `SaveButton` with gallery/collection wiring
+
+### Data & testing
+- `DATA_DIR` env override so integration tests use a temp keystore instead of polluting dev
+- Schema: signing-key `encryptedPrivateKey`, provenance + collection-title unique constraints
+
 ## 0.1.0 (2026-08-02)
 
 Security remediation — 27 fixes from full code audit.

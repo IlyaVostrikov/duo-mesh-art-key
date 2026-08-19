@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ArtworkCard, ArtworkCardSkeleton } from '@/components/artwork/ArtworkCard'
+import { SaveButton } from '@/components/SaveButton'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { FilterTab } from '@/components/ui/filter-tab'
 import { SearchField } from '@/components/ui/search-field'
 import { GalleryHeader } from '@/components/ui/gallery-header'
 import { assetUrl } from '@/lib/asset-url'
 import { apiBaseUrl } from '@/lib/api'
+import { useAuth } from '@/lib/use-auth'
 
 interface ArtworkItem {
   id: string
@@ -35,6 +37,7 @@ const MEDIA_FILTERS = [
 ]
 
 export function GalleryPage() {
+  const auth = useAuth()
   const [artworks, setArtworks] = useState<ArtworkItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -43,6 +46,7 @@ export function GalleryPage() {
   const [sort, setSort] = useState('newest')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
+  const [savedIds, setSavedIds] = useState<Set<string> | null>(null)
   const debounce = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const handleSearchChange = (value: string) => {
@@ -54,6 +58,24 @@ export function GalleryPage() {
   useEffect(() => {
     return () => clearTimeout(debounce.current)
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!auth.accessToken) {
+      setSavedIds(new Set())
+      return
+    }
+    auth.api.listSavedIds()
+      .then((data) => {
+        if (!cancelled) setSavedIds(new Set(data.artworkIds))
+      })
+      .catch(() => {
+        if (!cancelled) setSavedIds(new Set())
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [auth.accessToken, auth.api])
 
   const fetchArtworks = useCallback(async (media: string, sortBy: string, q: string) => {
     setLoading(true)
@@ -194,16 +216,33 @@ export function GalleryPage() {
         >
           {artworks.map((aw, i) => (
             <RevealOnScroll key={aw.id} direction="up" delay={i * 40}>
-              <ArtworkCard
-                id={aw.id}
-                title={aw.title}
-                artistName={aw.artist.displayName ?? 'Неизвестный художник'}
-                posterUrl={assetUrl(aw.posterUrl)}
-                mediaType={aw.mediaType}
-                price={aw.price}
-                currency={aw.currency}
-                status={aw.status}
-              />
+              <div style={{ position: 'relative' }}>
+                <ArtworkCard
+                  id={aw.id}
+                  title={aw.title}
+                  artistName={aw.artist.displayName ?? 'Неизвестный художник'}
+                  posterUrl={assetUrl(aw.posterUrl)}
+                  mediaType={aw.mediaType}
+                  price={aw.price}
+                  currency={aw.currency}
+                  status={aw.status}
+                />
+                {savedIds && (
+                  <SaveButton
+                    artworkId={aw.id}
+                    initialSaved={savedIds.has(aw.id)}
+                    style={{ position: 'absolute', bottom: '10px', right: '10px' }}
+                    onToggle={(saved) => {
+                      setSavedIds((prev) => {
+                        const next = new Set(prev ?? [])
+                        if (saved) next.add(aw.id)
+                        else next.delete(aw.id)
+                        return next
+                      })
+                    }}
+                  />
+                )}
+              </div>
             </RevealOnScroll>
           ))}
         </div>

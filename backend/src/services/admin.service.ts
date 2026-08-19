@@ -2,6 +2,7 @@ import type { DbClient } from '../db'
 import type { Prisma } from '../generated/prisma/client'
 import type { UserRole, ArtworkStatus } from '../generated/prisma/enums'
 import { ValidationError, NotFoundError, ForbiddenError } from '../http/errors'
+import { SAVED_COLLECTION_TITLE } from './collection.service'
 
 const VALID_ROLES: readonly UserRole[] = ['GUEST', 'ARTIST', 'COLLECTOR', 'ADMIN'] as const
 
@@ -92,7 +93,10 @@ export class AdminService {
     if (role === 'COLLECTOR') {
       await this.prisma.collector.upsert({
         where: { userId },
-        create: { userId },
+        create: {
+          userId,
+          collections: { create: { title: SAVED_COLLECTION_TITLE, isPublic: false } },
+        },
         update: {},
       })
     }

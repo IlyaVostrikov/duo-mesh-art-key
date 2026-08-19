@@ -12,6 +12,10 @@
   },
   "include": [
     "src/**/*.ts",
+    "scripts/migrate-kdf.ts",
+    "scripts/rotate-secret.ts",
+    "scripts/backfill-artist-keys.ts",
+    "scripts/migrate-kdf.test.ts",
     "prisma.config.ts"
   ]
 }

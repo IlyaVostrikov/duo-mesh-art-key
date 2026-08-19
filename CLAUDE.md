@@ -212,3 +212,54 @@
 - Include a concise suggested commit message when the change is ready.
 - For `Direct` or read-only `Review` tasks, compress the report to the relevant fields only.
 - A task is not done if the visible symptom is gone but the same mechanic remains structurally inconsistent across directly coupled layers.
+
+## Knowledge Graph (Graphify)
+
+This project maintains a code knowledge graph via Graphify (tree-sitter AST, fully local, no LLM).
+The graph at `graphify-out/graph.json` (2224 nodes, 4486 edges) is rebuilt by the git post-commit hook.
+Key concepts file: `INVARIANTS.md` — business invariants with explicit code references.
+
+On this machine the `graphify` launcher is not on PATH — use `python -m graphify` (the PreToolUse hooks already use the absolute exe path).
+
+Rules:
+- For codebase questions, first run `python -m graphify query "<question>"` when graphify-out/graph.json exists. Use `python -m graphify path "<A>" "<B>"` for relationships and `python -m graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `python -m graphify update .` to keep the graph current (AST-only, no API cost).
+
+### HARD REQUIREMENT — Pre-Change Dependency Check
+
+**NEVER edit any of these files without first running the corresponding graph query.** The graph is the only way to see the full blast radius of a change.
+
+| File | Required query before editing | Why |
+|---|---|---|
+| `backend/src/app.ts` | `python -m graphify explain "app.ts"` | Degree=90. Route assembly point; every route mounts here. |
+| `backend/src/http/errors.ts` | `python -m graphify explain "errors.ts"` | Degree=38. Every route uses `AppError`. |
+| `backend/src/db.ts` | `python -m graphify explain "db.ts"` | Degree=28. Prisma client; all services depend on it. |
+| `backend/src/env.ts` | `python -m graphify explain "env.ts"` | Degree=26. Runtime config entry point. |
+| `packages/contracts/src/index.ts` | `python -m graphify query "what depends on <schema>?"` | Degree=26. Zod schemas shared by backend and webapp. |
+| `packages/verifier/src/verify.ts` | `python -m graphify explain "verify.ts"` | Degree=20. Offline provenance verification; canonicalization + Ed25519 are DUPLICATED here and must stay byte-identical to backend crypto. |
+| `backend/src/crypto/keystore.ts` | `python -m graphify explain "keystore.ts"` | Degree=10. Custodial keys (AES-256-GCM + PBKDF2); active KDF-migration bug lives here. |
+| `backend/src/crypto/canonical.ts` | `python -m graphify explain "canonical.ts"` | Degree=8. Canonical JSON — byte-identical to the verifier copy. |
+
+**If `graphify-out/graph.json` is missing or stale** (commit doesn't match `git rev-parse HEAD`) — run `python -m graphify update .` first, then query the graph, then edit.
+
+### Graph out of date? Update it
+
+```bash
+python -m graphify update .                              # incremental (changed files only, ~2-5s, no API)
+python -m graphify extract . --code-only --force         # full rebuild if update doesn't help
+```
+
+### Other cases requiring a graph query
+
+- Before changing any shared TypeScript type or Zod schema
+- Before changing the Prisma schema
+- Before changing auth/session behavior
+- Before changing crypto/provenance (canonical, hash, sign, keystore, verifier)
+- Before adding an external integration
+
+### When the graph is NOT needed
+
+- Cosmetic/styles in webapp or website
+- Isolated feature that doesn't touch shared infrastructure
+- Purely additive routes/services

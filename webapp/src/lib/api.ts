@@ -7,6 +7,9 @@ import {
   refreshRequestSchema,
   refreshResponseSchema,
   registerRequestSchema,
+  saveArtworkResponseSchema,
+  savedArtworkListSchema,
+  savedIdsSchema,
   type AuthResponse,
   type LoginRequest,
   type LogoutRequest,
@@ -14,6 +17,9 @@ import {
   type RefreshRequest,
   type RefreshResponse,
   type RegisterRequest,
+  type SaveArtworkResponse,
+  type SavedArtworkListDto,
+  type SavedIdsDto,
 } from '@duo-mesh/contracts'
 import type { z } from 'zod'
 
@@ -26,7 +32,7 @@ type ApiClientOptions = {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
   body?: unknown
   auth?: boolean
   retryOnUnauthorized?: boolean
@@ -86,6 +92,34 @@ export class ApiClient {
     })
   }
 
+  saveArtwork(artworkId: string): Promise<SaveArtworkResponse> {
+    return this.request(`/api/collection/${artworkId}`, saveArtworkResponseSchema, {
+      method: 'POST',
+      auth: true,
+    })
+  }
+
+  unsaveArtwork(artworkId: string): Promise<SaveArtworkResponse> {
+    return this.request(`/api/collection/${artworkId}`, saveArtworkResponseSchema, {
+      method: 'DELETE',
+      auth: true,
+    })
+  }
+
+  getSaveStatus(artworkId: string): Promise<SaveArtworkResponse> {
+    return this.request(`/api/collection/${artworkId}`, saveArtworkResponseSchema, {
+      auth: true,
+    })
+  }
+
+  listSaved(): Promise<SavedArtworkListDto> {
+    return this.request('/api/collection', savedArtworkListSchema, { auth: true })
+  }
+
+  listSavedIds(): Promise<SavedIdsDto> {
+    return this.request('/api/collection/saved-ids', savedIdsSchema, { auth: true })
+  }
+
   async logout(input: LogoutRequest = {}) {
     const payload = logoutRequestSchema.parse(input)
     await this.rawRequest('/api/auth/logout', {
@@ -105,6 +139,15 @@ export class ApiClient {
       retryOnUnauthorized: false,
     }).catch(() => undefined)
     await this.options.onAuthExpired?.()
+  }
+
+  async requestJson<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
+    const response = await this.rawRequest(path, { auth: true, ...options })
+    try {
+      return (await response.json()) as T
+    } catch {
+      throw new ApiRequestError(response.status, 'PARSE_ERROR', 'Server returned invalid JSON')
+    }
   }
 
   private async request<TSchema extends z.ZodType>(
