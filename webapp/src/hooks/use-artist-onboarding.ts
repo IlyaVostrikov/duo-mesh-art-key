@@ -40,13 +40,8 @@ export function useArtistOnboarding() {
 
     setSubmitting(true)
     try {
-      // Upload avatar first if present
-      let avatarUrl: string | undefined
-      if (values.avatarFile) {
-        const result = await uploadFile(values.avatarFile, auth.accessToken!)
-        avatarUrl = result.url
-      }
-
+      // Create the profile first (no avatar). This upgrades the user's role
+      // GUEST → ARTIST, which is required before any upload can be authorized.
       const res = await fetch(`${apiBaseUrl}/api/artists`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.accessToken!}` },
@@ -56,7 +51,6 @@ export function useArtistOnboarding() {
           artistStatement: joinBilingual(values.statementRu, values.statementEn) || undefined,
           location: values.location?.trim() || undefined,
           websiteUrl: values.websiteUrl?.trim() || undefined,
-          avatarUrl,
         }),
       })
 
@@ -71,6 +65,22 @@ export function useArtistOnboarding() {
       }
 
       const artist: CreatedArtist = await res.json()
+
+      // Avatar is now authorized (role is ARTIST). Attach it, but don't fail
+      // onboarding if the storage upload fails — the profile is already created
+      // and the avatar can be re-added later.
+      if (values.avatarFile) {
+        try {
+          const result = await uploadFile(values.avatarFile, auth.accessToken!)
+          await fetch(`${apiBaseUrl}/api/artists/${artist.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.accessToken!}` },
+            body: JSON.stringify({ avatarUrl: result.url }),
+          })
+        } catch (err) {
+          console.warn('Avatar upload failed during onboarding; profile created without it', err)
+        }
+      }
 
       // Role was upgraded to ARTIST — refresh token so step 2 has the new role
       await auth.refreshToken()

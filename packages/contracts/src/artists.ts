@@ -56,6 +56,7 @@ export const updateArtistSchema = z.object({
   location: z.string().trim().max(200).optional(),
   bio: z.string().trim().max(2000).optional(),
   socialLinks: z.record(z.string(), z.string()).optional(),
+  avatarUrl: z.string().trim().optional(),
 })
 
 export type ArtistDto = z.infer<typeof artistSchema>
