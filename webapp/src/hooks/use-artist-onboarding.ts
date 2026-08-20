@@ -82,8 +82,14 @@ export function useArtistOnboarding() {
         }
       }
 
-      // Role was upgraded to ARTIST — refresh token so step 2 has the new role
-      await auth.refreshToken()
+      // Refresh the session now that the role is upgraded. Non-fatal: the
+      // profile is already created and every request re-reads the role from
+      // the DB, so a failed refresh must not fail onboarding.
+      try {
+        await auth.refreshToken()
+      } catch (err) {
+        console.warn('Session refresh after onboarding failed', err)
+      }
 
       return artist
     } finally {
