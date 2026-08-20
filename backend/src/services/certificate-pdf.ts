@@ -16,6 +16,8 @@ export interface CertPdfInput {
   artKey:  { keyCode: string; integrityHash: string; issuedAt: string }
   artwork: { title: string; medium: string | null; year: number | null; posterUrl?: string | null }
   artist:  { displayName: string }
+  currentOwner?: string | null
+  provenance?: Array<{ recordHash: string; sequence: number; fromOwnerName: string | null; toOwnerName: string | null; createdAt: string }>
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -141,6 +143,7 @@ function resolveFontDir(): string {
   const candidates = [
     resolve(here, '../../assets/fonts'),
     resolve(here, '../assets/fonts'),
+    resolve(process.cwd(), 'backend/assets/fonts'),
     resolve(process.cwd(), 'assets/fonts'),
   ]
   for (const c of candidates) {
@@ -208,12 +211,12 @@ function fitSize(font: PDFFont, text: string, maxWidth: number, baseSize: number
   return size
 }
 
-function wrapLines(ctx: Ctx, text: string, size: number, maxWidth: number): string[] {
+function wrapLines(ctx: Ctx, text: string, size: number, maxWidth: number, font = ctx.f.sans): string[] {
   const lines: string[] = []
   let line = ''
   for (const w of text.split(' ')) {
     const test = line ? `${line} ${w}` : w
-    if (ctx.f.sans.widthOfTextAtSize(test, size) > maxWidth && line) {
+    if (font.widthOfTextAtSize(test, size) > maxWidth && line) {
       lines.push(line)
       line = w
     } else { line = test }
@@ -325,17 +328,22 @@ async function drawBody(
   ctx: Ctx,
   artwork: { title: string; medium: string | null; year: number | null; posterUrl?: string | null },
   artist: { displayName: string },
+  currentOwner: string | null | undefined,
   issuedDate: string,
   doc: PDFDocument,
 ) {
   const { page, f: fu, x, w } = ctx
   const colGap = 24
   const c1 = w * 0.46
-  const c2 = c1 + colGap
-  const c2w = w - c2
+  // c2 is an absolute page coordinate. Keep the registry beside the poster
+  // instead of starting it inside the poster frame.
+  const c2 = x + c1 + colGap
+  const c2w = w - c1 - colGap
 
   const y0 = ctx.y
-  const fh = 220
+  // Keep the fallback geometry aligned with the HTML certificate: the artwork
+  // frame is square, even when the source poster is landscape or portrait.
+  const fh = Math.min(220, c1)
   const fx = x
   const fy = y0 - fh
 
@@ -366,23 +374,36 @@ async function drawBody(
   fcm(fx + c1, fy, -1,  1)
 
   const plate = `«${artwork.title}» · ${artist.displayName} · ${artwork.year ?? '2026'}`
-  mc(ctx, plate, fy - 24, 8.5, I3)
+  const plateLines = wrapLines(ctx, plate, 8.5, c1, ctx.f.mono).slice(0, 2)
+  plateLines.forEach((line, index) => {
+    const plateSize = fitSize(ctx.f.mono, line, c1, 8.5, 6.5)
+    m(ctx, line, fx + (c1 - ctx.f.mono.widthOfTextAtSize(line, plateSize)) / 2, fy - 24 - index * 12, plateSize, I3)
+  })
 
   let ry = y0
   function reg(lab: string, val: string, valSize: number, muted = false) {
     m(ctx, lab, c2, ry, 7.5, I3)
     const fit = fitSize(ctx.f.sans, val, c2w, valSize, 8)
-    s(ctx, val, c2, ry - 12, fit, muted ? I3 : I1)
-    ry -= 36
+    const valueInk = muted ? I3 : I1
+    const needsWrap = ctx.f.sans.widthOfTextAtSize(val, fit) > c2w
+    if (needsWrap && val.includes(' ')) {
+      const lines = wrapLines(ctx, val, Math.min(valSize, 11), c2w).slice(0, 2)
+      lines.forEach((line, index) => s(ctx, line, c2, ry - 12 - index * 15, Math.min(valSize, 11), valueInk))
+      ry -= 36 + (lines.length - 1) * 15
+    } else {
+      s(ctx, val, c2, ry - 12, fit, valueInk)
+      ry -= 36
+    }
     if (ry > fy + 14) ln(ctx, c2, ry + 8, c2 + c2w, ry + 8, 0.5, IS)
   }
   reg('Работа / Artwork',                  artwork.title,     16)
   reg('Художник / Artist',                 artist.displayName, 13)
-  reg('Владелец / Owner',                  'имя приобретателя', 12, true)
+  reg('Владелец / Owner',                  currentOwner ?? artist.displayName, 12, true)
   reg('Тираж · техника / Edition · medium', `${artwork.medium ?? 'Единственный экземпляр'} · 1 / 1`, 12, true)
   reg('Выдан / Issued',                    issuedDate,         12)
 
-  ctx.y = fy - 40
+  // Account for wrapped registry values before placing the next block.
+  ctx.y = Math.min(fy - 40, ry - 16)
   ctx.gap(24)
 }
 
@@ -456,7 +477,12 @@ function drawGuarantee(ctx: Ctx) {
   ctx.gap(20); hl(ctx); ctx.gap(8)
 }
 
-function drawProvenance(ctx: Ctx) {
+function drawProvenance(
+  ctx: Ctx,
+  records: CertPdfInput['provenance'] = [],
+  artistName = 'Художник',
+  currentOwner: string | null | undefined,
+) {
   const { page, f: fu, x, w } = ctx
   ctx.gap(22)
   mc(ctx, 'Цепочка владения / Provenance', ctx.y, 7.5, I3)
@@ -465,14 +491,27 @@ function drawProvenance(ctx: Ctx) {
   const tw = Math.min(w * 0.82, 480)
   const tx0 = x + (w - tw) / 2
   const ty = ctx.y - 14
+  const genesis = records[0]
+  const lastTransfer = records.length > 1 ? records[records.length - 1] : null
+  const shortHash = (value: string | undefined, fallback: string) => value ? `${value.slice(0, 10)}…` : fallback
 
   ln(ctx, tx0 + tw * 0.07, ty, tx0 + tw * 0.93, ty, 0.75, IH)
 
   const ns = tw / 2
   const nodes = [
-    { hash: '0x1a · genesis', role: 'Художник',        sub: 'iv · выпуск ключа',    live: true },
-    { hash: '0x9c · 2026',    role: 'Приобретатель',    sub: 'текущий владелец',     live: true },
-    { hash: '— · открыто',     role: 'Будущая передача', sub: 'цепочка продолжится', live: false },
+    {
+      hash: shortHash(genesis?.recordHash, '— · genesis'),
+      role: 'Художник',
+      sub: `${artistName} · выпуск ключа`,
+      live: Boolean(genesis),
+    },
+    {
+      hash: lastTransfer ? shortHash(lastTransfer.recordHash, '—') : '— · ожидает',
+      role: lastTransfer ? 'Владелец' : 'Приобретатель',
+      sub: lastTransfer?.toOwnerName ?? currentOwner ?? 'ожидает передачи',
+      live: Boolean(lastTransfer),
+    },
+    { hash: '— · открыто', role: 'Будущая передача', sub: 'цепочка продолжится', live: false },
   ]
 
   for (let i = 0; i < 3; i++) {
@@ -482,7 +521,8 @@ function drawProvenance(ctx: Ctx) {
     m(ctx, n.hash, nx - fu.mono.widthOfTextAtSize(n.hash, 7) / 2, ty + 18, 7, I3)
     page.drawCircle({ x: nx, y: ty, size: R, borderColor: C.ink, borderWidth: 1.4, opacity: n.live ? 1 : O.i3, color: C.sheet })
     s(ctx, n.role, nx - fu.sans.widthOfTextAtSize(n.role, 10.5) / 2, ty - R - 12, 10.5, I1)
-    s(ctx, n.sub,  nx - fu.sans.widthOfTextAtSize(n.sub, 8)  / 2, ty - R - 30, 8, I3)
+    const subSize = fitSize(fu.sans, n.sub, ns - 18, 8, 6.5)
+    s(ctx, n.sub, nx - fu.sans.widthOfTextAtSize(n.sub, subSize) / 2, ty - R - 30, subSize, I3)
   }
 
   ctx.gap(60)
@@ -570,14 +610,18 @@ export async function generateCertificatePdfWithPdfLib(result: CertPdfInput): Pr
   const c1 = makeCtx(s1.page, f, s1.startY)
   drawMasthead(c1)
   drawTitle(c1)
-  await drawBody(c1, artwork, artist, issuedDate, doc)
+  await drawBody(c1, artwork, artist, result.currentOwner, issuedDate, doc)
+  // Keep the dark key block in the lower third of the sheet, matching the
+  // print CSS. If unusually long metadata consumes more space, the normal
+  // flow wins and the block moves up instead of colliding with the body.
+  c1.y = Math.min(c1.y, SHEET_BOT + 194)
   drawCrypto(c1, artKey.keyCode, artKey.integrityHash)
 
   // Page 2: Guarantee → Provenance → Verify → Signatures → Closing
   const s2 = makeSheet(doc)
   const c2 = makeCtx(s2.page, f, s2.startY)
   drawGuarantee(c2)
-  drawProvenance(c2)
+  drawProvenance(c2, result.provenance, artist.displayName, result.currentOwner)
   await drawVerify(c2, verifyUrl)
   drawSignatures(c2, artist.displayName)
   drawClosing(c2)

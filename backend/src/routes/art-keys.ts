@@ -28,6 +28,8 @@ export function createArtKeyRoutes() {
       const pdf = await generateCertificatePdf({
         ...result,
         artist: { displayName: result.artist.displayName ?? 'Unknown Artist' },
+        currentOwner: result.currentOwner,
+        provenance: result.provenance,
       })
       return new Response(new Uint8Array(pdf), {
         headers: {

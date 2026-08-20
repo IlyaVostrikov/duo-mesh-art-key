@@ -297,6 +297,11 @@
   align-items: start;
 }
 
+.cert-artwork-frame,
+.cert-registry {
+  min-width: 0;
+}
+
 .cert-artwork-frame {
   display: flex;
   flex-direction: column;
@@ -304,6 +309,7 @@
 }
 
 .cert-poster {
+  display: block;
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
@@ -364,6 +370,7 @@
   font-size: 13px;
   color: var(--cert-ink);
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .cert-reg-value--muted {
