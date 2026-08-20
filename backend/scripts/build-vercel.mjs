@@ -20,6 +20,10 @@ import { spawnSync } from 'node:child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const backendRoot = resolve(__dirname, '..')
+// Always resolve the bundle from the backend root. esbuild embeds module
+// paths in its generated wrapper; using the caller cwd made the committed
+// bundle differ depending on whether the script ran from root or backend.
+const bundleRoot = backendRoot
 const apiDir = resolve(backendRoot, 'api')
 const entry = resolve(backendRoot, 'src/vercel-entry.ts')
 const outfile = resolve(apiDir, 'index.js')
@@ -64,8 +68,9 @@ console.log('→ Bundling backend for Vercel...')
 
 try {
   await build({
-    entryPoints: [entry],
-    outfile,
+    absWorkingDir: bundleRoot,
+    entryPoints: ['src/vercel-entry.ts'],
+    outfile: 'api/index.js',
     bundle: true,
     platform: 'node',
     target: 'node20',

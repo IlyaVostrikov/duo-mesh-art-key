@@ -74,6 +74,24 @@ describe('StorageService', () => {
     // Content-Length can never drift into a SignatureDoesNotMatch.
     expect(uploadUrl.searchParams.get('X-Amz-SignedHeaders')).not.toContain('content-length')
     expect(uploadUrl.searchParams.get('X-Amz-SignedHeaders')).toBe('host')
+    expect(uploadUrl.searchParams.get('x-amz-acl')).toBe('public-read')
+  })
+
+  test('creates private upload URLs without public ACL or cache headers', async () => {
+    const service = new StorageService(config)
+    const upload = await service.createUploadUrl({
+      key: 'uploads/private.bin',
+      contentType: 'application/octet-stream',
+      byteSize: 64,
+      visibility: 'private',
+    })
+    const uploadUrl = new URL(upload.uploadUrl)
+
+    expect(upload.headers).toEqual({ 'Content-Type': 'application/octet-stream' })
+    expect(upload.publicUrl).toBeUndefined()
+    expect(uploadUrl.searchParams.get('x-amz-acl')).toBe('private')
+    expect(uploadUrl.searchParams.get('X-Amz-SignedHeaders')).toBe('host')
+    expect(uploadUrl.searchParams.get('X-Amz-SignedHeaders')).not.toContain('content-length')
   })
 
   test('enforces upload size and TTL limits before signing', async () => {

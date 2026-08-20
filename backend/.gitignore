@@ -1,3 +1,6 @@
 .vercel
 .env*
-api/
+# The serverless entrypoint is committed because Vercel deploys it as-is.
+# Ignore other local API artifacts without hiding the tracked bundle.
+api/*
+!api/index.js
