@@ -76,7 +76,7 @@ Default direct-upload flow:
 
 1. Authenticated client asks the backend for an upload URL with intended file metadata.
 2. Backend validates role, size, content type, owner record, and target key.
-3. Backend returns a presigned PUT URL, browser-settable upload headers, and a `contentLength` value when the upload size is part of the signature.
+3. Backend returns a presigned PUT URL, browser-settable upload headers, and the declared `contentLength` (informational — the signature does not depend on it).
 4. Client uploads directly to Spaces.
 5. Client calls the app API to confirm the uploaded object key.
 6. Backend stores object metadata in PostgreSQL if the product needs ownership, deletion, audit, or private access rules.
@@ -95,13 +95,13 @@ await fetch(upload.uploadUrl, {
 })
 ```
 
-The presigned PUT URL validates the requested upload intent before signing. If the product must strictly enforce actual stored file size, content type, or image dimensions, verify the uploaded object before confirming it in the app database. When the backend returns a `contentLength` value, the uploaded body must match that exact byte size even if the browser or HTTP client sets the request header automatically.
+The presigned PUT URL validates the requested upload intent before signing. The signature does not include `content-length`, so the storage provider does not compare the browser's actual body size against the declared size. Size is enforced at the backend validation step (`assertByteSize`) against the declared `byteSize`. If the product must strictly enforce the actual stored file size, content type, or image dimensions, verify the uploaded object before confirming it in the app database.
 
 For public media, the object should be uploaded with `public-read`, immutable object keys, and long cache headers. For private files, keep objects private and return short-lived presigned GET URLs only after permission checks.
 
 If product records store public media URLs instead of only object keys, shared API contracts must reject non-HTTPS schemes such as `javascript:`, `data:`, and `ftp:`. Prefer storing app-owned object keys and deriving public CDN URLs on the backend.
 
-When browser clients upload directly to Spaces, configure Spaces CORS for the deployed origins and allowed upload headers such as `Content-Type`, `Cache-Control`, and `x-amz-acl`. If the Spaces CDN is enabled and CORS changed after files were cached, purge the CDN cache.
+When browser clients upload directly to Spaces, configure Spaces CORS for the deployed origins and allowed upload headers such as `Content-Type` and `Cache-Control` (the ACL travels as a signed query parameter, not a header). If the Spaces CDN is enabled and CORS changed after files were cached, purge the CDN cache.
 
 ## Images And Optimization
 

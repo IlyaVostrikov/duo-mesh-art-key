@@ -95,14 +95,18 @@ export class StorageService {
       Bucket: this.config.bucket,
       Key: key,
       ContentType: contentType,
-      ContentLength: byteSize,
+      // Do not sign ContentLength: it ties the signature to the browser's exact
+      // Content-Length, and any drift fails as SignatureDoesNotMatch (a 403 with
+      // no CORS headers, which the browser reports as a CORS failure). Size is
+      // already enforced above via assertByteSize.
       ACL: acl,
       ...(cacheControl ? { CacheControl: cacheControl } : {}),
     })
     const uploadUrl = await getSignedUrl(this.s3, command, { expiresIn: expiresInSeconds })
+    // The ACL is already a signed query param on the presigned URL (via `ACL`
+    // above). Re-sending it as a header duplicates it and can trip R2's check.
     const headers: Record<string, string> = {
       'Content-Type': contentType,
-      'x-amz-acl': acl,
     }
 
     if (cacheControl) {

@@ -63,7 +63,6 @@ describe('StorageService', () => {
     expect(upload.method).toBe('PUT')
     expect(upload.headers).toEqual({
       'Content-Type': 'image/png',
-      'x-amz-acl': 'public-read',
       'Cache-Control': 'public, max-age=31536000, immutable',
     })
     expect(upload.contentLength).toBe(128)
@@ -71,7 +70,10 @@ describe('StorageService', () => {
     expect(uploadUrl.hostname).toBe('demo-bucket.nyc3.digitaloceanspaces.com')
     expect(uploadUrl.pathname).toBe('/uploads/avatar.png')
     expect(uploadUrl.searchParams.get('X-Amz-Algorithm')).toBe('AWS4-HMAC-SHA256')
-    expect(uploadUrl.searchParams.get('X-Amz-SignedHeaders')).toContain('content-length')
+    // The signature must not depend on content-length, so the browser's real
+    // Content-Length can never drift into a SignatureDoesNotMatch.
+    expect(uploadUrl.searchParams.get('X-Amz-SignedHeaders')).not.toContain('content-length')
+    expect(uploadUrl.searchParams.get('X-Amz-SignedHeaders')).toBe('host')
   })
 
   test('enforces upload size and TTL limits before signing', async () => {
