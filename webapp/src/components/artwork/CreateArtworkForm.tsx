@@ -167,7 +167,7 @@ export function CreateArtworkForm({
       className="p-6 mb-8 space-y-5"
       style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
     >
-      {/* ── 3D model upload (optional) — GLB or GLTF ── */}
+      {/* ── 3D model upload (optional) — GLB, GLTF or ZIP bundle ── */}
       <FileUpload
         accept=".zip,.glb,.gltf"
         maxSize={100 * 1024 * 1024}
