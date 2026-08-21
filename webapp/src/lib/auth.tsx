@@ -91,7 +91,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const refreshToken = useCallback(async () => {
     const refreshed = await api.refresh()
     setAccessToken(refreshed.accessToken)
-  }, [api, setAccessToken])
+    // Refreshing the token does not update the cached user returned by /me.
+    // Artist onboarding changes the role in the database, so invalidate the
+    // user query here or the UI will keep rendering the old GUEST role until
+    // a full page reload.
+    await queryClient.invalidateQueries({ queryKey: meQueryKey })
+  }, [api, queryClient, setAccessToken])
 
   const logout = useCallback(async () => {
     await api.logout().catch(() => undefined)
