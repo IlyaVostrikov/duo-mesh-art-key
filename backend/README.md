@@ -53,6 +53,8 @@ Keep an explicit username and password in Prisma connection URLs even on local n
 
 `JWT_SECRET` must be at least 32 characters. For production, generate it with `openssl rand -hex 32`; this creates 32 random bytes encoded as 64 hex characters. Do not use the `.env.example` placeholder, repeated characters, or human phrases.
 
+KEYSTORE_SALT must be a stable 32-byte salt encoded as exactly 64 hexadecimal characters in production. It must match the committed ackend/data/keystore.salt value used by the KDF migration; do not rotate it independently of the encrypted signing_keys data. The migration endpoint reads KEYSTORE_SALT first and only uses the file as a local fallback.
+
 `COOKIE_SECURE=false` is appropriate for local HTTP; production should use `COOKIE_SECURE=true` with exact HTTPS origins in `CORS_ORIGINS`. Production browser auth uses `SameSite=None; Secure` refresh cookies, so wildcard, empty, or path-bearing CORS origins are invalid. Cookie-backed `refresh` and `logout` requests also require a trusted `Origin` in production cookie mode.
 
 DigitalOcean Spaces env is optional. Leave `SPACES_*` blank until the product needs uploads, media, exports, or downloads. When storage is active, configure the complete Spaces group in `backend/.env` and follow [../docs/STORAGE.md](../docs/STORAGE.md).

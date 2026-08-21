@@ -101,4 +101,24 @@ describe('migrate-kdf orchestration', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+
+  test('aborts on an invalid configured salt before touching the keystore', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'migrate-kdf-invalid-salt-'))
+    try {
+      const storePath = await writeFixture(dir, 'correct-secret')
+      const before = readFileSync(storePath, 'utf-8')
+
+      const { code, stderr } = await runScript({
+        SECRET_STORE_KEY: 'correct-secret',
+        KEYSTORE_PATH: storePath,
+        KEYSTORE_SALT: 'not-a-valid-salt',
+      }, ['--dry-run'])
+
+      expect(code).toBe(1)
+      expect(stderr).toMatch(/KEYSTORE_SALT must be exactly 64 hexadecimal characters/)
+      expect(readFileSync(storePath, 'utf-8')).toBe(before)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })

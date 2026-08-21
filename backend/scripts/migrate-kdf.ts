@@ -13,6 +13,7 @@
 //
 // Dry run decrypts everything with the old key and reports without writing.
 
+import { createHash } from 'node:crypto'
 import { config } from 'dotenv'
 import { readFile, writeFile, copyFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
@@ -56,9 +57,7 @@ interface StoreFile {
 
 /** Old KDF: SHA-256(SECRET) → raw AES-256-GCM key. */
 async function oldDeriveKey(secret: string): Promise<CryptoKey> {
-  const hasher = new Bun.CryptoHasher('sha256')
-  hasher.update(secret)
-  const hashHex = hasher.digest('hex') as string
+  const hashHex = createHash('sha256').update(secret).digest('hex')
   return crypto.subtle.importKey(
     'raw',
     hexToBytes(hashHex),
@@ -77,21 +76,33 @@ async function main() {
   console.log('Deriving old key (SHA-256)...')
   const oldKey = await oldDeriveKey(SECRET!)
 
-  // Reuse the committed salt if present (idempotent), otherwise generate fresh.
+  // The runtime must use the exact same salt as this migration. Prefer the
+  // explicit production env value, then fall back to the committed file.
+  // Never silently replace an invalid existing salt with a fresh one: that
+  // would make the migrated DB unreadable by a runtime using another salt.
   let salt: Uint8Array<ArrayBuffer>
   let saltIsFresh = false
-  try {
-    const existingSaltHex = (await readFile(SALT_PATH, 'utf-8')).trim()
-    if (/^[0-9a-f]{64}$/i.test(existingSaltHex)) {
+  const configuredSaltHex = process.env.KEYSTORE_SALT?.trim()
+  if (configuredSaltHex !== undefined) {
+    if (!/^[0-9a-f]{64}$/i.test(configuredSaltHex)) {
+      console.error('ERROR: KEYSTORE_SALT must be exactly 64 hexadecimal characters')
+      process.exit(1)
+    }
+    salt = hexToBytes(configuredSaltHex)
+    console.log('Using KEYSTORE_SALT from the environment')
+  } else {
+    try {
+      const existingSaltHex = (await readFile(SALT_PATH, 'utf-8')).trim()
+      if (!/^[0-9a-f]{64}$/i.test(existingSaltHex)) {
+        console.error(`ERROR: invalid salt file at ${SALT_PATH}; expected 64 hexadecimal characters`)
+        process.exit(1)
+      }
       salt = hexToBytes(existingSaltHex)
       console.log(`Reusing existing salt from ${SALT_PATH}`)
-    } else {
+    } catch {
       salt = crypto.getRandomValues(new Uint8Array(32))
       saltIsFresh = true
     }
-  } catch {
-    salt = crypto.getRandomValues(new Uint8Array(32))
-    saltIsFresh = true
   }
   console.log(`Salt (hex): ${bytesToHex(salt)}`)
   console.log('Deriving new key (PBKDF2, 600K iterations)...')

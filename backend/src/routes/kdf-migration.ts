@@ -18,9 +18,7 @@ import type { EncryptedEntry } from '../crypto/aes-gcm'
 
 /** Old KDF: SHA-256(SECRET) → raw AES-256-GCM key (legacy, pre-PBKDF2). */
 async function oldDeriveKey(secret: string): Promise<CryptoKey> {
-  const hasher = new Bun.CryptoHasher('sha256')
-  hasher.update(secret)
-  const hashHex = hasher.digest('hex') as string
+  const hashHex = createHash('sha256').update(secret).digest('hex')
   return crypto.subtle.importKey('raw', hexToBytes(hashHex),
     { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'])
 }
@@ -44,13 +42,21 @@ export function createKdfMigrationRoutes() {
         return c.json(errorResponse('INTERNAL_ERROR', 'SECRET_STORE_KEY not set'), 500)
       }
 
-      // Read committed salt
-      const saltPath = resolve(import.meta.dir ?? __dirname, '../data/keystore.salt')
-      let saltHex: string
-      try {
-        saltHex = (await readFile(saltPath, 'utf-8')).trim()
-      } catch {
-        return c.json(errorResponse('NOT_FOUND', 'Salt file not found — commit keystore.salt first'), 500)
+      // Use the same salt as the runtime. Vercel runs from a bundle and may not
+      // contain the source data file, so KEYSTORE_SALT is the authoritative value.
+      // The file remains a local/dev fallback when the env variable is absent.
+      const configuredSalt = process.env.KEYSTORE_SALT
+      let saltHex = configuredSalt?.trim()
+      if (saltHex === undefined) {
+        const saltPath = resolve(import.meta.dir ?? __dirname, '../data/keystore.salt')
+        try {
+          saltHex = (await readFile(saltPath, 'utf-8')).trim()
+        } catch {
+          return c.json(errorResponse('NOT_FOUND', 'Salt not found — set KEYSTORE_SALT or commit keystore.salt first'), 500)
+        }
+      }
+      if (!/^[0-9a-f]{64}$/i.test(saltHex)) {
+        return c.json(errorResponse('INTERNAL_ERROR', 'KEYSTORE_SALT must be exactly 64 hexadecimal characters'), 500)
       }
 
       console.log('→ Running KDF migration (DB only)...')
@@ -68,6 +74,7 @@ export function createKdfMigrationRoutes() {
       let already = 0
       let fail = 0
       const errors: string[] = []
+      const toUpdate: { id: string; newEntry: EncryptedEntry }[] = []
 
       for (const key of keys) {
         const entry = key.encryptedPrivateKey as EncryptedEntry | null
@@ -79,10 +86,7 @@ export function createKdfMigrationRoutes() {
         try {
           const plaintext = await decryptString(oldKey, entry)
           const newEntry = await encryptString(newKey, plaintext)
-          await prisma.signingKey.update({
-            where: { id: key.id },
-            data: { encryptedPrivateKey: newEntry as unknown as Prisma.InputJsonValue },
-          })
+          toUpdate.push({ id: key.id, newEntry })
           ok++
         } catch {
           // Old KDF failed — the row may already be under PBKDF2 from a prior run.
@@ -94,6 +98,19 @@ export function createKdfMigrationRoutes() {
             errors.push(`${key.id.slice(0, 8)}: unknown KDF/secret`)
           }
         }
+      }
+
+      // Do not partially migrate the table: if any row failed, leave every
+      // old-KDF row untouched so a retry can safely process the full set.
+      if (fail === 0 && toUpdate.length > 0) {
+        await prisma.$transaction(
+          toUpdate.map(({ id, newEntry }) =>
+            prisma.signingKey.update({
+              where: { id },
+              data: { encryptedPrivateKey: newEntry as unknown as Prisma.InputJsonValue },
+            }),
+          ),
+        )
       }
 
       const result = {
