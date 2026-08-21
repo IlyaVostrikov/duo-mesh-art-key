@@ -9,6 +9,8 @@ type ModelViewerElement = HTMLElement & {
   requestFullscreen?: (opts?: FullscreenOptions) => Promise<void>
   updateFraming?: () => Promise<void>
   jumpCameraToGoal?: () => void
+  /** Hide the loading poster after the scene is ready. */
+  dismissPoster?: () => void
 }
 
 export interface ModelViewer3DProps {
@@ -190,11 +192,23 @@ export function ModelViewer3D({
       // Recompute the bounds after all external buffers/textures are ready.
       // This is important for uploaded scenes with arbitrary exporter scale/origin.
       const viewer = viewerRef.current
+      // reveal="auto" normally dismisses the poster at the end of loading,
+      // but imported ZIP scenes can finish their last texture/buffer update
+      // after that transition. Explicitly dismiss it once the model event has
+      // fired so a white poster can never cover the rendered canvas.
+      viewer?.dismissPoster?.()
       if (viewer?.updateFraming) {
         void viewer.updateFraming()
-          .then(() => viewer.jumpCameraToGoal?.())
-          .catch(() => viewer.jumpCameraToGoal?.())
+          .then(() => {
+            viewer.dismissPoster?.()
+            viewer.jumpCameraToGoal?.()
+          })
+          .catch(() => {
+            viewer.dismissPoster?.()
+            viewer.jumpCameraToGoal?.()
+          })
       } else {
+        viewer?.dismissPoster?.()
         viewer?.jumpCameraToGoal?.()
       }
     }
