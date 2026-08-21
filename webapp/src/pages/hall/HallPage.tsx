@@ -202,7 +202,7 @@ export function HallPage() {
     theme: h.theme,
     coverImageUrl: h.coverImageUrl,
     customization: h.customization as HallData['customization'],
-    artworks: h.artworks.filter((aw) => aw.mediaType !== 'MODEL_3D').map((aw) => ({
+    artworks: h.artworks.map((aw) => ({
       id: aw.id,
       title: aw.title,
       posterUrl: aw.posterUrl ? assetUrl(aw.posterUrl) : null,

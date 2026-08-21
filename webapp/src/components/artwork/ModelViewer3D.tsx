@@ -7,6 +7,8 @@ type ModelViewerElement = HTMLElement & {
   removeAttribute(name: string): void
   // Fullscreen helper — model-viewer exposes enterFullscreen/exitFullscreen when available
   requestFullscreen?: (opts?: FullscreenOptions) => Promise<void>
+  updateFraming?: () => Promise<void>
+  jumpCameraToGoal?: () => void
 }
 
 export interface ModelViewer3DProps {
@@ -184,6 +186,17 @@ export function ModelViewer3D({
       setLoadingProgress(1)
       setLoadError(false)
       console.log('[ModelViewer3D] model loaded:', resolvedModelUrl)
+
+      // Recompute the bounds after all external buffers/textures are ready.
+      // This is important for uploaded scenes with arbitrary exporter scale/origin.
+      const viewer = viewerRef.current
+      if (viewer?.updateFraming) {
+        void viewer.updateFraming()
+          .then(() => viewer.jumpCameraToGoal?.())
+          .catch(() => viewer.jumpCameraToGoal?.())
+      } else {
+        viewer?.jumpCameraToGoal?.()
+      }
     }
     const onError = (e: Event) => {
       const detail = (e as CustomEvent)?.detail ?? 'unknown'
@@ -265,12 +278,12 @@ export function ModelViewer3D({
     if (minCameraOrbit) {
       el.setAttribute('min-camera-orbit', minCameraOrbit)
     } else {
-      el.setAttribute('min-camera-orbit', 'auto auto 45deg auto')
+      el.setAttribute('min-camera-orbit', 'auto 45deg auto')
     }
     if (maxCameraOrbit) {
       el.setAttribute('max-camera-orbit', maxCameraOrbit)
     } else {
-      el.setAttribute('max-camera-orbit', 'auto auto 120deg auto')
+      el.setAttribute('max-camera-orbit', 'auto 120deg auto')
     }
 
     // ─── AR (Task 4) ───
@@ -305,6 +318,7 @@ export function ModelViewer3D({
     >
       {createElement('model-viewer', {
         ref: viewerRef,
+        alt: '3D model preview',
         style: {
           display: 'block',
           position: 'absolute',

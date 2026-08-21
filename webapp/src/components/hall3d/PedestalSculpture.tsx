@@ -244,12 +244,20 @@ function SculptureModel({
   const box = new THREE.Box3().setFromObject(cloned)
   const size = box.getSize(new THREE.Vector3())
   const maxDim = Math.max(size.x, size.y, size.z)
+  if (!Number.isFinite(maxDim) || maxDim <= 0) return null
+
+  const center = box.getCenter(new THREE.Vector3())
   const scale = 1.3 / maxDim
+  const position: [number, number, number] = [
+    -center.x * scale,
+    pedestalTop + 0.01 - box.min.y * scale,
+    -center.z * scale,
+  ]
 
   return (
     <primitive
       object={cloned}
-      position={[0, pedestalTop + 0.01, 0]}
+      position={position}
       scale={scale}
       castShadow
     />

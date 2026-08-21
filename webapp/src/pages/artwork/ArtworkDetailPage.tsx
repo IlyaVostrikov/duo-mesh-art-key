@@ -163,10 +163,10 @@ export function ArtworkDetailPage() {
   const description = descParts[lang === 'ru' ? 0 : 1]
 
   // Per-piece camera & AR defaults
+  // Uploaded models use arbitrary exporter scales and origins, so let model-viewer frame them automatically.
+  const cameraOrbit = aw.cameraOrbit ?? 'auto auto auto'
+  const cameraTarget = aw.cameraTarget ?? 'auto auto auto'
   const isSculpture = aw.category === 'SCULPTURE'
-  const cameraOrbit = aw.cameraOrbit
-    ?? (isSculpture ? '20deg 75deg 2m' : '30deg 75deg 2.5m')
-  const cameraTarget = aw.cameraTarget ?? (isSculpture ? '0m 0.3m 0m' : undefined)
   const iosSrc = aw.usdzUrl ?? (aw.modelUrl ? aw.modelUrl.replace(/\.(glb|gltf)$/i, '.usdz') : undefined)
 
   return (
