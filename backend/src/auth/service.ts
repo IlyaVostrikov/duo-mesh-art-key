@@ -26,10 +26,10 @@ type UserRecord = {
   createdAt: Date
 }
 
-// Dummy bcrypt hash used for timing-safe login to prevent email enumeration.
+// Dummy scrypt hash used for timing-safe login to prevent email enumeration.
 // When no user is found, password verification runs against this hash so the
-// bcrypt cost is identical regardless of whether the email exists.
-const DUMMY_BCRYPT_HASH = '$2b$12$L8Jx5mN3pQ7rS9tV1wX3yZ5aB8cD2eF4gH6iJ0kL1mN3oP5qR7sT9u'
+// password verification cost is comparable regardless of whether the email exists.
+const DUMMY_PASSWORD_HASH = '$2b$12$MDEyMzQ1Njc4OWFiY2RlZg$PQ98qZZ0tysc/6vsO9FxF1ebbPKVH22fzl2x+A3otz8u2J8KmSEQBMWg5W7NiYq0XnUx2MjwHAdXgrKgBPhFUw'
 
 export class AuthService {
   constructor(
@@ -75,11 +75,11 @@ export class AuthService {
       where: { email: input.email },
     })
 
-    // Always run bcrypt verification against a valid-format hash to prevent
+    // Always run password verification against a valid-format hash to prevent
     // timing-based email enumeration. When the user doesn't exist, verify
     // against a dummy hash so the cost is indistinguishable from a real
     // (but wrong) password attempt.
-    const hashToCheck = user?.passwordHash ?? DUMMY_BCRYPT_HASH
+    const hashToCheck = user?.passwordHash ?? DUMMY_PASSWORD_HASH
     const passwordMatches = await verifyPassword(input.password, hashToCheck)
 
     if (!user || !passwordMatches) {

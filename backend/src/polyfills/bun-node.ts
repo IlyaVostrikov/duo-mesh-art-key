@@ -29,28 +29,51 @@ if (!_Bun) {
     ...(_Bun ?? {}),
     password: {
       hash(password: string, options?: { algorithm?: string; cost?: number }) {
-        // Default cost=12 (~4s on modern hw) — Bun argon2id defaults are higher but scrypt needs N=2^cost to be reasonable
+        // Legacy compatibility format for code paths that still call Bun.password
+        // directly on Node. New auth hashes use the native Argon2 implementation.
         const cost = options?.cost ?? 12
         const salt = randomBytes(16)
         const key = scryptSync(password, salt, 64, { N: 1 << cost, r: 8, p: 1 })
-        const parts = [
+        return [
           `$2b$${String(cost).padStart(2, '0')}$`,
           salt.toString('base64').replace(/=+$/, ''),
+          '$',
           key.toString('base64').replace(/=+$/, ''),
-        ]
-        return parts.join('')
+        ].join('')
       },
       verify(password: string, hash: string) {
         const parts = hash.split('$')
-        // hash format: $2b$<cost>$<salt>$<key>
-        const costAndSalt = parts[3]
-        if (!costAndSalt) throw new Error('Invalid password hash format')
-        const cost = parseInt(costAndSalt.slice(0, 2), 10)
-        const saltB64 = costAndSalt.slice(2)
+        if (parts[1] !== '2b') return false
+
+        const cost = parseInt(parts[2] ?? '', 10)
+        if (!Number.isInteger(cost) || cost < 1 || cost > 20) return false
+
+        let saltB64: string
+        let keyB64: string
+        if (parts.length === 5) {
+          // Correct format: $2b$<cost>$<salt>$<key>
+          saltB64 = parts[3] ?? ''
+          keyB64 = parts[4] ?? ''
+        } else if (parts.length === 4) {
+          // Recover hashes emitted by the old shim, which concatenated salt and
+          // key without a separator. The salt is always 16 bytes / 22 chars.
+          const combined = parts[3] ?? ''
+          saltB64 = combined.slice(0, 22)
+          keyB64 = combined.slice(22)
+        } else {
+          return false
+        }
+
         const salt = Buffer.from(saltB64, 'base64')
-        const expected = Buffer.from(parts[4] ?? '', 'base64')
-        const actual = scryptSync(password, salt, expected.length, { N: 1 << cost, r: 8, p: 1 })
-        return timingSafeEqual(actual, expected)
+        const expected = Buffer.from(keyB64, 'base64')
+        if (salt.length !== 16 || expected.length === 0) return false
+
+        try {
+          const actual = scryptSync(password, salt, expected.length, { N: 1 << cost, r: 8, p: 1 })
+          return actual.length === expected.length && timingSafeEqual(actual, expected)
+        } catch {
+          return false
+        }
       },
     },
     CryptoHasher,
