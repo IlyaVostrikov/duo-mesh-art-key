@@ -152,6 +152,14 @@ export function AccountMenu() {
               </MenuItem>
             )}
 
+            {user.role !== 'ARTIST' && user.role !== 'ADMIN' && (
+              <MenuItem onClick={() => { setOpen(false); navigate({ to: '/onboarding/artist' }) }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 3v18M3 12h18" />
+                </svg>
+                Стать художником / Become an Artist
+              </MenuItem>
+            )}
             {user.role === 'ADMIN' && (
               <MenuItem onClick={() => { setOpen(false); navigate({ to: '/admin' }) }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

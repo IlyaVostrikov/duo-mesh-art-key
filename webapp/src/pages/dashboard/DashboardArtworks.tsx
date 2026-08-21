@@ -87,6 +87,19 @@ export function DashboardArtworks() {
     }
   }
 
+  if (auth.user && auth.user.role !== 'ARTIST' && auth.user.role !== 'ADMIN') {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-16">
+          <p className="mb-4" style={{ color: 'var(--text-muted)' }}>
+            Сначала создайте профиль художника, чтобы загружать работы / Create an artist profile to upload artworks.
+          </p>
+          <Button asChild size="sm"><Link to="/onboarding/artist">Создать профиль / Create profile</Link></Button>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>

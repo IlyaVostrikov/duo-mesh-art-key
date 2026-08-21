@@ -111,7 +111,7 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
           return ext === 'glb' || ext === 'gltf'
         })
         if (!modelEntry) {
-          throw new Error('No .glb or .gltf model found in the uploaded 3D file.')
+          throw new Error('Не найден файл .glb или .gltf. Выберите файл glTF-модели напрямую.')
         }
         newModelUrl = modelEntry.url
       }
@@ -261,10 +261,10 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
           )}
         </div>
         <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
-          Загрузите ZIP-архив с моделью или отдельный .glb/.gltf файл. При добавлении 3D-модели тип работы сменится на MODEL_3D.
+          Загрузите файл .glb или .gltf. При добавлении 3D-модели тип работы сменится на MODEL_3D.
         </p>
         <FileUpload
-          accept=".zip,.glb,.gltf,.blend,.obj,.fbx,.stl,.usdz"
+          accept=".glb,.gltf"
           maxSize={100 * 1024 * 1024}
           onFileSelect={setModelFile}
           label={modelFile ? `3D модель: ${modelFile.name}` : 'Заменить 3D модель / Replace 3D model'}

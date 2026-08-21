@@ -92,6 +92,9 @@ export function useArtistOnboarding() {
       }
 
       return artist
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось создать профиль / Profile creation failed')
+      throw err
     } finally {
       setSubmitting(false)
     }

@@ -22,11 +22,13 @@ const ARTIST_NAV = [
 const COLLECTOR_NAV = [
   { to: '/dashboard', label: 'Обзор / Overview', exact: true },
   { to: '/dashboard/settings', label: 'Профиль / Settings' },
+  { to: '/onboarding/artist', label: 'Стать художником / Become an Artist' },
 ]
 
 const GUEST_NAV = [
   { to: '/dashboard', label: 'Обзор / Overview', exact: true },
   { to: '/dashboard/settings', label: 'Профиль / Settings' },
+  { to: '/onboarding/artist', label: 'Стать художником / Become an Artist' },
 ]
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {

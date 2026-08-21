@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { useState, useEffect, type FormEvent } from 'react'
 import { useAuth } from '@/lib/use-auth'
 import { DashboardLayout } from './DashboardLayout'
@@ -210,6 +211,9 @@ export function DashboardHallCustomization() {
               ? 'Сначала создайте профиль художника / Create artist profile first.'
               : 'Сначала создайте зал / Create a hall first.'}
           </p>
+          <Button asChild size="sm" className="mt-4">
+            <Link to="/onboarding/artist">{error === 'NO_PROFILE' ? 'Создать профиль / Create profile' : 'Создать зал / Create hall'}</Link>
+          </Button>
         </div>
       </DashboardLayout>
     )

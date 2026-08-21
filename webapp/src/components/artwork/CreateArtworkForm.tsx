@@ -98,7 +98,7 @@ export function CreateArtworkForm({
         modelUrl = modelEntry?.url
 
         if (!modelUrl) {
-          throw new Error('No .glb or .gltf model found in the uploaded 3D file. For zip files, ensure a glTF model is included.')
+          throw new Error('Не найден файл .glb или .gltf. Выберите файл glTF-модели напрямую.')
         }
       }
 
@@ -170,12 +170,12 @@ export function CreateArtworkForm({
       className="p-6 mb-8 space-y-5"
       style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
     >
-      {/* ── 3D model upload (optional) — zip or individual 3D file ── */}
+      {/* ── 3D model upload (optional) — GLB or GLTF ── */}
       <FileUpload
-        accept=".zip,.glb,.gltf,.blend,.obj,.fbx,.stl,.usdz"
+        accept=".glb,.gltf"
         maxSize={100 * 1024 * 1024}
         onFileSelect={setModelFile}
-        label={modelFile ? `3D модель: ${modelFile.name}` : '3D модель (опционально) — ZIP или .glb/.gltf'}
+        label={modelFile ? `3D модель: ${modelFile.name}` : '3D модель (опционально) — .glb или .gltf'}
       />
 
       {/* ── Poster / preview render — always visible.

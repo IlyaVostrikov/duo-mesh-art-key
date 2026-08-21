@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { useState, useEffect, type FormEvent } from 'react'
 import { useAuth } from '@/lib/use-auth'
 import { DashboardLayout } from './DashboardLayout'
@@ -171,6 +172,7 @@ export function DashboardHallSettings() {
       <DashboardLayout>
         <div className="text-center py-16">
           <p style={{ color: 'var(--text-muted)' }}>Сначала создайте профиль художника / Create artist profile first.</p>
+          <Button asChild size="sm" className="mt-4"><Link to="/onboarding/artist">Создать профиль / Create profile</Link></Button>
         </div>
       </DashboardLayout>
     )

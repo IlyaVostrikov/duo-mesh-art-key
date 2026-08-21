@@ -31,7 +31,7 @@ export function DashboardHome() {
         </Badge>
       </RevealOnScroll>
 
-      {user?.role === 'ARTIST' ? <ArtistDashboardCards accessToken={auth.accessToken} /> : <CollectorDashboardCards />}
+      {user?.role === 'ARTIST' ? <ArtistDashboardCards accessToken={auth.accessToken} /> : <CollectorDashboardCards isGuest={user?.role === 'GUEST'} />}
     </DashboardLayout>
   )
 }
@@ -91,6 +91,7 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
+
       <RevealOnScroll direction="up" delay={0}>
       <Card>
         <CardHeader>
@@ -191,9 +192,24 @@ function ArtistDashboardCards({ accessToken }: { accessToken: string | null }) {
   )
 }
 
-function CollectorDashboardCards() {
+function CollectorDashboardCards({ isGuest }: { isGuest: boolean }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
+      {isGuest && (
+        <RevealOnScroll direction="up" delay={0}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Стать художником / Become an Artist</CardTitle>
+            <CardDescription>Создайте профиль, зал и начните загружать 2D/3D-работы.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild size="sm">
+              <Link to="/onboarding/artist">Создать зал / Create Hall</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        </RevealOnScroll>
+      )}
       <RevealOnScroll direction="up" delay={0}>
       <Card>
         <CardHeader>

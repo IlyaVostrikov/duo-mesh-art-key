@@ -45,7 +45,9 @@ export function ArtistOnboarding() {
   const [awPrice, setAwPrice] = useState('')
   const [awCurrency, setAwCurrency] = useState('RUB')
   const [posterFile, setPosterFile] = useState<File | null>(null)
+  const [awModelFile, setAwModelFile] = useState<File | null>(null)
   const [awUploading, setAwUploading] = useState(false)
+  const [step2Error, setStep2Error] = useState<string | null>(null)
 
   if (!auth.user) {
     return (
@@ -99,9 +101,16 @@ export function ArtistOnboarding() {
     setAwUploading(true)
     try {
       let posterUrl = 'seed/placeholder-poster.svg'
+      let modelUrl: string | undefined
       if (posterFile) {
         const url = await uploadFile(posterFile)
         if (url) posterUrl = url
+      }
+
+      if (awMediaType === 'MODEL_3D') {
+        if (!awModelFile) throw new Error('Загрузите 3D-модель GLB или GLTF / Upload a GLB or GLTF model')
+        modelUrl = await uploadFile(awModelFile) ?? undefined
+        if (!modelUrl) throw new Error('Не удалось загрузить 3D-модель / 3D model upload failed')
       }
 
       const body: Record<string, unknown> = {
@@ -110,6 +119,7 @@ export function ArtistOnboarding() {
         category: awCategory,
         mediaType: awMediaType,
         posterUrl,
+        modelUrl,
         price: awPrice ? Number(awPrice) : undefined,
         currency: awCurrency,
       }
@@ -132,8 +142,6 @@ export function ArtistOnboarding() {
       setAwUploading(false)
     }
   }
-
-  const [step2Error, setStep2Error] = useState<string | null>(null)
 
   async function handleSkipArtwork() {
     if (artist) {
@@ -364,6 +372,14 @@ export function ArtistOnboarding() {
                   label={t.awPosterLabel}
                   imagePreview
                 />
+                {awMediaType === 'MODEL_3D' && (
+                  <FileUpload
+                    accept=".glb,.gltf"
+                    maxSize={100 * 1024 * 1024}
+                    onFileSelect={setAwModelFile}
+                    label={awModelFile ? `3D: ${awModelFile.name}` : '3D-модель / 3D model (GLB or GLTF)'}
+                  />
+                )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div>
