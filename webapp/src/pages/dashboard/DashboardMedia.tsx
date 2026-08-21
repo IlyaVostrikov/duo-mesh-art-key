@@ -5,7 +5,8 @@ import { Spinner } from '@/components/ui/spinner'
 import { DashboardLayout } from './DashboardLayout'
 import { CreateArtworkForm } from '@/components/artwork/CreateArtworkForm'
 import { apiBaseUrl } from '@/lib/api'
-import { uploadFile, type UploadedFile } from '@/lib/upload'
+import { uploadFile, type UploadedFile, type UploadProgress } from '@/lib/upload'
+import { UploadProgressView } from '@/components/ui/upload-progress'
 
 const ACCEPT_3D = '.glb,.gltf,.blend,.obj,.fbx,.stl,.usdz'
 const ACCEPT_ZIP = '.zip'
@@ -18,6 +19,7 @@ export function DashboardMedia() {
   const auth = useAuth()
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
 
@@ -27,9 +29,10 @@ export function DashboardMedia() {
   const doUpload = useCallback(async (file: File) => {
     setUploading(true)
     setError(null)
+    setUploadProgress(null)
 
     try {
-      const result = await uploadFile(file, auth.accessToken!)
+      const result = await uploadFile(file, auth.accessToken!, setUploadProgress)
       setFiles((prev) => [result, ...prev])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
@@ -136,6 +139,8 @@ export function DashboardMedia() {
                 JPG, PNG, WebP, SVG, GLB, GLTF, BLEND, ZIP · макс. 100 MB для 3D
               </p>
             </div>
+
+            <UploadProgressView progress={uploadProgress} />
 
             {uploading && (
               <div className="flex items-center gap-2 mb-4">

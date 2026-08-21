@@ -11,6 +11,8 @@ import { joinBilingualTitle, joinBilingual } from '@/lib/utils'
 import { BilingualField } from '@/components/BilingualField'
 import { useArtistOnboarding, type OnboardingProfile, type CreatedArtist } from '@/hooks/use-artist-onboarding'
 import { apiBaseUrl } from '@/lib/api'
+import type { UploadProgress } from '@/lib/upload'
+import { UploadProgressView } from '@/components/ui/upload-progress'
 
 type Step = 'profile' | 'artwork' | 'done'
 
@@ -19,7 +21,7 @@ const CATEGORIES = ['DIGITAL', 'PAINTING', 'SCULPTURE', 'PHOTOGRAPHY', 'DRAWING'
 export function ArtistOnboarding() {
   const auth = useAuth()
   const navigate = useNavigate()
-  const { submitting, error, createProfile, uploadFile, clearError } = useArtistOnboarding()
+  const { submitting, error, createProfile, uploadFile, uploadModelFile, clearError } = useArtistOnboarding()
   const [lang, setLang] = useState<'ru' | 'en'>('ru')
   const [step, setStep] = useState<Step>('profile')
   const [artist, setArtist] = useState<CreatedArtist | null>(null)
@@ -48,6 +50,7 @@ export function ArtistOnboarding() {
   const [awModelFile, setAwModelFile] = useState<File | null>(null)
   const [awUploading, setAwUploading] = useState(false)
   const [step2Error, setStep2Error] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
 
   if (!auth.user) {
     return (
@@ -89,6 +92,8 @@ export function ArtistOnboarding() {
     e.preventDefault()
     if (!artist) return
     clearError()
+    setStep2Error(null)
+    setUploadProgress(null)
 
     const fullTitle = awTitleEn.trim()
       ? `${awTitle.trim() || awTitleEn.trim()} / ${awTitleEn.trim()}`
@@ -103,13 +108,13 @@ export function ArtistOnboarding() {
       let posterUrl = 'seed/placeholder-poster.svg'
       let modelUrl: string | undefined
       if (posterFile) {
-        const url = await uploadFile(posterFile)
+        const url = await uploadFile(posterFile, setUploadProgress)
         if (url) posterUrl = url
       }
 
       if (awMediaType === 'MODEL_3D') {
         if (!awModelFile) throw new Error('Загрузите 3D-модель GLB или GLTF / Upload a GLB or GLTF model')
-        modelUrl = await uploadFile(awModelFile) ?? undefined
+        modelUrl = await uploadModelFile(awModelFile, setUploadProgress) ?? undefined
         if (!modelUrl) throw new Error('Не удалось загрузить 3D-модель / 3D model upload failed')
       }
 
@@ -374,10 +379,10 @@ export function ArtistOnboarding() {
                 />
                 {awMediaType === 'MODEL_3D' && (
                   <FileUpload
-                    accept=".glb,.gltf"
+                    accept=".zip,.glb,.gltf"
                     maxSize={100 * 1024 * 1024}
                     onFileSelect={setAwModelFile}
-                    label={awModelFile ? `3D: ${awModelFile.name}` : '3D-модель / 3D model (GLB or GLTF)'}
+                    label={awModelFile ? `3D набор: ${awModelFile.name}` : '3D-модель или ZIP-набор / 3D model or ZIP bundle'}
                   />
                 )}
 
@@ -416,6 +421,8 @@ export function ArtistOnboarding() {
                     </Tabs>
                   </div>
                 </div>
+
+                <UploadProgressView progress={uploadProgress} />
 
                 {step2Error && (
                   <p className="text-sm px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--surface)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>

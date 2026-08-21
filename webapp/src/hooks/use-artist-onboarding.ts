@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/lib/use-auth'
 import { apiBaseUrl } from '@/lib/api'
-import { uploadFile } from '@/lib/upload'
+import { uploadFile, uploadModelFile, type UploadProgressCallback } from '@/lib/upload'
 import { joinBilingual, joinBilingualTitle } from '@/lib/utils'
 
 export interface OnboardingProfile {
@@ -100,10 +100,15 @@ export function useArtistOnboarding() {
     }
   }
 
-  async function upload(file: File): Promise<string | null> {
-    const result = await uploadFile(file, auth.accessToken!)
+  async function upload(file: File, onProgress?: UploadProgressCallback): Promise<string | null> {
+    const result = await uploadFile(file, auth.accessToken!, onProgress)
     return result.url ?? null
   }
 
-  return { submitting, error, createProfile, uploadFile: upload, clearError: () => setError(null) }
+  async function uploadModel(file: File, onProgress?: UploadProgressCallback): Promise<string | null> {
+    const result = await uploadModelFile(file, auth.accessToken!, onProgress)
+    return result.url ?? null
+  }
+
+  return { submitting, error, createProfile, uploadFile: upload, uploadModelFile: uploadModel, clearError: () => setError(null) }
 }

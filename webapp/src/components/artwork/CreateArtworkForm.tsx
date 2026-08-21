@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { FileUpload } from '@/components/ui/file-upload'
 import { apiBaseUrl } from '@/lib/api'
-import { uploadFiles } from '@/lib/upload'
+import { uploadFiles, type UploadProgress } from '@/lib/upload'
+import { UploadProgressView } from '@/components/ui/upload-progress'
 
 const CATEGORIES = ['DIGITAL', 'PAINTING', 'SCULPTURE', 'PHOTOGRAPHY', 'DRAWING', 'MIXED_MEDIA', 'PRINT', 'NFT', 'OTHER']
 
@@ -40,6 +41,7 @@ export function CreateArtworkForm({
   }
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [done, setDone] = useState<CreatedArtwork | null>(null)
 
   // Optional advanced fields — hidden by default
@@ -62,6 +64,7 @@ export function CreateArtworkForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setFormError(null)
+    setUploadProgress(null)
     if (!title.trim() && !titleEn.trim()) {
       setFormError('Название обязательно / Title is required')
       return
@@ -80,25 +83,19 @@ export function CreateArtworkForm({
 
       // Upload poster (skip if preselected from Media library)
       if (posterFile) {
-        const uploadData = await uploadFiles([posterFile], auth.accessToken!)
+        const uploadData = await uploadFiles([posterFile], auth.accessToken!, setUploadProgress)
         posterUrl = uploadData.files?.[0]?.url ?? posterUrl
         Object.assign(fileHashes, uploadData.hashes)
       }
 
-      // Upload 3D model (zip or individual file)
+      // Upload a single GLB/GLTF or a ZIP bundle with scene.gltf + dependencies.
       if (modelFile) {
-        const uploadData = await uploadFiles([modelFile], auth.accessToken!)
+        const uploadData = await uploadFiles([modelFile], auth.accessToken!, setUploadProgress, { finalizeModels: true })
         Object.assign(fileHashes, uploadData.hashes)
-
-        // Find the main 3D model file (.glb or .gltf) from the upload response
-        const modelEntry = uploadData.files?.find((f: { name: string; url: string }) => {
-          const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
-          return ext === 'glb' || ext === 'gltf'
-        })
-        modelUrl = modelEntry?.url
+        modelUrl = uploadData.files?.[0]?.url
 
         if (!modelUrl) {
-          throw new Error('Не найден файл .glb или .gltf. Выберите файл glTF-модели напрямую.')
+          throw new Error('Не удалось определить 3D-сцену / Could not determine the 3D scene')
         }
       }
 
@@ -172,10 +169,10 @@ export function CreateArtworkForm({
     >
       {/* ── 3D model upload (optional) — GLB or GLTF ── */}
       <FileUpload
-        accept=".glb,.gltf"
+        accept=".zip,.glb,.gltf"
         maxSize={100 * 1024 * 1024}
         onFileSelect={setModelFile}
-        label={modelFile ? `3D модель: ${modelFile.name}` : '3D модель (опционально) — .glb или .gltf'}
+        label={modelFile ? `3D набор: ${modelFile.name}` : '3D модель или ZIP-набор — .zip, .glb, .gltf'}
       />
 
       {/* ── Poster / preview render — always visible.
@@ -397,6 +394,8 @@ export function CreateArtworkForm({
           </div>
         </div>
       )}
+
+      <UploadProgressView progress={uploadProgress} />
 
       {formError && (
         <p className="text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--bg)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>

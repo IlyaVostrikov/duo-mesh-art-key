@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Spinner } from '@/components/ui/spinner'
 import { FileUpload } from '@/components/ui/file-upload'
 import { apiBaseUrl } from '@/lib/api'
-import { uploadFiles } from '@/lib/upload'
+import { uploadFiles, type UploadProgress } from '@/lib/upload'
+import { UploadProgressView } from '@/components/ui/upload-progress'
 
 const CATEGORIES = ['DIGITAL', 'PAINTING', 'SCULPTURE', 'PHOTOGRAPHY', 'DRAWING', 'MIXED_MEDIA', 'PRINT', 'NFT', 'OTHER']
 
@@ -32,6 +33,7 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -90,6 +92,7 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setUploadProgress(null)
     if (!title.trim()) {
       setError('Название обязательно / Title is required')
       return
@@ -100,20 +103,16 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
       let newModelUrl = modelUrl
 
       if (posterFile) {
-        const uploadData = await uploadFiles([posterFile], auth.accessToken!)
+        const uploadData = await uploadFiles([posterFile], auth.accessToken!, setUploadProgress)
         newPosterUrl = uploadData.files?.[0]?.url ?? newPosterUrl
       }
 
       if (modelFile) {
-        const uploadData = await uploadFiles([modelFile], auth.accessToken!)
-        const modelEntry = uploadData.files?.find((f: { name: string; url: string }) => {
-          const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
-          return ext === 'glb' || ext === 'gltf'
-        })
-        if (!modelEntry) {
-          throw new Error('Не найден файл .glb или .gltf. Выберите файл glTF-модели напрямую.')
+        const uploadData = await uploadFiles([modelFile], auth.accessToken!, setUploadProgress, { finalizeModels: true })
+        newModelUrl = uploadData.files?.[0]?.url ?? newModelUrl
+        if (!newModelUrl) {
+          throw new Error('Не удалось определить 3D-сцену / Could not determine the 3D scene')
         }
-        newModelUrl = modelEntry.url
       }
 
       const res = await fetch(`${apiBaseUrl}/api/artworks/${artworkId}`, {
@@ -261,13 +260,13 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
           )}
         </div>
         <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
-          Загрузите файл .glb или .gltf. При добавлении 3D-модели тип работы сменится на MODEL_3D.
+          Загрузите .glb/.gltf или ZIP-набор с scene.gltf, .bin и текстурами. При добавлении 3D-модели тип работы сменится на MODEL_3D.
         </p>
         <FileUpload
-          accept=".glb,.gltf"
+          accept=".zip,.glb,.gltf"
           maxSize={100 * 1024 * 1024}
           onFileSelect={setModelFile}
-          label={modelFile ? `3D модель: ${modelFile.name}` : 'Заменить 3D модель / Replace 3D model'}
+          label={modelFile ? `3D набор: ${modelFile.name}` : 'Заменить 3D модель или ZIP / Replace model or ZIP'}
         />
       </div>
 
@@ -317,6 +316,8 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
           {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]} ({s})</option>)}
         </select>
       </div>
+
+      <UploadProgressView progress={uploadProgress} />
 
       {error && (
         <p className="text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--bg)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>

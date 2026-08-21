@@ -5,6 +5,7 @@ import { unzipSync, strFromU8 } from 'fflate'
 const ALLOWED_3D = new Set(['glb', 'gltf', 'blend', 'obj', 'fbx', 'stl', 'usdz'])
 const ALLOWED_IMAGE = new Set(['jpg', 'jpeg', 'png', 'webp', 'svg'])
 const ALLOWED_TEXTURE = new Set(['bin', 'hdr', 'exr', 'ktx2'])
+const ALLOWED_BUNDLE = new Set([...ALLOWED_3D, ...ALLOWED_IMAGE, ...ALLOWED_TEXTURE, 'txt', 'json'])
 const MAX_FILES_PER_REQUEST = 50
 const MAX_ZIP_ENTRIES = 200
 const MAX_ZIP_COMPRESSED_BYTES = 100 * 1024 * 1024    // 100 MB — archive on disk
@@ -320,6 +321,130 @@ export class UploadService {
       byteSize: opts.byteSize,
       visibility: opts.visibility ?? 'public',
     })
+  }
+
+  async finalizeModelBundle(userId: string, key: string) {
+    const storage = this.storage
+    if (!storage) {
+      throw new Error('Storage service is not configured. Use local upload or set SPACES_* env vars.')
+    }
+
+    const normalizedKey = key.trim()
+    if (!normalizedKey.startsWith(`uploads/${userId}/`)) {
+      throw new UploadValidationError('You do not own this upload')
+    }
+    if (extension(normalizedKey) !== 'zip') {
+      throw new UploadValidationError('Model bundle must be a .zip archive')
+    }
+
+    const compressed = await storage.readObjectBytes(normalizedKey)
+    if (compressed.byteLength > MAX_ZIP_COMPRESSED_BYTES) {
+      throw new UploadValidationError('ZIP archive too large (max 100 MB)')
+    }
+
+    let metadata: { entryCount: number; totalUncompressed: number }
+    try {
+      metadata = readZipMetadata(compressed)
+    } catch (err) {
+      if (err instanceof UploadValidationError) throw err
+      throw new UploadValidationError('Invalid ZIP archive')
+    }
+    if (metadata.entryCount > MAX_ZIP_ENTRIES) {
+      throw new UploadValidationError(`Too many files in zip (max ${MAX_ZIP_ENTRIES})`)
+    }
+    if (metadata.totalUncompressed > MAX_ZIP_UNCOMPRESSED_BYTES) {
+      throw new UploadValidationError('ZIP uncompressed size too large (max 500 MB)')
+    }
+    if (compressed.byteLength > 0 && metadata.totalUncompressed / compressed.byteLength > MAX_ZIP_COMPRESSION_RATIO) {
+      throw new UploadValidationError('Suspicious compression ratio detected. Archive rejected.')
+    }
+
+    let extracted: Record<string, Uint8Array>
+    try {
+      extracted = unzipSync(compressed)
+    } catch {
+      throw new UploadValidationError('Invalid ZIP archive')
+    }
+
+    const bundlePrefix = normalizedKey.slice(0, -'.zip'.length)
+    const uploadedKeys: string[] = []
+    let modelKey: string | undefined
+    let modelName: string | undefined
+    let modelType: string | undefined
+    let totalBytes = 0
+
+    const contentTypeFor = (ext: string) => ({
+      glb: 'model/gltf-binary',
+      gltf: 'model/gltf+json',
+      bin: 'application/octet-stream',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      svg: 'image/svg+xml',
+      hdr: 'image/vnd.radiance',
+      txt: 'text/plain',
+      json: 'application/json',
+    } as Record<string, string>)[ext] ?? 'application/octet-stream'
+
+    try {
+      for (const [filename, data] of Object.entries(extracted)) {
+        if (data.length === 0 || filename.endsWith('/')) continue
+        const path = filename.replace(/\\/g, '/').trim()
+        const segments = path.split('/').filter(Boolean)
+        if (segments.some((segment) => segment === '.' || segment === '..')) {
+          throw new UploadValidationError('ZIP contains an unsafe path')
+        }
+        const ext = extension(path)
+        if (!ALLOWED_BUNDLE.has(ext)) continue
+        if (data.length > this.max3DBytes && !ALLOWED_IMAGE.has(ext)) {
+          throw new UploadValidationError(`File too large in zip: ${filename}`)
+        }
+        if (data.length > this.maxImageBytes && ALLOWED_IMAGE.has(ext)) {
+          throw new UploadValidationError(`Image too large in zip: ${filename}`)
+        }
+        totalBytes += data.length
+        if (totalBytes > MAX_ZIP_UNCOMPRESSED_BYTES) {
+          throw new UploadValidationError('ZIP uncompressed size too large (max 500 MB)')
+        }
+
+        const safePath = segments.map(sanitizeFilename).join('/')
+        if (!safePath) continue
+        const object = await storage.putPublicObject({
+          key: `${bundlePrefix}/${safePath}`,
+          body: data,
+          contentType: contentTypeFor(ext),
+        })
+        uploadedKeys.push(object.key)
+
+        const lowerName = safePath.toLowerCase()
+        if (ext === 'gltf' && (!modelKey || lowerName.endsWith('/scene.gltf') || lowerName === 'scene.gltf')) {
+          modelKey = object.key
+          modelName = safePath
+          modelType = 'model/gltf+json'
+        } else if (ext === 'glb' && !modelKey) {
+          modelKey = object.key
+          modelName = safePath
+          modelType = 'model/gltf-binary'
+        }
+      }
+
+      if (!modelKey) {
+        throw new UploadValidationError('ZIP does not contain a .gltf or .glb scene')
+      }
+
+      return {
+        archiveKey: normalizedKey,
+        modelKey,
+        modelName,
+        modelType,
+        modelUrl: storage.publicUrlForKey(modelKey),
+        files: uploadedKeys,
+      }
+    } catch (err) {
+      await Promise.allSettled(uploadedKeys.map((uploadedKey) => storage.deleteObject(uploadedKey)))
+      throw err
+    }
   }
 
   async createDownloadUrl(key: string) {

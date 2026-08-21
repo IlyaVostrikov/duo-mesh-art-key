@@ -142,6 +142,48 @@ export class StorageService {
     }
   }
 
+  async readObjectBytes(key: string): Promise<Uint8Array> {
+    const response = await this.s3.send(
+      new GetObjectCommand({ Bucket: this.config.bucket, Key: assertSafeObjectKey(key) }),
+    )
+    if (!response.Body) throw new AppError(404, 'NOT_FOUND', 'Storage object not found')
+
+    const body = response.Body as unknown as {
+      transformToByteArray?: () => Promise<Uint8Array>
+      [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array | string>
+    }
+    if (body.transformToByteArray) return new Uint8Array(await body.transformToByteArray())
+
+    const chunks: Uint8Array[] = []
+    if (!body[Symbol.asyncIterator]) throw new AppError(500, 'STORAGE_ERROR', 'Storage object body is unreadable')
+    for await (const chunk of body as AsyncIterable<Uint8Array | string>) {
+      chunks.push(typeof chunk === 'string' ? new TextEncoder().encode(chunk) : chunk)
+    }
+    const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0)
+    const bytes = new Uint8Array(total)
+    let offset = 0
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    return bytes
+  }
+
+  async putPublicObject(input: { key: string; body: Uint8Array; contentType: string }) {
+    const key = assertSafeObjectKey(input.key)
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.config.bucket,
+        Key: key,
+        Body: input.body,
+        ContentType: assertContentType(input.contentType),
+        ACL: 'public-read',
+        CacheControl: this.config.publicCacheControl,
+      }),
+    )
+    return { key, publicUrl: this.publicUrlForKey(key) }
+  }
+
   async deleteObject(key: string) {
     await this.s3.send(
       new DeleteObjectCommand({

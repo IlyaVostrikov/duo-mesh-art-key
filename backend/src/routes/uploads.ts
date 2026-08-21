@@ -12,6 +12,7 @@ const presignedSchema = z.object({
 })
 
 const downloadUrlSchema = z.object({ key: z.string().min(1) })
+const finalizeModelSchema = z.object({ key: z.string().min(1).max(1024) })
 
 const cleanupSchema = z.object({ olderThanHours: z.coerce.number().int().positive().default(24) })
 
@@ -64,6 +65,29 @@ export function createUploadRoutes() {
     } catch (err) {
       if (err instanceof UploadValidationError) {
         return c.json(errorResponse(err.code, err.message), 400)
+      }
+      if (err instanceof Error && err.message.includes('not configured')) {
+        return c.json(errorResponse('NOT_CONFIGURED', err.message), 501)
+      }
+      throw err
+    }
+  })
+
+  // Finalize a directly uploaded ZIP model bundle. The server extracts the
+  // scene and its relative .bin/textures into public storage so model-viewer
+  // can load the glTF without requiring the browser to unpack the archive.
+  routes.post('/finalize-model', authGuard(), requireRole('ARTIST', 'ADMIN'), async (c) => {
+    const authUser = getAuthUser(c)!
+    const svc = c.get('uploadService')
+    const parsed = finalizeModelSchema.safeParse(await c.req.json().catch(() => ({})))
+    if (!parsed.success) return c.json(errorResponse('VALIDATION_ERROR', 'Invalid request payload', parsed.error.issues), 400)
+
+    try {
+      const result = await svc.finalizeModelBundle(authUser.userId, parsed.data.key)
+      return c.json(result, 201)
+    } catch (err) {
+      if (err instanceof UploadValidationError) {
+        return c.json(errorResponse('VALIDATION_ERROR', err.message), 400)
       }
       if (err instanceof Error && err.message.includes('not configured')) {
         return c.json(errorResponse('NOT_CONFIGURED', err.message), 501)
