@@ -89,6 +89,7 @@ const require = __cjs_require(import.meta.url);
       'puppeteer',
       '@prisma/client',
       '@prisma/adapter-pg',
+      '@node-rs/argon2',
       // hono/bun is loaded dynamically and skipped on Vercel
       'hono/bun',
     ],
