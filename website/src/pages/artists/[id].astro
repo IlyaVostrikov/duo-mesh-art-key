@@ -26,6 +26,8 @@ import PageFooter from "../../components/PageFooter.astro";
 </BaseLayout>
 
 <script>
+  import { escapeHtml } from '../../lib/escape-html'
+
   const id = window.location.pathname.split('/').pop()!
   const container = document.getElementById('artist-profile')!
 
@@ -39,25 +41,25 @@ import PageFooter from "../../components/PageFooter.astro";
         <a href="/artists" style="display:inline-block;margin-bottom:1.5rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);opacity:.55;text-decoration:none">&larr; К каталогу</a>
         <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:1.5rem">
           <div style="position:relative;width:80px;height:80px;border-radius:50%;overflow:hidden;flex-shrink:0">
-            ${artist.avatarUrl ? `<img src="${artist.avatarUrl}" alt="${name}" style="width:100%;height:100%;object-fit:cover" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--iri-deep);font-family:var(--serif);font-size:2rem;color:var(--paper)">${name[0]}</div>`}
+            ${artist.avatarUrl ? `<img src="${escapeHtml(artist.avatarUrl)}" alt="${escapeHtml(name)}" style="width:100%;height:100%;object-fit:cover" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--iri-deep);font-family:var(--serif);font-size:2rem;color:var(--paper)">${escapeHtml(name[0])}</div>`}
             ${artist.verified ? '<span style="position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--iri-deep);border-radius:50%;font-size:.7rem;display:flex;align-items:center;justify-content:center;color:var(--paper)">&#10003;</span>' : ''}
           </div>
           <div>
-            <h1 class="display xs" style="margin-bottom:.2rem">${name}</h1>
-            ${artist.location ? `<p style="font-family:var(--mono);font-size:.68rem;opacity:.5;letter-spacing:.04em">${artist.location}</p>` : ''}
+            <h1 class="display xs" style="margin-bottom:.2rem">${escapeHtml(name)}</h1>
+            ${artist.location ? `<p style="font-family:var(--mono);font-size:.68rem;opacity:.5;letter-spacing:.04em">${escapeHtml(artist.location)}</p>` : ''}
             <p style="font-family:var(--mono);font-size:.66rem;opacity:.5;margin-top:.2rem">${artist.followersCount} подписчиков</p>
             ${artist.hall?.slug ? `<a href="/halls/${artist.hall.slug}" style="display:inline-block;margin-top:.5rem;font-family:var(--sans);font-weight:600;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);text-decoration:underline;text-underline-offset:3px">Выставочный зал &rarr;</a>` : ''}
           </div>
         </div>
-        ${artist.bio ? `<p style="font-family:var(--sans);font-size:.84rem;line-height:1.62;opacity:.8;margin-bottom:1.5rem;max-width:720px">${artist.bio}</p>` : ''}
-        ${artist.artistStatement ? `<div style="border:1px solid color-mix(in oklab,var(--ink) 10%,transparent);padding:1.5rem;margin-bottom:2rem"><h3 style="font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;opacity:.5;margin-bottom:.5rem">Artist Statement</h3><p style="font-family:var(--sans);font-size:.84rem;line-height:1.62;opacity:.8">${artist.artistStatement}</p></div>` : ''}
+        ${artist.bio ? `<p style="font-family:var(--sans);font-size:.84rem;line-height:1.62;opacity:.8;margin-bottom:1.5rem;max-width:720px">${escapeHtml(artist.bio)}</p>` : ''}
+        ${artist.artistStatement ? `<div style="border:1px solid color-mix(in oklab,var(--ink) 10%,transparent);padding:1.5rem;margin-bottom:2rem"><h3 style="font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;opacity:.5;margin-bottom:.5rem">Artist Statement</h3><p style="font-family:var(--sans);font-size:.84rem;line-height:1.62;opacity:.8">${escapeHtml(artist.artistStatement)}</p></div>` : ''}
         <h2 class="display xs" style="margin-bottom:1.5rem">Работы художника</h2>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem">
           ${works.artworks.length === 0 ? '<p style="grid-column:1/-1;text-align:center;opacity:.5;font-family:var(--mono);font-size:.7rem;padding:3rem 0">Пока нет опубликованных работ</p>' :
             works.artworks.map((aw: any) => `
               <a href="/artworks/${aw.id}" class="aw-card">
-                <div class="aw-img">${aw.images[0] ? `<img src="${aw.images[0]}" alt="${aw.title}" loading="lazy" />` : '<div class="aw-noimg"></div>'}</div>
-                <div class="aw-body"><h3>${aw.title}</h3>${aw.price ? `<p class="aw-price">${Number(aw.price).toLocaleString()} ${aw.currency}</p>` : ''}</div>
+                <div class="aw-img">${aw.images[0] ? `<img src="${escapeHtml(aw.images[0])}" alt="${escapeHtml(aw.title)}" loading="lazy" />` : '<div class="aw-noimg"></div>'}</div>
+                <div class="aw-body"><h3>${escapeHtml(aw.title)}</h3>${aw.price ? `<p class="aw-price">${Number(aw.price).toLocaleString()} ${aw.currency}</p>` : ''}</div>
               </a>
             `).join('')
           }

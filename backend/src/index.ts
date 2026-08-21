@@ -9,7 +9,7 @@ const app = new Hono().route('/api', inner)
 const server = Bun.serve({
   port: runtime.env.PORT,
   fetch: app.fetch,
-  maxRequestBodySize: 128 * 1024 * 1024, // 128 MB — above UPLOAD_MAX_3D_BYTES default (100 MB)
+  maxRequestBodySize: 256 * 1024 * 1024, // 256 MB — above UPLOAD_MAX_3D_BYTES default (200 MB)
   idleTimeout: 30, // seconds — drop slow-loris / idle connections
 })
 

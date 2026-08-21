@@ -26,6 +26,8 @@ import PageFooter from "../../components/PageFooter.astro";
 </BaseLayout>
 
 <script>
+  import { escapeHtml } from '../../lib/escape-html'
+
   const id = window.location.pathname.split('/').pop()!
   const container = document.getElementById('artwork-detail')!
 
@@ -35,7 +37,7 @@ import PageFooter from "../../components/PageFooter.astro";
 
       const images = aw.images.length > 0
         ? aw.images.map((img: string, i: number) =>
-            `<img src="${img}" alt="${aw.title} — ${i + 1}" class="aw-main-img" ${i > 0 ? 'loading="lazy" style="width:80px;height:60px;object-fit:cover;margin:.5rem .5rem 0 0;cursor:pointer"' : ''} />`
+            `<img src="${escapeHtml(img)}" alt="${escapeHtml(aw.title)} — ${i + 1}" class="aw-main-img" ${i > 0 ? 'loading="lazy" style="width:80px;height:60px;object-fit:cover;margin:.5rem .5rem 0 0;cursor:pointer"' : ''} />`
           ).join('')
         : '<div class="aw-no-img">Нет изображения</div>'
 
@@ -46,17 +48,17 @@ import PageFooter from "../../components/PageFooter.astro";
         <div class="aw-layout">
           <div class="aw-images">${images}</div>
           <div class="aw-info">
-            <h1 class="display xs" style="margin-bottom:.5rem">${aw.title}</h1>
-            ${aw.artist ? `<a href="/artists/${aw.artist.id}" style="font-family:var(--sans);font-size:.9rem;color:var(--ink);opacity:.7">${aw.artist.displayName ?? 'Художник'}</a>` : ''}
-            ${aw.year ? `<p style="font-family:var(--mono);font-size:.66rem;opacity:.5;letter-spacing:.05em;margin:.5rem 0">${aw.year}${aw.medium ? ' · ' + aw.medium : ''}${aw.dimensions ? ' · ' + aw.dimensions : ''}</p>` : ''}
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0">${aw.styleTags.map((t: string) => `<span class="aw-tag">${t}</span>`).join(' ')}</div>
-            ${aw.description ? `<p style="font-family:var(--sans);font-size:.84rem;line-height:1.62;opacity:.8;margin:1rem 0">${aw.description}</p>` : ''}
+            <h1 class="display xs" style="margin-bottom:.5rem">${escapeHtml(aw.title)}</h1>
+            ${aw.artist ? `<a href="/artists/${aw.artist.id}" style="font-family:var(--sans);font-size:.9rem;color:var(--ink);opacity:.7">${escapeHtml(aw.artist.displayName ?? 'Художник')}</a>` : ''}
+            ${aw.year ? `<p style="font-family:var(--mono);font-size:.66rem;opacity:.5;letter-spacing:.05em;margin:.5rem 0">${escapeHtml(aw.year)}${aw.medium ? ' · ' + escapeHtml(aw.medium) : ''}${aw.dimensions ? ' · ' + escapeHtml(aw.dimensions) : ''}</p>` : ''}
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0">${aw.styleTags.map((t: string) => `<span class="aw-tag">${escapeHtml(t)}</span>`).join(' ')}</div>
+            ${aw.description ? `<p style="font-family:var(--sans);font-size:.84rem;line-height:1.62;opacity:.8;margin:1rem 0">${escapeHtml(aw.description)}</p>` : ''}
             <div class="aw-price-block">
               <span class="aw-price">${price}</span>
-              <span style="font-family:var(--mono);font-size:.66rem;opacity:.5">${aw.editionType === 'UNIQUE' ? 'Уникат' : aw.editionType === 'LIMITED' ? `Тираж: ${aw.editionTotal}` : 'Открытый тираж'}</span>
+              <span style="font-family:var(--mono);font-size:.66rem;opacity:.5">${aw.editionType === 'UNIQUE' ? 'Уникат' : aw.editionType === 'LIMITED' ? `Тираж: ${escapeHtml(aw.editionTotal)}` : 'Открытый тираж'}</span>
             </div>
-            ${aw.artKey ? `<div class="aw-keyinfo"><span style="font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase">Art Key</span><code style="font-family:var(--mono);font-size:.7rem;display:block;margin:.4rem 0;opacity:.7;word-break:break-all">${aw.artKey.keyCode}</code><p style="font-family:var(--mono);font-size:.66rem;opacity:.5">Владелец: ${aw.artKey.ownerKey}</p></div>` : ''}
-            ${aw.latestProvenance ? `<div style="margin:1rem 0"><h3 style="font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.25rem">Последняя передача</h3><p style="font-family:var(--mono);font-size:.7rem;opacity:.6">${aw.latestProvenance.transferType} → ${aw.latestProvenance.toOwnerName ?? 'неизвестно'} (${new Date(aw.latestProvenance.createdAt).toLocaleDateString('ru')})</p></div>` : ''}
+            ${aw.artKey ? `<div class="aw-keyinfo"><span style="font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase">Art Key</span><code style="font-family:var(--mono);font-size:.7rem;display:block;margin:.4rem 0;opacity:.7;word-break:break-all">${escapeHtml(aw.artKey.keyCode)}</code><p style="font-family:var(--mono);font-size:.66rem;opacity:.5">Владелец: ${escapeHtml(aw.artKey.ownerKey)}</p></div>` : ''}
+            ${aw.latestProvenance ? `<div style="margin:1rem 0"><h3 style="font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.25rem">Последняя передача</h3><p style="font-family:var(--mono);font-size:.7rem;opacity:.6">${escapeHtml(aw.latestProvenance.transferType)} → ${escapeHtml(aw.latestProvenance.toOwnerName ?? 'неизвестно')} (${new Date(aw.latestProvenance.createdAt).toLocaleDateString('ru')})</p></div>` : ''}
             <div class="aw-contact">
               <h3 style="font-family:var(--serif);font-size:1.2rem;font-weight:300;margin-bottom:.25rem">Хочу купить</h3>
               <p style="font-family:var(--mono);font-size:.66rem;opacity:.5;margin-bottom:1rem">Оставьте контакты — художник свяжется с вами.</p>

@@ -167,12 +167,12 @@ export function CreateArtworkForm({
       className="p-6 mb-8 space-y-5"
       style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
     >
-      {/* ── 3D model upload (optional) — GLB, GLTF or ZIP bundle ── */}
+      {/* ── 3D model upload (optional) — GLB or ZIP bundle ── */}
       <FileUpload
-        accept=".zip,.glb,.gltf"
-        maxSize={100 * 1024 * 1024}
+        accept=".zip,.glb"
+        maxSize={200 * 1024 * 1024}
         onFileSelect={setModelFile}
-        label={modelFile ? `3D набор: ${modelFile.name}` : '3D модель или ZIP-набор — .zip, .glb, .gltf'}
+        label={modelFile ? `3D набор: ${modelFile.name}` : '3D модель или ZIP-набор — .glb или .zip'}
       />
 
       {/* ── Poster / preview render — always visible.

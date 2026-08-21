@@ -89,6 +89,11 @@ export async function uploadModelFile(
   accessToken: string,
   onProgress?: UploadProgressCallback,
 ): Promise<UploadedFile> {
+  const extension = file.name.split('.').pop()?.toLowerCase()
+  if (extension === 'gltf') {
+    throw new Error('GLTF с .bin/текстурами нужно загрузить ZIP-набором: добавьте scene.gltf, scene.bin и папку textures в один ZIP')
+  }
+
   const uploaded = await uploadFile(file, accessToken, onProgress)
   if (!file.name.toLowerCase().endsWith('.zip')) return uploaded
 
@@ -208,9 +213,10 @@ export async function uploadFiles(
   const hashes: Record<string, string> = {}
 
   for (const file of files) {
-    // Upload first so large files start moving immediately. Hashing a 100 MB
+    // Upload first so large files start moving immediately. Hashing a 200 MB
     // File via arrayBuffer() can otherwise look like a frozen upload.
-    const result = options?.finalizeModels && file.name.toLowerCase().endsWith('.zip')
+    const lowerName = file.name.toLowerCase()
+    const result = options?.finalizeModels && (lowerName.endsWith('.zip') || lowerName.endsWith('.gltf'))
       ? await uploadModelFile(file, accessToken, onProgress)
       : await uploadFile(file, accessToken, onProgress)
 

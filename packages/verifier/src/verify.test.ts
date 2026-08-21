@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { verifySignedExport, DUO_MESH_PLATFORM_PUBKEY, type SignedExport } from './verify'
-
-// ── Pinned platform private key (test-only — matches DUO_MESH_PLATFORM_PUBKEY) ──
-const PLATFORM_PRIVKEY = '302e020100300506032b657004220420e084964ec8e0bb9f5cf6e9a7cb1372ceeef89b2272b38cec98cb57bcfb1924c3'
+import { verifySignedExport, type SignedExport } from './verify'
 
 /** Sign a payload with a CryptoKey, returning { recordHash, signature }. */
 async function signPayload(
@@ -22,10 +19,11 @@ async function signPayload(
   return { recordHash: hash, signature: sig }
 }
 
-/** Import a PKCS#8 Ed25519 private key from hex. */
-async function importPlatformPrivateKey(): Promise<CryptoKey> {
-  const buf = new Uint8Array([...Buffer.from(PLATFORM_PRIVKEY, 'hex')])
-  return crypto.subtle.importKey('pkcs8', buf, { name: 'Ed25519' }, true, ['sign'])
+/** Generate an ephemeral platform keypair (no committed private key). */
+async function generatePlatformKey(): Promise<{ privateKey: CryptoKey; publicKeyHex: string }> {
+  const kp = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify'])) as CryptoKeyPair
+  const publicKeyHex = Buffer.from(await crypto.subtle.exportKey('raw', kp.publicKey)).toString('hex')
+  return { privateKey: kp.privateKey, publicKeyHex }
 }
 
 /**
@@ -40,10 +38,11 @@ describe('verifySignedExport', () => {
     )) as CryptoKeyPair
     const artistPubHex = Buffer.from(await crypto.subtle.exportKey('raw', artistKp.publicKey)).toString('hex')
 
-    // ── Import pinned platform private key ──
-    const platformPrivKey = await importPlatformPrivateKey()
+    // ── Generate ephemeral platform keypair ──
+    const { privateKey: platformPrivKey, publicKeyHex: platformPubHex } = await generatePlatformKey()
 
     // ── Build provenance chain ──
+    const integrityHash = 'a'.repeat(64)
     const genesisPayload = {
       artworkId: 'aw_test',
       sequence: 1,
@@ -51,7 +50,7 @@ describe('verifySignedExport', () => {
       fromOwner: null,
       toOwner: 'artist_1',
       occurredAt: '2026-06-06T12:00:00Z',
-      prevRecordHash: '0'.repeat(64),
+      prevRecordHash: integrityHash,
     }
     const genesis = await signPayload(artistKp.privateKey, genesisPayload)
     const platformSig = await signPayload(platformPrivKey, genesisPayload)
@@ -73,12 +72,12 @@ describe('verifySignedExport', () => {
       exportedAt: new Date().toISOString(),
       artKey: {
         keyCode: 'KC_TEST',
-        integrityHash: genesis.recordHash,
+        integrityHash,
         timestampToken: null,
         platformSignature: platformSig.signature,
       },
       artist: { id: 'artist_1', displayName: 'Test Artist', publicKey: artistPubHex },
-      platform: { publicKey: DUO_MESH_PLATFORM_PUBKEY },
+      platform: { publicKey: platformPubHex },
       provenance: [
         {
           payload: genesisPayload as Record<string, unknown>,
@@ -91,7 +90,7 @@ describe('verifySignedExport', () => {
           payload: genesisPayload as Record<string, unknown>,
           recordHash: platformSig.recordHash,
           signature: platformSig.signature,
-          signerPublicKey: DUO_MESH_PLATFORM_PUBKEY,
+          signerPublicKey: platformPubHex,
           signerRole: 'PLATFORM',
         },
         {
@@ -104,7 +103,7 @@ describe('verifySignedExport', () => {
       ],
     }
 
-    const result = await verifySignedExport(exportData)
+    const result = await verifySignedExport(exportData, { platformPubKey: platformPubHex })
     expect(result.verified).toBe(true)
     expect(result.chainLength).toBe(3)
     expect(result.checks.every((c) => c.pass)).toBe(true)
@@ -214,5 +213,140 @@ describe('verifySignedExport', () => {
     const result = await verifySignedExport(exportData)
     expect(result.verified).toBe(false)
     expect(result.checks.some((c) => c.category === 'CHAIN' && !c.pass)).toBe(true)
+  })
+
+  test('rejects a record with a signature but no signerPublicKey', async () => {
+    const artistKp = (await crypto.subtle.generateKey(
+      { name: 'Ed25519' }, true, ['sign', 'verify'],
+    )) as CryptoKeyPair
+    const artistPubHex = Buffer.from(await crypto.subtle.exportKey('raw', artistKp.publicKey)).toString('hex')
+    const { privateKey: platformPrivKey, publicKeyHex: platformPubHex } = await generatePlatformKey()
+
+    const integrityHash = 'b'.repeat(64)
+    const genesisPayload = {
+      artworkId: 'aw_nullpub', sequence: 1, eventType: 'GENESIS',
+      fromOwner: null, toOwner: 'artist_1', occurredAt: '2026-06-06T12:00:00Z',
+      prevRecordHash: integrityHash,
+    }
+    const genesis = await signPayload(artistKp.privateKey, genesisPayload)
+    const platformSig = await signPayload(platformPrivKey, genesisPayload)
+
+    const exportData: SignedExport = {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      artKey: { keyCode: 'KC_NULLPUB', integrityHash, timestampToken: null, platformSignature: platformSig.signature },
+      artist: { id: 'artist_1', displayName: 'Test', publicKey: artistPubHex },
+      platform: { publicKey: platformPubHex },
+      provenance: [
+        {
+          payload: genesisPayload as Record<string, unknown>,
+          recordHash: genesis.recordHash,
+          signature: genesis.signature,
+          signerPublicKey: null, // signature present, no key to verify against
+          signerRole: 'ARTIST',
+        },
+        {
+          payload: genesisPayload as Record<string, unknown>,
+          recordHash: platformSig.recordHash,
+          signature: platformSig.signature,
+          signerPublicKey: platformPubHex,
+          signerRole: 'PLATFORM',
+        },
+      ],
+    }
+
+    const result = await verifySignedExport(exportData, { platformPubKey: platformPubHex })
+    expect(result.verified).toBe(false)
+    expect(result.checks.some((c) => c.category === 'SIGNATURE' && !c.pass && c.detail.includes('signerPublicKey'))).toBe(true)
+  })
+
+  test('rejects a genesis record not anchored to integrityHash', async () => {
+    const artistKp = (await crypto.subtle.generateKey(
+      { name: 'Ed25519' }, true, ['sign', 'verify'],
+    )) as CryptoKeyPair
+    const artistPubHex = Buffer.from(await crypto.subtle.exportKey('raw', artistKp.publicKey)).toString('hex')
+    const { privateKey: platformPrivKey, publicKeyHex: platformPubHex } = await generatePlatformKey()
+
+    const integrityHash = 'c'.repeat(64)
+    const genesisPayload = {
+      artworkId: 'aw_anchor', sequence: 1, eventType: 'GENESIS',
+      fromOwner: null, toOwner: 'artist_1', occurredAt: '2026-06-06T12:00:00Z',
+      prevRecordHash: 'd'.repeat(64), // WRONG anchor
+    }
+    const genesis = await signPayload(artistKp.privateKey, genesisPayload)
+    const platformSig = await signPayload(platformPrivKey, genesisPayload)
+
+    const exportData: SignedExport = {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      artKey: { keyCode: 'KC_ANCHOR', integrityHash, timestampToken: null, platformSignature: platformSig.signature },
+      artist: { id: 'artist_1', displayName: 'Test', publicKey: artistPubHex },
+      platform: { publicKey: platformPubHex },
+      provenance: [
+        {
+          payload: genesisPayload as Record<string, unknown>,
+          recordHash: genesis.recordHash,
+          signature: genesis.signature,
+          signerPublicKey: artistPubHex,
+          signerRole: 'ARTIST',
+        },
+        {
+          payload: genesisPayload as Record<string, unknown>,
+          recordHash: platformSig.recordHash,
+          signature: platformSig.signature,
+          signerPublicKey: platformPubHex,
+          signerRole: 'PLATFORM',
+        },
+      ],
+    }
+
+    const result = await verifySignedExport(exportData, { platformPubKey: platformPubHex })
+    expect(result.verified).toBe(false)
+    expect(result.checks.some((c) => c.category === 'CHAIN' && !c.pass && c.detail.includes('integrityHash'))).toBe(true)
+  })
+
+  test('rejects a tampered artKey.platformSignature', async () => {
+    const artistKp = (await crypto.subtle.generateKey(
+      { name: 'Ed25519' }, true, ['sign', 'verify'],
+    )) as CryptoKeyPair
+    const artistPubHex = Buffer.from(await crypto.subtle.exportKey('raw', artistKp.publicKey)).toString('hex')
+    const { privateKey: platformPrivKey, publicKeyHex: platformPubHex } = await generatePlatformKey()
+
+    const integrityHash = 'e'.repeat(64)
+    const genesisPayload = {
+      artworkId: 'aw_platsig', sequence: 1, eventType: 'GENESIS',
+      fromOwner: null, toOwner: 'artist_1', occurredAt: '2026-06-06T12:00:00Z',
+      prevRecordHash: integrityHash,
+    }
+    const genesis = await signPayload(artistKp.privateKey, genesisPayload)
+    const platformSig = await signPayload(platformPrivKey, genesisPayload)
+
+    const exportData: SignedExport = {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      // Declared platformSignature is tampered — doesn't match the real co-signature
+      artKey: { keyCode: 'KC_PLATSIG', integrityHash, timestampToken: null, platformSignature: 'f'.repeat(128) },
+      artist: { id: 'artist_1', displayName: 'Test', publicKey: artistPubHex },
+      platform: { publicKey: platformPubHex },
+      provenance: [
+        {
+          payload: genesisPayload as Record<string, unknown>,
+          recordHash: genesis.recordHash,
+          signature: genesis.signature,
+          signerPublicKey: artistPubHex,
+          signerRole: 'ARTIST',
+        },
+        {
+          payload: genesisPayload as Record<string, unknown>,
+          recordHash: platformSig.recordHash,
+          signature: platformSig.signature,
+          signerPublicKey: platformPubHex,
+          signerRole: 'PLATFORM',
+        },
+      ],
+    }
+
+    const result = await verifySignedExport(exportData, { platformPubKey: platformPubHex })
+    expect(result.verified).toBe(false)
   })
 })

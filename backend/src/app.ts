@@ -131,12 +131,13 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
   const provenanceTransferService = new ProvenanceTransferService(prisma, signingService)
 
   // ── Bootstrap: ensure platform key exists & sync keys from DB ──
-  // MUST await — the migration and key sync must complete before any request
-  // touches the signing_keys table (Prisma queries fail if columns are missing).
+  // MUST await — key sync must complete before any request signs or verifies.
+  let signingInitError: Error | null = null
   try {
     await signingService.ensureKeys()
   } catch (err) {
-    console.error('Failed to ensure keys:', err)
+    signingInitError = err instanceof Error ? err : new Error(String(err))
+    console.error('Failed to ensure signing keys:', signingInitError)
   }
 
   const app = new OpenAPIHono<AppBindings>({
@@ -180,7 +181,11 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
   })
 
   app.get('/', (c) => c.json({ name: 'DUO MESH API', status: 'ok' }))
-  app.get('/health', (c) => c.json({ status: 'ok' }))
+  app.get('/health', (c) =>
+    signingInitError
+      ? c.json({ status: 'degraded', signing: 'unavailable' }, 503)
+      : c.json({ status: 'ok' }),
+  )
 
   // Allow cross-origin loading of uploaded assets (overrides secureHeaders CORP: same-origin)
   // On Vercel, uploads are served from /tmp; locally via Bun serveStatic

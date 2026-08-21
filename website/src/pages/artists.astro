@@ -28,6 +28,8 @@ import PageFooter from "../components/PageFooter.astro";
 </BaseLayout>
 
 <script>
+  import { escapeHtml } from '../lib/escape-html'
+
   const grid = document.getElementById('artist-grid')!
   const searchInput = document.getElementById('artist-search') as HTMLInputElement
   let debounceTimer: ReturnType<typeof setTimeout>
@@ -43,10 +45,10 @@ import PageFooter from "../components/PageFooter.astro";
       grid.innerHTML = data.artists.map((a: any) => {
         const name = a.displayName ?? 'Анонимный художник'
         const link = a.hall?.slug ? `/halls/${a.hall.slug}` : `/artists/${a.id}`
-        const avatar = a.avatarUrl ? `<img src="${a.avatarUrl}" alt="${name}" />` : `<div class="a-placeholder">${name[0]}</div>`
+        const avatar = a.avatarUrl ? `<img src="${escapeHtml(a.avatarUrl)}" alt="${escapeHtml(name)}" />` : `<div class="a-placeholder">${escapeHtml(name[0])}</div>`
         return `<a href="${link}" class="a-card">
           <div class="a-avatar">${avatar}${a.verified ? '<span class="a-verified">&#10003;</span>' : ''}</div>
-          <div class="a-info"><h3>${name}</h3><p>${a.location ?? ''}</p><p class="a-followers">${a.followersCount} подписчиков</p></div>
+          <div class="a-info"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(a.location ?? '')}</p><p class="a-followers">${a.followersCount} подписчиков</p></div>
         </a>`
       }).join('')
     } catch (err) {

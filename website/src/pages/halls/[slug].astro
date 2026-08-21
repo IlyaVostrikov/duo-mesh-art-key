@@ -26,6 +26,8 @@ import PageFooter from "../../components/PageFooter.astro";
 </BaseLayout>
 
 <script>
+  import { escapeHtml } from '../../lib/escape-html'
+
   const slug = window.location.pathname.split('/').pop()!
   const container = document.getElementById('hall-content')!
 
@@ -35,18 +37,18 @@ import PageFooter from "../../components/PageFooter.astro";
       container.innerHTML = `
         <a href="/artists" style="display:inline-block;margin-bottom:1.5rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);opacity:.55;text-decoration:none">&larr; К художникам</a>
         <div style="margin-bottom:2rem">
-          ${hall.coverImageUrl ? `<img src="${hall.coverImageUrl}" alt="${hall.title}" style="width:100%;max-height:400px;object-fit:cover;margin-bottom:1.5rem;border:1px solid color-mix(in oklab,var(--ink) 10%,transparent)" />` : ''}
-          <h1 class="display sm" style="margin-bottom:.25rem">${hall.title}</h1>
-          <p style="font-family:var(--sans);font-size:1rem;opacity:.7;margin-bottom:.75rem">${hall.artist.displayName ?? 'Художник'}</p>
-          ${hall.description ? `<p style="font-family:var(--sans);font-size:.84rem;line-height:1.62;opacity:.8;max-width:720px">${hall.description}</p>` : ''}
+          ${hall.coverImageUrl ? `<img src="${escapeHtml(hall.coverImageUrl)}" alt="${escapeHtml(hall.title)}" style="width:100%;max-height:400px;object-fit:cover;margin-bottom:1.5rem;border:1px solid color-mix(in oklab,var(--ink) 10%,transparent)" />` : ''}
+          <h1 class="display sm" style="margin-bottom:.25rem">${escapeHtml(hall.title)}</h1>
+          <p style="font-family:var(--sans);font-size:1rem;opacity:.7;margin-bottom:.75rem">${escapeHtml(hall.artist.displayName ?? 'Художник')}</p>
+          ${hall.description ? `<p style="font-family:var(--sans);font-size:.84rem;line-height:1.62;opacity:.8;max-width:720px">${escapeHtml(hall.description)}</p>` : ''}
           <p style="font-family:var(--mono);font-size:.66rem;opacity:.45;letter-spacing:.04em;margin-top:.5rem">${hall.viewCount} просмотров</p>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem">
           ${hall.artworks.length === 0 ? '<p style="grid-column:1/-1;text-align:center;opacity:.5;font-family:var(--mono);font-size:.7rem;padding:3rem 0">В зале пока нет работ</p>' :
             hall.artworks.map((aw: any) => `
               <a href="/artworks/${aw.id}" class="aw-card">
-                <div class="aw-img">${aw.images[0] ? `<img src="${aw.images[0]}" alt="${aw.title}" loading="lazy" />` : '<div class="aw-noimg"></div>'}</div>
-                <div class="aw-body"><h3>${aw.title}</h3>${aw.price ? `<p class="aw-price">${Number(aw.price).toLocaleString()} ${aw.currency}</p>` : ''}</div>
+                <div class="aw-img">${aw.images[0] ? `<img src="${escapeHtml(aw.images[0])}" alt="${escapeHtml(aw.title)}" loading="lazy" />` : '<div class="aw-noimg"></div>'}</div>
+                <div class="aw-body"><h3>${escapeHtml(aw.title)}</h3>${aw.price ? `<p class="aw-price">${Number(aw.price).toLocaleString()} ${aw.currency}</p>` : ''}</div>
               </a>
             `).join('')
           }

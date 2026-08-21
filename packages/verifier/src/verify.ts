@@ -71,7 +71,7 @@ export interface VerificationResult {
 
 // ── Recursive canonical JSON (RFC 8785 / JCS-style) ──
 
-function canonicalJSON(value: unknown): string {
+export function canonicalJSON(value: unknown): string {
   return JSON.stringify(canonicalize(value))
 }
 
@@ -97,7 +97,7 @@ function canonicalize(value: unknown): unknown {
 
 // ── SHA-256 ──
 
-async function sha256Hex(data: string): Promise<string> {
+export async function sha256Hex(data: string): Promise<string> {
   const enc = new TextEncoder().encode(data)
   const hash = await crypto.subtle.digest('SHA-256', enc)
   return bufferToHex(hash)
@@ -138,8 +138,14 @@ const SUPPORTED_VERSIONS = new Set(['1.0.0', '2.0.0'])
 
 // ── Main verification ──
 
-export async function verifySignedExport(data: SignedExport): Promise<VerificationResult> {
+export interface VerifyOptions {
+  /** Override the pinned platform trust anchor (test-only). Defaults to DUO_MESH_PLATFORM_PUBKEY. */
+  platformPubKey?: string
+}
+
+export async function verifySignedExport(data: SignedExport, opts: VerifyOptions = {}): Promise<VerificationResult> {
   const checks: CheckResult[] = []
+  const trustAnchor = opts.platformPubKey ?? DUO_MESH_PLATFORM_PUBKEY
 
   // Version check
   if (!SUPPORTED_VERSIONS.has(data.version)) {
@@ -174,8 +180,19 @@ export async function verifySignedExport(data: SignedExport): Promise<Verificati
   let chainHash = ''  // recordHash of the last chain link
   let allHashesMatch = true
   let allSigsValid = true
-  let chainIntact = true
   let hasRequiredSigs = true
+
+  // Genesis anchor: the first record must link back to the artwork's integrityHash.
+  const genesisEntry = data.provenance[0]
+  const genesisAnchorOk = genesisEntry.payload.prevRecordHash === data.artKey.integrityHash
+  let chainIntact = genesisAnchorOk
+  checks.push({
+    category: 'CHAIN',
+    pass: genesisAnchorOk,
+    detail: genesisAnchorOk
+      ? 'Genesis record anchored to integrityHash'
+      : `Genesis record not anchored to integrityHash — expected ${data.artKey.integrityHash.slice(0, 16)}…, got ${String(genesisEntry.payload.prevRecordHash).slice(0, 16)}…`,
+  })
 
   for (let i = 0; i < data.provenance.length; i++) {
     const entry = data.provenance[i]
@@ -230,6 +247,15 @@ export async function verifySignedExport(data: SignedExport): Promise<Verificati
         pass: false,
         detail: `Record #${i + 1}: unsigned (LEGACY record)`,
       })
+    } else {
+      // signature present but no public key to verify it against
+      hasRequiredSigs = false
+      allSigsValid = false
+      checks.push({
+        category: 'SIGNATURE',
+        pass: false,
+        detail: `Record #${i + 1}: signature present but signerPublicKey is missing`,
+      })
     }
   }
 
@@ -239,7 +265,7 @@ export async function verifySignedExport(data: SignedExport): Promise<Verificati
   for (const entry of data.provenance) {
     if (entry.signerRole === 'PLATFORM' && entry.signature) {
       const pinnedValid = await verifyEd25519(
-        DUO_MESH_PLATFORM_PUBKEY,
+        trustAnchor,
         entry.signature,
         entry.recordHash,
       )
@@ -258,6 +284,24 @@ export async function verifySignedExport(data: SignedExport): Promise<Verificati
       : 'No valid platform co-signature against pinned DUO MESH key — provenance may be self-signed',
   })
 
+  // Reconcile the export's declared platformSignature against the pinned key.
+  // It signs the genesis record, so it must verify over provenance[0].recordHash.
+  let platformSignatureDeclaredValid = true
+  if (data.artKey.platformSignature) {
+    platformSignatureDeclaredValid = await verifyEd25519(
+      trustAnchor,
+      data.artKey.platformSignature,
+      genesisEntry.recordHash,
+    )
+    checks.push({
+      category: 'SIGNATURE',
+      pass: platformSignatureDeclaredValid,
+      detail: platformSignatureDeclaredValid
+        ? 'artKey.platformSignature verifies against pinned DUO MESH key'
+        : 'artKey.platformSignature does NOT verify against pinned DUO MESH key over the genesis record',
+    })
+  }
+
   // ── Trust model notes ──
 
   checks.push({
@@ -270,7 +314,7 @@ export async function verifySignedExport(data: SignedExport): Promise<Verificati
   // ── Determine status ──
 
   const structuralOk = allHashesMatch && chainIntact
-  const cryptoOk = allSigsValid && platformCoSignatureValid
+  const cryptoOk = allSigsValid && platformCoSignatureValid && platformSignatureDeclaredValid
 
   let status: VerificationStatus
   if (structuralOk && cryptoOk && hasRequiredSigs) {

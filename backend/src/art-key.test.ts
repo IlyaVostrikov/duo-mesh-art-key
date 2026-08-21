@@ -4,7 +4,7 @@ import { sha256Hex, compositeFileHash, hashPayload } from './crypto/hash'
 import { generateEd25519KeyPair } from './crypto/keys'
 import { signPayload } from './crypto/sign'
 import { verifyProvenanceSignature } from './crypto/verify'
-import { artKeySchema, provenanceRecordSchema, artKeyVerificationSchema } from '@duo-mesh/contracts'
+import { artKeySchema, provenanceRecordSchema, artKeyVerificationSchema, type ArtKeyVerificationDto } from '@duo-mesh/contracts'
 
 // ─── Crypto: canonicalJSON ───
 
@@ -251,54 +251,95 @@ describe('provenanceRecordSchema', () => {
 // ─── Contracts: artKeyVerificationSchema ───
 
 describe('artKeyVerificationSchema', () => {
-  test('parses valid verification result', () => {
-    const result = artKeyVerificationSchema.safeParse({
+  function validVerification(): ArtKeyVerificationDto {
+    return {
       artKey: {
         id: '00000000-0000-1000-8000-000000000001',
-        artworkId: '00000000-0000-1000-8000-000000000002',
         keyCode: 'DUO-2026-TEST',
         ownerKey: 'X12345678-ABCDEF01',
-        certificateHash: 'a'.repeat(64),
         integrityHash: 'b'.repeat(64),
-        certificatePdfUrl: null,
-        qrCodeUrl: null,
-        nfcId: null,
-        timestampToken: null,
-        platformSignature: null,
+        certificateHash: 'a'.repeat(64),
         issuedAt: '2026-01-01T00:00:00.000Z',
         revokedAt: null,
-        artwork: { id: '00000000-0000-1000-8000-000000000002', title: 'Test', artistName: 'Test Artist' },
+        timestampToken: null,
+        platformSignature: null,
+      },
+      artwork: {
+        id: '00000000-0000-1000-8000-000000000002',
+        title: 'Test',
+        description: null,
+        year: 2026,
+        medium: 'DIGITAL',
+        posterUrl: null,
+        modelUrl: null,
+        mediaType: 'IMAGE_2D',
+        status: 'LISTED',
+        price: null,
+        currency: 'RUB',
+      },
+      artist: {
+        id: '00000000-0000-1000-8000-000000000003',
+        displayName: 'Test Artist',
+        hallSlug: null,
       },
       provenance: [],
-      verified: false,
-      currentOwner: null,
-    })
-    expect(result.success).toBe(true)
+      verified: true,
+      checks: [
+        { label: 'integrityHash (file-based)', pass: true, detail: 'ok', category: 'INTEGRITY' },
+      ],
+      currentOwner: 'Test Artist',
+    }
+  }
+
+  test('parses the real verify() response shape', () => {
+    expect(artKeyVerificationSchema.safeParse(validVerification()).success).toBe(true)
   })
 
-  test('verified must be boolean (was isValid in old version)', () => {
-    const result = artKeyVerificationSchema.safeParse({
-      artKey: {
-        id: '00000000-0000-1000-8000-000000000001',
-        artworkId: '00000000-0000-1000-8000-000000000002',
-        keyCode: 'DUO-2026-TEST',
-        ownerKey: 'X12345678-ABCDEF01',
-        certificateHash: 'a'.repeat(64),
-        integrityHash: 'b'.repeat(64),
-        certificatePdfUrl: null,
-        qrCodeUrl: null,
-        nfcId: null,
-        timestampToken: null,
-        platformSignature: null,
-        issuedAt: '2026-01-01T00:00:00.000Z',
-        revokedAt: null,
-        artwork: { id: '00000000-0000-1000-8000-000000000002', title: 'Test', artistName: 'Test Artist' },
-      },
-      provenance: [],
-      isValid: true, // OLD field name — should fail
-      currentOwner: null,
-    })
-    expect(result.success).toBe(false)
+  test('accepts provenance records and nullable fields', () => {
+    const data = validVerification()
+    data.provenance = [{
+      sequence: 0,
+      transferType: 'CREATION',
+      fromOwnerName: null,
+      toOwnerName: 'Test Artist',
+      price: null,
+      recordHash: 'a'.repeat(64),
+      prevRecordHash: 'b'.repeat(64),
+      signature: 'c'.repeat(128),
+      signerPublicKey: 'd'.repeat(64),
+      signerRole: 'ARTIST',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }]
+    data.artwork.year = null
+    data.artwork.description = 'desc'
+    expect(artKeyVerificationSchema.safeParse(data).success).toBe(true)
+  })
+
+  test('rejects the old DB-shaped artKey (nested artwork instead of top-level)', () => {
+    const data = validVerification() as Record<string, unknown>
+    data.artKey = {
+      id: '00000000-0000-1000-8000-000000000001',
+      artworkId: '00000000-0000-1000-8000-000000000002',
+      keyCode: 'DUO-2026-TEST',
+      ownerKey: 'X12345678-ABCDEF01',
+      certificateHash: 'a'.repeat(64),
+      integrityHash: 'b'.repeat(64),
+      certificatePdfUrl: null,
+      qrCodeUrl: null,
+      nfcId: null,
+      timestampToken: null,
+      platformSignature: null,
+      issuedAt: '2026-01-01T00:00:00.000Z',
+      revokedAt: null,
+      artwork: { id: '00000000-0000-1000-8000-000000000002', title: 'Test', artistName: 'Test Artist' },
+    }
+    delete (data as Record<string, unknown>).artwork
+    expect(artKeyVerificationSchema.safeParse(data).success).toBe(false)
+  })
+
+  test('verified must be a boolean', () => {
+    const data = { ...validVerification(), verified: 'yes' }
+    expect(artKeyVerificationSchema.safeParse(data).success).toBe(false)
   })
 })
 

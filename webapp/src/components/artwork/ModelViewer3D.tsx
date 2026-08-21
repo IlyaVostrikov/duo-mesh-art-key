@@ -35,7 +35,7 @@ export interface ModelViewer3DProps {
   showFullscreen?: boolean
   /** Disable mouse-wheel zoom so page scroll passes through (default false) */
   disableZoom?: boolean
-  /** Override environment-image: "neutral" for specular-glossiness models, "" to disable IBL (default "") */
+  /** Override environment-image; "neutral" provides stable lighting for uploaded PBR models. */
   environmentImage?: string
 }
 
@@ -60,7 +60,7 @@ export function ModelViewer3D({
   exposure = 1.4,
   showFullscreen = true,
   disableZoom = false,
-  environmentImage,
+  environmentImage = 'neutral',
 }: ModelViewer3DProps) {
   const resolvedModelUrl = assetUrl(modelUrl)
   const resolvedPosterUrl = posterUrl ? assetUrl(posterUrl) : undefined
@@ -69,6 +69,8 @@ export function ModelViewer3D({
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<ModelViewerElement>(null) as RefObject<ModelViewerElement>
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [loadingProgress, setLoadingProgress] = useState(0)
+  const [loadError, setLoadError] = useState(false)
 
   // ─── Fullscreen toggle ───
   const toggleFullscreen = useCallback(async () => {
@@ -170,18 +172,30 @@ export function ModelViewer3D({
 
   // ─── Diagnostic: log model-viewer events ───
   useEffect(() => {
+    setLoadingProgress(0)
+    setLoadError(false)
+  }, [resolvedModelUrl])
+
+  useEffect(() => {
     const el = viewerRef.current
     if (!el) return
 
-    const onLoad = () => console.log('[ModelViewer3D] model loaded:', resolvedModelUrl)
+    const onLoad = () => {
+      setLoadingProgress(1)
+      setLoadError(false)
+      console.log('[ModelViewer3D] model loaded:', resolvedModelUrl)
+    }
     const onError = (e: Event) => {
       const detail = (e as CustomEvent)?.detail ?? 'unknown'
+      setLoadError(true)
       console.error('[ModelViewer3D] model ERROR:', resolvedModelUrl, detail)
     }
     const onProgress = (e: Event) => {
       const detail = (e as CustomEvent)?.detail
       if (detail?.totalProgress !== undefined) {
-        console.log(`[ModelViewer3D] progress: ${Math.round(detail.totalProgress * 100)}%`)
+        const progress = Math.max(0, Math.min(1, Number(detail.totalProgress)))
+        setLoadingProgress(progress)
+        console.log(`[ModelViewer3D] progress: ${Math.round(progress * 100)}%`)
       }
     }
 
@@ -237,10 +251,15 @@ export function ModelViewer3D({
     if (cameraOrbit) {
       el.setAttribute('camera-orbit', cameraOrbit)
     } else {
-      // Default: slightly elevated, angled for a "gallery pedestal" look
-      el.setAttribute('camera-orbit', '30deg 75deg 2.5m')
+      // Imported models have arbitrary scales. Let model-viewer frame them instead
+      // of forcing every asset into a fixed 2.5m camera radius.
+      el.setAttribute('camera-orbit', 'auto auto auto')
     }
-    if (cameraTarget) el.setAttribute('camera-target', cameraTarget)
+    if (cameraTarget) {
+      el.setAttribute('camera-target', cameraTarget)
+    } else {
+      el.setAttribute('camera-target', 'auto auto auto')
+    }
 
     // Orbit limits — prevent flipping under floor or into void
     if (minCameraOrbit) {
@@ -297,6 +316,45 @@ export function ModelViewer3D({
           '--poster-color': 'transparent',
         } as React.CSSProperties,
       })}
+
+      {loadError ? (
+        <div
+          role="alert"
+          style={{
+            position: 'absolute', inset: 0, zIndex: 5,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: '12px', padding: '24px', textAlign: 'center',
+            color: '#fff', background: 'rgba(0,0,0,0.72)',
+          }}
+        >
+          <strong>Не удалось отобразить 3D-модель / 3D preview failed</strong>
+          <span style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.85rem' }}>
+            Проверьте файл и зависимости .bin/текстур или скачайте исходную сцену.
+          </span>
+          <a
+            href={resolvedModelUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            style={{ color: 'var(--accent)', textDecoration: 'underline', fontSize: '0.85rem' }}
+          >
+            Скачать файл / Download
+          </a>
+        </div>
+      ) : loadingProgress < 1 ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'absolute', inset: 0, zIndex: 5,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: '12px', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.28)',
+            pointerEvents: 'none',
+          }}
+        >
+          <span>Загрузка 3D-модели / Loading 3D model…</span>
+          {loadingProgress > 0 && <span>{Math.round(loadingProgress * 100)}%</span>}
+        </div>
+      ) : null}
 
       {/* Fullscreen button (Task 2) */}
       {showFullscreen && (

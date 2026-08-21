@@ -15,7 +15,7 @@ describe('loadEnv', () => {
     expect(env.COOKIE_SECURE).toBe(false)
     expect(env.CORS_ORIGINS).toEqual(['http://localhost:5173', 'http://localhost:8081'])
     expect(env.SPACES_REGION).toBeUndefined()
-    expect(env.SPACES_UPLOAD_MAX_BYTES).toBe(10 * 1024 * 1024)
+    expect(env.SPACES_UPLOAD_MAX_BYTES).toBe(200 * 1024 * 1024)
     expect(env.SPACES_UPLOAD_URL_TTL_SECONDS).toBe(900)
     expect(env.SPACES_DOWNLOAD_URL_TTL_SECONDS).toBe(300)
     expect(env.SPACES_PUBLIC_CACHE_CONTROL).toBe('public, max-age=31536000, immutable')

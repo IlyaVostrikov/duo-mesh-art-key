@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
-import { verifySignedExport, DUO_MESH_PLATFORM_PUBKEY, type SignedExport } from '@duo-mesh/verifier'
+import { verifySignedExport, type SignedExport } from '@duo-mesh/verifier'
 import { canonicalJSON } from './canonical'
 import { sha256Hex, hashPayload } from './hash'
 import { generateEd25519KeyPair, importPublicKey } from './keys'
@@ -13,10 +13,15 @@ describe('Art Key tamper detection', () => {
     mint = await mintSignedExport({ records: 3 })
   })
 
+  // Verify against the ephemeral platform key mintSignedExport generated,
+  // injected as the trust anchor (no committed private key).
+  const verify = (data: SignedExport) =>
+    verifySignedExport(data, { platformPubKey: mint.platformKey.publicKey })
+
   // ─── 0. Valid certificate passes ───
 
   test('валидный сертификат проходит', async () => {
-    const result = await verifySignedExport(mint.exportData)
+    const result = await verify(mint.exportData)
     expect(result.verified).toBe(true)
   })
 
@@ -25,7 +30,7 @@ describe('Art Key tamper detection', () => {
   test('изменение поля → verified=false (Layer A)', async () => {
     const t = structuredClone(mint.exportData)
     t.provenance[0].payload.toOwner = 'FORGED'
-    const result = await verifySignedExport(t)
+    const result = await verify(t)
     expect(result.verified).toBe(false)
     expect(result.checks.some((c) => c.category === 'INTEGRITY' && !c.pass)).toBe(true)
   })
@@ -41,7 +46,7 @@ describe('Art Key tamper detection', () => {
     t.provenance[0].recordHash = newHash
     // prevRecordHash in the next non-co-sig record (index 2) still points to old hash
 
-    const result = await verifySignedExport(t)
+    const result = await verify(t)
     expect(result.verified).toBe(false)
     expect(result.checks.some((c) => c.category === 'CHAIN' && !c.pass)).toBe(true)
   })
@@ -60,7 +65,7 @@ describe('Art Key tamper detection', () => {
     // Re-chain: recalculate all hashes and fix prevRecordHash links
     rechainAll(t)
 
-    const result = await verifySignedExport(t)
+    const result = await verify(t)
     // CRITICAL: signatures were made over old hashes, so Ed25519 must reject them
     expect(result.verified).toBe(false)
 
@@ -75,7 +80,7 @@ describe('Art Key tamper detection', () => {
     // Swap genesis and the first transfer (skip co-sig at index 1)
     ;[t.provenance[0], t.provenance[2]] = [t.provenance[2], t.provenance[0]]
 
-    const result = await verifySignedExport(t)
+    const result = await verify(t)
     expect(result.verified).toBe(false)
   })
 
@@ -90,7 +95,7 @@ describe('Art Key tamper detection', () => {
     // This breaks the chain: the next transfer's prevRecordHash points to the deleted record
     t.provenance.splice(2, 1)
 
-    const result = await verifySignedExport(t)
+    const result = await verifySignedExport(t, { platformPubKey: long.platformKey.publicKey })
     expect(result.verified).toBe(false)
     expect(result.checks.some((c) => c.category === 'CHAIN' && !c.pass)).toBe(true)
   })
@@ -101,7 +106,7 @@ describe('Art Key tamper detection', () => {
     const t = structuredClone(mint.exportData)
     t.provenance[0].signature = flipOneHexByte(t.provenance[0].signature!)
 
-    const result = await verifySignedExport(t)
+    const result = await verify(t)
     expect(result.verified).toBe(false)
     expect(result.checks.some((c) => c.category === 'SIGNATURE' && !c.pass)).toBe(true)
   })
@@ -113,7 +118,7 @@ describe('Art Key tamper detection', () => {
     const otherKp = await generateEd25519KeyPair()
     t.provenance[0].signerPublicKey = otherKp.publicKey
 
-    const result = await verifySignedExport(t)
+    const result = await verify(t)
     expect(result.verified).toBe(false)
     expect(result.checks.some((c) => c.category === 'SIGNATURE' && !c.pass)).toBe(true)
   })
@@ -135,7 +140,7 @@ describe('Art Key tamper detection', () => {
     // Re-chain and re-sign everything under the evil key
     await rechainAndResignAll(t, evil.privateKey)
 
-    const result = await verifySignedExport(t)
+    const result = await verify(t)
     // Must fail: platform co-signature is checked against PINNED key,
     // and the evil key doesn't match the pinned platform key
     expect(result.verified).toBe(false)
@@ -158,7 +163,7 @@ describe('Art Key tamper detection', () => {
     // If the verifier reads platform.publicKey from the document,
     // this would be a catastrophic hole.
     // The verifier must use the PINNED key instead.
-    const result = await verifySignedExport(t)
+    const result = await verify(t)
     expect(result.verified).toBe(true)
 
     // The platform signature still verifies against the pinned key

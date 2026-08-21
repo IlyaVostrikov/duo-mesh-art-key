@@ -16,7 +16,7 @@
     "build": "bun run prisma:generate && tsc --noEmit",
     "typecheck": "bun run prisma:generate && tsc --noEmit",
     "test": "bun run test:unit && bun run test:integration",
-    "test:unit": "bun test src/env.test.ts src/db.test.ts src/db-errors.test.ts src/contracts.test.ts src/cron.test.ts src/art-key.test.ts src/crypto/aes-gcm.test.ts src/crypto/keystore.test.ts src/crypto/timestamp.test.ts src/auth/access-tokens.test.ts src/auth/passwords.test.ts src/auth/refresh-tokens.test.ts src/auth/routes.test.ts src/routes/kdf-migration.test.ts src/storage/service.test.ts scripts/migrate-kdf.test.ts",
+    "test:unit": "bun test src scripts --path-ignore-patterns='**/*.integration.test.ts' --path-ignore-patterns='**/services/*.test.ts'",
     "test:integration": "bun scripts/test-integration.mjs",
     "smoke:docker": "bun scripts/docker-smoke.mjs",
     "prisma": "prisma",

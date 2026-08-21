@@ -11,6 +11,7 @@ export const apiErrorCodeSchema = z.enum([
   'INTERNAL_ERROR',
   'NOT_IMPLEMENTED',
   'NOT_CONFIGURED',
+  'STORAGE_ERROR',
   'DELETE_FAILED',
   'ALREADY_REVOKED',
   'PDF_GENERATION_FAILED',

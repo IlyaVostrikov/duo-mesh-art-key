@@ -3,11 +3,9 @@ import { signPayload } from './sign'
 import { hashPayload, compositeFileHash, sha256Hex } from './hash'
 import type { SignedExport, ProvenanceEntry } from '@duo-mesh/verifier'
 
-// ── Pinned DUO MESH platform keypair (test) ──
-// Public key is pinned in @duo-mesh/verifier — must match.
-// Private key lives ONLY in the fixture (and real signing service), never in the verifier.
-const PLATFORM_PUBKEY = '3ac4ff474fe8dc1825e53d7c92c3125dde8cf82eebabd29b96ad94de5cdce871'
-const PLATFORM_PRIVKEY = '302e020100300506032b657004220420e084964ec8e0bb9f5cf6e9a7cb1372ceeef89b2272b38cec98cb57bcfb1924c3'
+// The platform keypair is generated ephemerally per mint so no private key is
+// committed. The verifier is invoked with the ephemeral public key as its trust
+// anchor (see tamper.test.ts), so a "valid" fixture still round-trips.
 
 export interface MintOptions {
   /** Number of provenance records (excluding co-signatures). Default 3. */
@@ -26,13 +24,14 @@ export interface MintResult {
  * Build a valid SignedExport using the REAL crypto primitives
  * that the minting pipeline (ArtKeyService + SigningService) uses.
  *
- * The platform co-signature is made with the PINNED platform key.
- * The verifier will only accept exports whose platform signature
- * validates against the pinned public key — self-signed exports are rejected.
+ * The platform co-signature is made with an ephemeral platform key.
+ * Callers verify by injecting the ephemeral public key as the trust anchor:
+ * `verifySignedExport(exportData, { platformPubKey: platformKey.publicKey })`.
  */
 export async function mintSignedExport(opts: MintOptions = {}): Promise<MintResult> {
   const records = opts.records ?? 3
   const artistKp = await generateEd25519KeyPair()
+  const platformKp = await generateEd25519KeyPair()
 
   const artworkId = '00000000-0000-4000-8000-000000000001'
   const integrityHash =
@@ -61,13 +60,13 @@ export async function mintSignedExport(opts: MintOptions = {}): Promise<MintResu
     signerRole: 'ARTIST',
   })
 
-  // ── Platform co-signature on genesis (PINNED key) ──
-  const platformSig = await signPayload(PLATFORM_PRIVKEY, genesisPayload)
+  // ── Platform co-signature on genesis (ephemeral platform key) ──
+  const platformSig = await signPayload(platformKp.privateKey, genesisPayload)
   provenance.push({
     payload: { ...genesisPayload },
     recordHash: platformSig.recordHash,
     signature: platformSig.signature,
-    signerPublicKey: PLATFORM_PUBKEY,
+    signerPublicKey: platformKp.publicKey,
     signerRole: 'PLATFORM',
   })
 
@@ -109,7 +108,7 @@ export async function mintSignedExport(opts: MintOptions = {}): Promise<MintResu
       publicKey: artistKp.publicKey,
     },
     platform: {
-      publicKey: PLATFORM_PUBKEY,
+      publicKey: platformKp.publicKey,
     },
     provenance,
   }
@@ -117,6 +116,6 @@ export async function mintSignedExport(opts: MintOptions = {}): Promise<MintResu
   return {
     exportData,
     artistKey: artistKp,
-    platformKey: { publicKey: PLATFORM_PUBKEY, privateKey: PLATFORM_PRIVKEY },
+    platformKey: platformKp,
   }
 }

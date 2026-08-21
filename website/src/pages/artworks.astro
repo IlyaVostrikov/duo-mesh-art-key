@@ -47,6 +47,8 @@ import PageFooter from "../components/PageFooter.astro";
 </BaseLayout>
 
 <script>
+  import { escapeHtml } from '../lib/escape-html'
+
   let page = 1
   const grid = document.getElementById('artwork-grid')!
   const pagination = document.getElementById('pagination')!
@@ -71,8 +73,8 @@ import PageFooter from "../components/PageFooter.astro";
         const img = aw.images[0] ?? '/placeholder-art.svg'
         const price = aw.price ? `${Number(aw.price).toLocaleString()} ${aw.currency}` : ''
         return `<a href="/artworks/${aw.id}" class="aw-card">
-          <div class="aw-img"><img src="${img}" alt="${aw.title}" loading="lazy" /><span class="aw-tag">${aw.category}</span></div>
-          <div class="aw-body"><h3>${aw.title}</h3><p class="aw-artist">${aw.artist?.displayName ?? ''}</p>${price ? `<p class="aw-price">${price}</p>` : ''}</div>
+          <div class="aw-img"><img src="${escapeHtml(img)}" alt="${escapeHtml(aw.title)}" loading="lazy" /><span class="aw-tag">${escapeHtml(aw.category)}</span></div>
+          <div class="aw-body"><h3>${escapeHtml(aw.title)}</h3><p class="aw-artist">${escapeHtml(aw.artist?.displayName ?? '')}</p>${price ? `<p class="aw-price">${price}</p>` : ''}</div>
         </a>`
       }).join('')
       pagination.innerHTML = ''

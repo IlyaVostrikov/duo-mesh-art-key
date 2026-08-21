@@ -113,7 +113,7 @@ export function ArtistOnboarding() {
       }
 
       if (awMediaType === 'MODEL_3D') {
-        if (!awModelFile) throw new Error('Загрузите 3D-модель GLB или GLTF / Upload a GLB or GLTF model')
+        if (!awModelFile) throw new Error('Загрузите 3D-модель GLB или ZIP-набор / Upload a GLB or ZIP bundle')
         modelUrl = await uploadModelFile(awModelFile, setUploadProgress) ?? undefined
         if (!modelUrl) throw new Error('Не удалось загрузить 3D-модель / 3D model upload failed')
       }
@@ -379,10 +379,10 @@ export function ArtistOnboarding() {
                 />
                 {awMediaType === 'MODEL_3D' && (
                   <FileUpload
-                    accept=".zip,.glb,.gltf"
-                    maxSize={100 * 1024 * 1024}
+                    accept=".zip,.glb"
+                    maxSize={200 * 1024 * 1024}
                     onFileSelect={setAwModelFile}
-                    label={awModelFile ? `3D набор: ${awModelFile.name}` : '3D-модель или ZIP-набор / 3D model or ZIP bundle'}
+                    label={awModelFile ? `3D набор: ${awModelFile.name}` : '3D-модель или ZIP-набор (.glb или .zip) / 3D model or ZIP bundle'}
                   />
                 )}
 

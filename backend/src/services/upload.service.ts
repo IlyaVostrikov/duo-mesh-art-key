@@ -8,7 +8,7 @@ const ALLOWED_TEXTURE = new Set(['bin', 'hdr', 'exr', 'ktx2'])
 const ALLOWED_BUNDLE = new Set([...ALLOWED_3D, ...ALLOWED_IMAGE, ...ALLOWED_TEXTURE, 'txt', 'json'])
 const MAX_FILES_PER_REQUEST = 50
 const MAX_ZIP_ENTRIES = 200
-const MAX_ZIP_COMPRESSED_BYTES = 100 * 1024 * 1024    // 100 MB — archive on disk
+const MAX_ZIP_COMPRESSED_BYTES = 200 * 1024 * 1024    // 200 MB — archive on disk
 const MAX_ZIP_UNCOMPRESSED_BYTES = 500 * 1024 * 1024  // 500 MB — total after extraction
 const MAX_ZIP_COMPRESSION_RATIO = 100                  // reject if uncompressed > 100× compressed
 
@@ -339,7 +339,8 @@ export class UploadService {
 
     const compressed = await storage.readObjectBytes(normalizedKey)
     if (compressed.byteLength > MAX_ZIP_COMPRESSED_BYTES) {
-      throw new UploadValidationError('ZIP archive too large (max 100 MB)')
+      const maxMB = Math.round(MAX_ZIP_COMPRESSED_BYTES / 1024 / 1024)
+      throw new UploadValidationError(`ZIP archive too large (max ${maxMB} MB)`)
     }
 
     let metadata: { entryCount: number; totalUncompressed: number }

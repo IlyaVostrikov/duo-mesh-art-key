@@ -7,6 +7,7 @@ import {
   KeyStore,
 } from '../crypto'
 import type { StoreEntry } from '../crypto/keystore'
+import { DUO_MESH_PLATFORM_PUBKEY } from '@duo-mesh/verifier'
 
 export interface ProvenancePayload {
   artworkId: string
@@ -27,15 +28,7 @@ export class SigningService {
 
   /** Ensure platform key exists and sync all keys from DB on cold start. */
   async ensureKeys(): Promise<void> {
-    // 1. Run migration FIRST — Prisma schema expects encrypted_private_key column,
-    //    so any query on signing_keys will fail until the column exists.
-    try {
-      await this.prisma.$executeRawUnsafe(
-        `ALTER TABLE signing_keys ADD COLUMN IF NOT EXISTS encrypted_private_key JSONB`,
-      )
-    } catch { /* column may already exist from a prior run; ignore */ }
-
-    // 2. Ensure platform signing key exists
+    // Ensure platform signing key exists
     const existing = await this.prisma.signingKey.findFirst({
       where: { ownerType: 'PLATFORM', isActive: true },
     })
@@ -103,12 +96,6 @@ export class SigningService {
       }
     }
 
-    // 4. Revoke active keys whose private key was lost (no encryptedPrivateKey in DB)
-    //    Uses raw SQL because Prisma JSONB columns don't accept plain `null` in filters.
-    await this.prisma.$executeRawUnsafe(
-      `UPDATE signing_keys SET is_active = false, revoked_at = NOW() WHERE is_active = true AND encrypted_private_key IS NULL AND owner_type != 'PLATFORM'`,
-    )
-
     // Warm the PBKDF2 key derivation now (outside any transaction) so the first
     // getOrCreateArtistKey doesn't hold the artist row lock (FOR UPDATE) for the
     // ~600k-iteration CPU-bound KDF. Best-effort: a missing salt surfaces the
@@ -116,6 +103,17 @@ export class SigningService {
     try {
       await this.keyStore.warmKey()
     } catch { /* ignore — see above */ }
+
+    // Cold-start trust-anchor check: warn if the active platform public key does
+    // not match the pinned key baked into the offline verifier. A mismatch means
+    // every real export will fail offline verification.
+    const platformPub = await this.getPlatformActivePublicKey()
+    if (platformPub && platformPub.publicKey !== DUO_MESH_PLATFORM_PUBKEY) {
+      console.warn(
+        '[TRUST-ANCHOR] Active platform public key does not match the pinned DUO MESH key. ' +
+        'Offline verification will reject all exports until the pinned key is updated.',
+      )
+    }
   }
 
   /**

@@ -62,7 +62,8 @@ SPACES_ENDPOINT=https://nyc3.digitaloceanspaces.com
 SPACES_CDN_BASE_URL=https://images.example.com
 SPACES_ACCESS_KEY_ID=<spaces-access-key>
 SPACES_SECRET_ACCESS_KEY=<spaces-secret-key>
-SPACES_UPLOAD_MAX_BYTES=10485760
+UPLOAD_MAX_3D_BYTES=209715200
+SPACES_UPLOAD_MAX_BYTES=209715200
 SPACES_UPLOAD_URL_TTL_SECONDS=900
 SPACES_DOWNLOAD_URL_TTL_SECONDS=300
 SPACES_PUBLIC_CACHE_CONTROL="public, max-age=31536000, immutable"
@@ -79,7 +80,7 @@ Default direct-upload flow:
 3. Backend returns a presigned PUT URL, browser-settable upload headers, and the declared `contentLength` (informational — the signature does not depend on it).
 4. Client uploads directly to Spaces.
 5. Client calls the app API to confirm the uploaded object key.
-For glTF scenes with external `.bin` or texture files, the web client accepts a single ZIP bundle. It uploads the archive directly to Spaces, then calls `POST /api/uploads/finalize-model`; the backend validates the archive, safely extracts supported files under one immutable object prefix, and returns the public `scene.gltf`/`scene.glb` URL. The original archive key remains available for cleanup or future download. ZIP limits are 100 MB compressed, 500 MB uncompressed, and 200 entries.
+For glTF scenes with external `.bin` or texture files, the web client accepts a single ZIP bundle. It uploads the archive directly to Spaces, then calls `POST /api/uploads/finalize-model`; the backend validates the archive, safely extracts supported files under one immutable object prefix, and returns the public `scene.gltf`/`scene.glb` URL. The original archive key remains available for cleanup or future download. ZIP limits are 200 MB compressed, 500 MB uncompressed, and 200 entries. Individual 3D files inside the bundle are limited to 200 MB by `UPLOAD_MAX_3D_BYTES`.
 6. Backend stores object metadata in PostgreSQL if the product needs ownership, deletion, audit, or private access rules.
 
 Browser upload example:

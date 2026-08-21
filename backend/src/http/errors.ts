@@ -56,8 +56,7 @@ export function handleError(error: Error, c: Context) {
 
   console.error(error)
   const message = error instanceof Error ? error.message : 'Unexpected server error'
-  const stack = error instanceof Error ? error.stack : undefined
-  return c.json(errorResponse('INTERNAL_ERROR', message, stack), 500)
+  return c.json(errorResponse('INTERNAL_ERROR', message), 500)
 }
 
 // ─── Common error subclasses (status + code baked in) ───

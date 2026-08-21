@@ -48,9 +48,59 @@ export const provenanceRecordSchema = z.object({
 })
 
 export const artKeyVerificationSchema = z.object({
-  artKey: artKeyPublicSchema,
-  provenance: z.array(provenanceRecordSchema),
+  artKey: z.object({
+    id: z.string().uuid(),
+    keyCode: z.string(),
+    ownerKey: z.string(),
+    integrityHash: z.string(),
+    certificateHash: z.string(),
+    issuedAt: z.string().datetime(),
+    revokedAt: z.string().datetime().nullable(),
+    timestampToken: z.string().nullable(),
+    platformSignature: z.string().nullable(),
+  }),
+  artwork: z.object({
+    id: z.string().uuid(),
+    title: z.string(),
+    description: z.string().nullable(),
+    year: z.number().int().nullable(),
+    medium: z.string().nullable(),
+    posterUrl: z.string().nullable(),
+    modelUrl: z.string().nullable(),
+    mediaType: z.string(),
+    status: z.string(),
+    price: z.string().nullable(),
+    currency: z.string(),
+  }),
+  artist: z.object({
+    id: z.string().uuid(),
+    displayName: z.string(),
+    hallSlug: z.string().nullable(),
+  }),
+  provenance: z.array(
+    z.object({
+      sequence: z.number().int(),
+      transferType: z.string(),
+      fromOwnerName: z.string().nullable(),
+      toOwnerName: z.string(),
+      price: z.string().nullable(),
+      recordHash: z.string(),
+      prevRecordHash: z.string().nullable(),
+      signature: z.string().nullable(),
+      signerPublicKey: z.string().nullable(),
+      signerRole: z.string().nullable(),
+      createdAt: z.string().datetime(),
+    }),
+  ),
   verified: z.boolean(),
+  checks: z.array(
+    z.object({
+      label: z.string(),
+      pass: z.boolean(),
+      detail: z.string(),
+      category: z.string(),
+    }),
+  ),
   currentOwner: z.string().nullable(),
 })
 

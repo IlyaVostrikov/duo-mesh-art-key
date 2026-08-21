@@ -8,7 +8,9 @@ import { KeyStore } from './keystore'
 // ── Test fixtures ──
 
 const SECRET_KEY = 'test-secret-store-key-minimum-32'
-const TEST_PRIVKEY_HEX = '302e020100300506032b657004220420e084964ec8e0bb9f5cf6e9a7cb1372ceeef89b2272b38cec98cb57bcfb1924c3'
+// Opaque blob — KeyStore only encrypts/decrypts this string, never parses it as
+// a key. Deliberately NOT a real private key.
+const TEST_PRIVKEY_HEX = 'a'.repeat(96)
 
 let tmpDir: string
 let storePath: string

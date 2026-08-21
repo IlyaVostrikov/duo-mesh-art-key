@@ -8,7 +8,8 @@
 import { Hono } from 'hono'
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { errorResponse } from '../http/errors'
 import { rateLimiter } from '../http/rate-limiter'
 import type { DbClient } from '../db'
@@ -48,7 +49,7 @@ export function createKdfMigrationRoutes() {
       const configuredSalt = process.env.KEYSTORE_SALT
       let saltHex = configuredSalt?.trim()
       if (saltHex === undefined) {
-        const saltPath = resolve(import.meta.dir ?? __dirname, '../data/keystore.salt')
+        const saltPath = resolve(dirname(fileURLToPath(import.meta.url)), '../../data/keystore.salt')
         try {
           saltHex = (await readFile(saltPath, 'utf-8')).trim()
         } catch {

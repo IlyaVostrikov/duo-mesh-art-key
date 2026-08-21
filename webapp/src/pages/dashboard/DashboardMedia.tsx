@@ -5,10 +5,10 @@ import { Spinner } from '@/components/ui/spinner'
 import { DashboardLayout } from './DashboardLayout'
 import { CreateArtworkForm } from '@/components/artwork/CreateArtworkForm'
 import { apiBaseUrl } from '@/lib/api'
-import { uploadFile, type UploadedFile, type UploadProgress } from '@/lib/upload'
+import { uploadFile, uploadModelFile, type UploadedFile, type UploadProgress } from '@/lib/upload'
 import { UploadProgressView } from '@/components/ui/upload-progress'
 
-const ACCEPT_3D = '.glb,.gltf,.blend,.obj,.fbx,.stl,.usdz'
+const ACCEPT_3D = '.glb,.blend,.obj,.fbx,.stl,.usdz'
 const ACCEPT_ZIP = '.zip'
 const ACCEPT_IMAGE = '.jpg,.jpeg,.png,.webp,.svg'
 const ALL_ACCEPT = [ACCEPT_IMAGE, ACCEPT_ZIP, ACCEPT_3D].join(',')
@@ -32,7 +32,9 @@ export function DashboardMedia() {
     setUploadProgress(null)
 
     try {
-      const result = await uploadFile(file, auth.accessToken!, setUploadProgress)
+      const result = file.name.toLowerCase().endsWith('.zip')
+        ? await uploadModelFile(file, auth.accessToken!, setUploadProgress)
+        : await uploadFile(file, auth.accessToken!, setUploadProgress)
       setFiles((prev) => [result, ...prev])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
@@ -60,13 +62,13 @@ export function DashboardMedia() {
     setDragOver(false)
     const dropped = Array.from(e.dataTransfer.files)
     for (const file of dropped) doUpload(file)
-  }, [uploadFile])
+  }, [doUpload])
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files ?? [])
     for (const file of selected) doUpload(file)
     if (e.target) e.target.value = ''
-  }, [uploadFile])
+  }, [doUpload])
 
   const handleArtworkCreated = useCallback(() => {
     setCreatingFrom(null)
@@ -136,7 +138,7 @@ export function DashboardMedia() {
                 </label>
               </p>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                JPG, PNG, WebP, SVG, GLB, GLTF, BLEND, ZIP · макс. 100 MB для 3D
+                JPG, PNG, WebP, SVG, GLB, BLEND, OBJ, FBX, STL, ZIP · ZIP-бандлы 3D собираются автоматически · макс. 200 MB
               </p>
             </div>
 

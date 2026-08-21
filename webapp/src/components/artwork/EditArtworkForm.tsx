@@ -8,6 +8,7 @@ import { FileUpload } from '@/components/ui/file-upload'
 import { apiBaseUrl } from '@/lib/api'
 import { uploadFiles, type UploadProgress } from '@/lib/upload'
 import { UploadProgressView } from '@/components/ui/upload-progress'
+import { parseBilingualTitle, joinBilingualTitle } from '@/lib/utils'
 
 const CATEGORIES = ['DIGITAL', 'PAINTING', 'SCULPTURE', 'PHOTOGRAPHY', 'DRAWING', 'MIXED_MEDIA', 'PRINT', 'NFT', 'OTHER']
 
@@ -36,6 +37,7 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
 
   const [title, setTitle] = useState('')
+  const [titleEn, setTitleEn] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('DIGITAL')
   const [price, setPrice] = useState('')
@@ -69,9 +71,15 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         if (cancelled) return
-        // Parse bilingual title: "RU / EN" → extract RU part
-        const sep = data.title.indexOf(' / ')
-        setTitle(sep > 0 ? data.title.slice(0, sep) : data.title)
+        // Split bilingual title "RU / EN" into halves so the EN half is preserved on save.
+        if (data.title.includes(' / ')) {
+          const [ru, en] = parseBilingualTitle(data.title)
+          setTitle(ru)
+          setTitleEn(en)
+        } else {
+          setTitle(data.title)
+          setTitleEn('')
+        }
         setDescription(data.description ?? '')
         setCategory(data.category ?? 'DIGITAL')
         setPrice(data.price ?? '')
@@ -122,7 +130,7 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
           Authorization: `Bearer ${auth.accessToken!}`,
         },
         body: JSON.stringify({
-          title: title.trim(),
+          title: joinBilingualTitle(title.trim(), titleEn.trim()),
           description: description.trim() || undefined,
           category,
           price: price ? Number(price) : undefined,
@@ -170,11 +178,17 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
         Редактировать работу / Edit Artwork
       </h2>
 
-      <div>
-        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
-          Название (RU) <span style={{ color: 'var(--accent)' }}>*</span>
-        </label>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Название работы" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
+            Название (RU) <span style={{ color: 'var(--accent)' }}>*</span>
+          </label>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Название работы" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>Title (EN)</label>
+          <Input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder="Artwork title" />
+        </div>
       </div>
 
       {/* Poster / preview image */}
@@ -260,11 +274,11 @@ export function EditArtworkForm({ artworkId, onSaved, onCancel }: Props) {
           )}
         </div>
         <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
-          Загрузите .glb/.gltf или ZIP-набор с scene.gltf, .bin и текстурами. При добавлении 3D-модели тип работы сменится на MODEL_3D.
+          Загрузите .glb или ZIP-набор с scene.gltf, .bin и текстурами. При добавлении 3D-модели тип работы сменится на MODEL_3D.
         </p>
         <FileUpload
-          accept=".zip,.glb,.gltf"
-          maxSize={100 * 1024 * 1024}
+          accept=".zip,.glb"
+          maxSize={200 * 1024 * 1024}
           onFileSelect={setModelFile}
           label={modelFile ? `3D набор: ${modelFile.name}` : 'Заменить 3D модель или ZIP / Replace model or ZIP'}
         />
