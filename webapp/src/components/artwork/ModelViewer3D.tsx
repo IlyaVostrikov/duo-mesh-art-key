@@ -9,6 +9,7 @@ type ModelViewerElement = HTMLElement & {
   requestFullscreen?: (opts?: FullscreenOptions) => Promise<void>
   updateFraming?: () => Promise<void>
   jumpCameraToGoal?: () => void
+  getDimensions?: () => { x: number; y: number; z: number }
   /** Hide the loading poster after the scene is ready. */
   dismissPoster?: () => void
 }
@@ -184,33 +185,64 @@ export function ModelViewer3D({
     const el = viewerRef.current
     if (!el) return
 
+    let frameStarted = false
+    let frameRequest = 0
+    let disposed = false
+
+    const frameWhenReady = () => {
+      if (frameStarted || disposed) return
+      frameStarted = true
+      let attempts = 0
+
+      const checkBounds = () => {
+        if (disposed) return
+        const viewer = viewerRef.current
+        const dimensions = viewer?.getDimensions?.()
+        const hasValidBounds = Boolean(
+          dimensions &&
+          Number.isFinite(dimensions.x) && dimensions.x > 0 &&
+          Number.isFinite(dimensions.y) && dimensions.y > 0 &&
+          Number.isFinite(dimensions.z) && dimensions.z > 0,
+        )
+
+        // The load event may precede the last buffer/texture progress event
+        // for large ZIP scenes. Never frame the camera against zero bounds.
+        if (!hasValidBounds) {
+          if (++attempts < 300) {
+            frameRequest = requestAnimationFrame(checkBounds)
+          } else {
+            frameStarted = false
+            setLoadError(true)
+            console.error('[ModelViewer3D] model bounds were not ready:', resolvedModelUrl)
+          }
+          return
+        }
+
+        const finish = () => {
+          if (disposed) return
+          viewer?.jumpCameraToGoal?.()
+          // Paint one frame before removing the poster so shader compilation
+          // cannot expose a white/transparent frame.
+          requestAnimationFrame(() => {
+            if (!disposed) viewer?.dismissPoster?.()
+          })
+        }
+
+        if (viewer?.updateFraming) {
+          void viewer.updateFraming().then(finish).catch(finish)
+        } else {
+          finish()
+        }
+      }
+
+      frameRequest = requestAnimationFrame(checkBounds)
+    }
+
     const onLoad = () => {
       setLoadingProgress(1)
       setLoadError(false)
       console.log('[ModelViewer3D] model loaded:', resolvedModelUrl)
-
-      // Recompute the bounds after all external buffers/textures are ready.
-      // This is important for uploaded scenes with arbitrary exporter scale/origin.
-      const viewer = viewerRef.current
-      // reveal="auto" normally dismisses the poster at the end of loading,
-      // but imported ZIP scenes can finish their last texture/buffer update
-      // after that transition. Explicitly dismiss it once the model event has
-      // fired so a white poster can never cover the rendered canvas.
-      viewer?.dismissPoster?.()
-      if (viewer?.updateFraming) {
-        void viewer.updateFraming()
-          .then(() => {
-            viewer.dismissPoster?.()
-            viewer.jumpCameraToGoal?.()
-          })
-          .catch(() => {
-            viewer.dismissPoster?.()
-            viewer.jumpCameraToGoal?.()
-          })
-      } else {
-        viewer?.dismissPoster?.()
-        viewer?.jumpCameraToGoal?.()
-      }
+      frameWhenReady()
     }
     const onError = (e: Event) => {
       const detail = (e as CustomEvent)?.detail ?? 'unknown'
@@ -223,6 +255,7 @@ export function ModelViewer3D({
         const progress = Math.max(0, Math.min(1, Number(detail.totalProgress)))
         setLoadingProgress(progress)
         console.log(`[ModelViewer3D] progress: ${Math.round(progress * 100)}%`)
+        if (progress >= 1) frameWhenReady()
       }
     }
 
@@ -230,6 +263,8 @@ export function ModelViewer3D({
     el.addEventListener('error', onError)
     el.addEventListener('progress', onProgress)
     return () => {
+      disposed = true
+      cancelAnimationFrame(frameRequest)
       el.removeEventListener('load', onLoad)
       el.removeEventListener('error', onError)
       el.removeEventListener('progress', onProgress)
@@ -244,7 +279,7 @@ export function ModelViewer3D({
     // Source
     el.setAttribute('src', resolvedModelUrl)
     if (resolvedPosterUrl) el.setAttribute('poster', resolvedPosterUrl)
-    el.setAttribute('loading', 'lazy')
+    el.setAttribute('loading', 'eager')
     el.setAttribute('reveal', 'auto')
 
     // ─── Light & Materials ───
