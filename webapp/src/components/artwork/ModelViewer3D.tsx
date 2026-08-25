@@ -280,7 +280,7 @@ export function ModelViewer3D({
     el.setAttribute('src', resolvedModelUrl)
     if (resolvedPosterUrl) el.setAttribute('poster', resolvedPosterUrl)
     el.setAttribute('loading', 'eager')
-    el.setAttribute('reveal', 'auto')
+    el.setAttribute('reveal', 'manual')
 
     // ─── Light & Materials ───
     // Only override when explicitly provided; otherwise let model-viewer use its
