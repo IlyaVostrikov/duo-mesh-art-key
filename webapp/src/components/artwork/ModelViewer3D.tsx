@@ -49,6 +49,17 @@ function isViewableFormat(url: string): boolean {
   return ext === 'glb' || ext === 'gltf'
 }
 
+function withRetryCacheBust(url: string, attempt: number) {
+  try {
+    const parsed = new URL(url, window.location.href)
+    parsed.searchParams.set('_model_retry', String(attempt))
+    return parsed.toString()
+  } catch {
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}_model_retry=${attempt}`
+  }
+}
+
 export function ModelViewer3D({
   modelUrl,
   posterUrl,
@@ -76,6 +87,9 @@ export function ModelViewer3D({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [loadingProgress, setLoadingProgress] = useState(0)
   const [loadError, setLoadError] = useState(false)
+  const [retryNonce, setRetryNonce] = useState(0)
+  const retryAttemptRef = useRef(0)
+  const modelLoadUrl = retryNonce > 0 ? withRetryCacheBust(resolvedModelUrl, retryNonce) : resolvedModelUrl
 
   // ─── Fullscreen toggle ───
   const toggleFullscreen = useCallback(async () => {
@@ -177,6 +191,7 @@ export function ModelViewer3D({
 
   // ─── Diagnostic: log model-viewer events ───
   useEffect(() => {
+    retryAttemptRef.current = 0
     setLoadingProgress(0)
     setLoadError(false)
   }, [resolvedModelUrl])
@@ -241,13 +256,27 @@ export function ModelViewer3D({
     const onLoad = () => {
       setLoadingProgress(1)
       setLoadError(false)
-      console.log('[ModelViewer3D] model loaded:', resolvedModelUrl)
+      console.log('[ModelViewer3D] model loaded:', modelLoadUrl)
       frameWhenReady()
     }
     const onError = (e: Event) => {
       const detail = (e as CustomEvent)?.detail ?? 'unknown'
-      setLoadError(true)
-      console.error('[ModelViewer3D] model ERROR:', resolvedModelUrl, detail)
+      const nextAttempt = retryAttemptRef.current + 1
+      retryAttemptRef.current = nextAttempt
+      console.error('[ModelViewer3D] model ERROR:', modelLoadUrl, detail)
+
+      // R2/CDN can occasionally close a response or return a truncated body.
+      // model-viewer does not retry those network failures, so retry the whole
+      // scene with a cache-busting query before showing the terminal error UI.
+      if (nextAttempt <= 2 && !disposed) {
+        setLoadError(false)
+        setLoadingProgress(0)
+        window.setTimeout(() => {
+          if (!disposed) setRetryNonce((nonce) => nonce + 1)
+        }, 500 * nextAttempt)
+      } else {
+        setLoadError(true)
+      }
     }
     const onProgress = (e: Event) => {
       const detail = (e as CustomEvent)?.detail
@@ -269,7 +298,7 @@ export function ModelViewer3D({
       el.removeEventListener('error', onError)
       el.removeEventListener('progress', onProgress)
     }
-  }, [resolvedModelUrl])
+  }, [modelLoadUrl])
 
   // ─── Set attributes on mount/change ───
   useEffect(() => {
@@ -277,7 +306,7 @@ export function ModelViewer3D({
     if (!el) return
 
     // Source
-    el.setAttribute('src', resolvedModelUrl)
+    el.setAttribute('src', modelLoadUrl)
     if (resolvedPosterUrl) el.setAttribute('poster', resolvedPosterUrl)
     el.setAttribute('loading', 'eager')
     el.setAttribute('reveal', 'manual')
@@ -344,7 +373,7 @@ export function ModelViewer3D({
       el.setAttribute('ios-src', resolvedIosSrc)
     }
   }, [
-    resolvedModelUrl, resolvedPosterUrl, resolvedIosSrc,
+    modelLoadUrl, resolvedPosterUrl, resolvedIosSrc,
     cameraOrbit, cameraTarget, minCameraOrbit, maxCameraOrbit,
     arScale, interactionPrompt, autoRotateDelay, exposure,
     disableZoom, environmentImage,
@@ -392,8 +421,28 @@ export function ModelViewer3D({
         >
           <strong>Не удалось отобразить 3D-модель / 3D preview failed</strong>
           <span style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.85rem' }}>
-            Проверьте файл и зависимости .bin/текстур или скачайте исходную сцену.
+            Сбой загрузки файла или его зависимостей. Повторите попытку или скачайте исходную сцену.
           </span>
+          <button
+            type="button"
+            onClick={() => {
+              retryAttemptRef.current = 0
+              setLoadError(false)
+              setLoadingProgress(0)
+              setRetryNonce((nonce) => nonce + 1)
+            }}
+            style={{
+              padding: '9px 18px',
+              border: '1px solid var(--accent)',
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--accent)',
+              color: 'var(--accent-ink)',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            Повторить загрузку / Retry
+          </button>
           <a
             href={resolvedModelUrl}
             target="_blank"
