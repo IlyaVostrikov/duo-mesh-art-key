@@ -116,7 +116,11 @@ function SceneContent({
   const slottedArtworks = useMemo(() => {
     const result: Array<{ artwork: Hall3DArtwork; slot: SlotLayout['slots'][number] }> = []
     artworks.forEach((aw, i) => {
-      if (i < layout.slots.length) result.push({ artwork: aw, slot: layout.slots[i] })
+      if (i < layout.slots.length) {
+        const raw = layout.slots[i]
+        const slot = aw.mediaType === 'MODEL_3D' ? { ...raw, y: 0, z: raw.z === 0 ? 1.5 : raw.z } : raw
+        result.push({ artwork: aw, slot })
+      }
     })
     return result
   }, [artworks, layout])

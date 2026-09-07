@@ -45,13 +45,16 @@ export interface ModelViewer3DProps {
 }
 
 function isViewableFormat(url: string): boolean {
-  const ext = url.split('.').pop()?.toLowerCase()
+  let pathname = url
+  try { pathname = new URL(url, window.location.href).pathname } catch { /* keep raw */ }
+  const ext = pathname.split('.').pop()?.toLowerCase()
   return ext === 'glb' || ext === 'gltf'
 }
 
 function withRetryCacheBust(url: string, attempt: number) {
   try {
     const parsed = new URL(url, window.location.href)
+    if (parsed.search) return url
     parsed.searchParams.set('_model_retry', String(attempt))
     return parsed.toString()
   } catch {
@@ -60,7 +63,11 @@ function withRetryCacheBust(url: string, attempt: number) {
   }
 }
 
-export function ModelViewer3D({
+export function ModelViewer3D(props: ModelViewer3DProps) {
+  return <ModelViewerContent key={props.modelUrl} {...props} />
+}
+
+function ModelViewerContent({
   modelUrl,
   posterUrl,
   className,
@@ -87,6 +94,7 @@ export function ModelViewer3D({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [loadingProgress, setLoadingProgress] = useState(0)
   const [loadError, setLoadError] = useState(false)
+  const [ready, setReady] = useState(false)
   const [retryNonce, setRetryNonce] = useState(0)
   const retryAttemptRef = useRef(0)
   const modelLoadUrl = retryNonce > 0 ? withRetryCacheBust(resolvedModelUrl, retryNonce) : resolvedModelUrl
@@ -120,75 +128,6 @@ export function ModelViewer3D({
     return () => document.removeEventListener('fullscreenchange', onFsChange)
   }, [])
 
-  // ─── Non-viewable format fallback ───
-  if (!isViewableFormat(modelUrl)) {
-    const ext = modelUrl.split('.').pop()?.toUpperCase() ?? ''
-    const isSafe = /^https?:\/\//i.test(resolvedModelUrl)
-
-    return (
-      <div
-        className={className}
-        style={{
-          ...style,
-          width: '100%',
-          height: '100%',
-          minHeight: '400px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '20px',
-          padding: '40px',
-          backgroundColor: 'var(--surface)',
-          borderRadius: 'var(--radius)',
-        }}
-      >
-        {resolvedPosterUrl && (
-          <img
-            src={resolvedPosterUrl}
-            alt="Preview"
-            style={{ maxWidth: '100%', maxHeight: '45%', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }}
-          />
-        )}
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '0.875rem' }}>
-            Этот формат требует внешнего просмотрщика / This format requires an external viewer
-          </p>
-          {isSafe ? (
-            <a
-              href={resolvedModelUrl}
-              download
-              rel="noreferrer noopener"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 24px',
-                backgroundColor: 'var(--accent)',
-                color: 'var(--accent-ink)',
-                borderRadius: 'var(--radius)',
-                textDecoration: 'none',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Скачать / Download {ext}
-            </a>
-          ) : (
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-              Недоступно для скачивания / Download unavailable
-            </span>
-          )}
-        </div>
-      </div>
-    )
-  }
-
   // ─── Diagnostic: log model-viewer events ───
   useEffect(() => {
     retryAttemptRef.current = 0
@@ -203,6 +142,7 @@ export function ModelViewer3D({
     let frameStarted = false
     let frameRequest = 0
     let disposed = false
+    let retryTimer: number | undefined
 
     const frameWhenReady = () => {
       if (frameStarted || disposed) return
@@ -215,9 +155,10 @@ export function ModelViewer3D({
         const dimensions = viewer?.getDimensions?.()
         const hasValidBounds = Boolean(
           dimensions &&
-          Number.isFinite(dimensions.x) && dimensions.x > 0 &&
-          Number.isFinite(dimensions.y) && dimensions.y > 0 &&
-          Number.isFinite(dimensions.z) && dimensions.z > 0,
+          Number.isFinite(dimensions.x) && dimensions.x >= 0 &&
+          Number.isFinite(dimensions.y) && dimensions.y >= 0 &&
+          Number.isFinite(dimensions.z) && dimensions.z >= 0 &&
+          Math.max(dimensions.x, dimensions.y, dimensions.z) > 0,
         )
 
         // The load event may precede the last buffer/texture progress event
@@ -239,7 +180,10 @@ export function ModelViewer3D({
           // Paint one frame before removing the poster so shader compilation
           // cannot expose a white/transparent frame.
           requestAnimationFrame(() => {
-            if (!disposed) viewer?.dismissPoster?.()
+            if (!disposed) {
+              viewer?.dismissPoster?.()
+              setReady(true)
+            }
           })
         }
 
@@ -260,6 +204,7 @@ export function ModelViewer3D({
       frameWhenReady()
     }
     const onError = (e: Event) => {
+      setReady(false)
       const detail = (e as CustomEvent)?.detail ?? 'unknown'
       const nextAttempt = retryAttemptRef.current + 1
       retryAttemptRef.current = nextAttempt
@@ -271,7 +216,7 @@ export function ModelViewer3D({
       if (nextAttempt <= 2 && !disposed) {
         setLoadError(false)
         setLoadingProgress(0)
-        window.setTimeout(() => {
+        retryTimer = window.setTimeout(() => {
           if (!disposed) setRetryNonce((nonce) => nonce + 1)
         }, 500 * nextAttempt)
       } else {
@@ -282,9 +227,8 @@ export function ModelViewer3D({
       const detail = (e as CustomEvent)?.detail
       if (detail?.totalProgress !== undefined) {
         const progress = Math.max(0, Math.min(1, Number(detail.totalProgress)))
-        setLoadingProgress(progress)
+        if (Number.isFinite(progress)) setLoadingProgress(progress)
         console.log(`[ModelViewer3D] progress: ${Math.round(progress * 100)}%`)
-        if (progress >= 1) frameWhenReady()
       }
     }
 
@@ -294,11 +238,12 @@ export function ModelViewer3D({
     return () => {
       disposed = true
       cancelAnimationFrame(frameRequest)
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer)
       el.removeEventListener('load', onLoad)
       el.removeEventListener('error', onError)
       el.removeEventListener('progress', onProgress)
     }
-  }, [modelLoadUrl])
+  }, [modelLoadUrl, retryNonce])
 
   // ─── Set attributes on mount/change ───
   useEffect(() => {
@@ -373,11 +318,81 @@ export function ModelViewer3D({
       el.setAttribute('ios-src', resolvedIosSrc)
     }
   }, [
-    modelLoadUrl, resolvedPosterUrl, resolvedIosSrc,
+    modelLoadUrl, retryNonce, resolvedPosterUrl, resolvedIosSrc,
     cameraOrbit, cameraTarget, minCameraOrbit, maxCameraOrbit,
     arScale, interactionPrompt, autoRotateDelay, exposure,
     disableZoom, environmentImage,
   ])
+
+  // ─── Non-viewable format fallback ───
+  if (!isViewableFormat(modelUrl)) {
+    const ext = modelUrl.split('.').pop()?.toUpperCase() ?? ''
+    const isSafe = /^https?:\/\//i.test(resolvedModelUrl)
+
+    return (
+      <div
+        className={className}
+        style={{
+          ...style,
+          width: '100%',
+          height: '100%',
+          minHeight: '400px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '20px',
+          padding: '40px',
+          backgroundColor: 'var(--surface)',
+          borderRadius: 'var(--radius)',
+        }}
+      >
+        {resolvedPosterUrl && (
+          <img
+            src={resolvedPosterUrl}
+            alt="Preview"
+            style={{ maxWidth: '100%', maxHeight: '45%', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }}
+          />
+        )}
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '0.875rem' }}>
+            Этот формат требует внешнего просмотрщика / This format requires an external viewer
+          </p>
+          {isSafe ? (
+            <a
+              href={resolvedModelUrl}
+              download
+              rel="noreferrer noopener"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 24px',
+                backgroundColor: 'var(--accent)',
+                color: 'var(--accent-ink)',
+                borderRadius: 'var(--radius)',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Скачать / Download {ext}
+            </a>
+          ) : (
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+              Недоступно для скачивания / Download unavailable
+            </span>
+          )}
+        </div>
+      </div>
+    )
+  }
+
 
   return (
     <div
@@ -396,6 +411,7 @@ export function ModelViewer3D({
     >
       {createElement('model-viewer', {
         ref: viewerRef,
+        key: retryNonce,
         alt: '3D model preview',
         style: {
           display: 'block',
@@ -452,7 +468,7 @@ export function ModelViewer3D({
             Скачать файл / Download
           </a>
         </div>
-      ) : loadingProgress < 1 ? (
+      ) : !ready ? (
         <div
           role="status"
           aria-live="polite"
@@ -463,7 +479,7 @@ export function ModelViewer3D({
             pointerEvents: 'none',
           }}
         >
-          <span>Загрузка 3D-модели / Loading 3D model…</span>
+          <span>{loadingProgress >= 1 ? 'Подготовка 3D-модели / Preparing model…' : 'Загрузка 3D-модели / Loading 3D model…'}</span>
           {loadingProgress > 0 && <span>{Math.round(loadingProgress * 100)}%</span>}
         </div>
       ) : null}
