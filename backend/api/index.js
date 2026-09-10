@@ -122176,22 +122176,28 @@ var exhibitionHallSchema = external_exports.object({
   coverImageUrl: external_exports.string().nullable(),
   layoutConfig: external_exports.unknown().nullable(),
   theme: external_exports.string().nullable(),
+  customization: external_exports.unknown().nullable(),
   isPublished: external_exports.boolean(),
   viewCount: external_exports.number().int(),
   createdAt: external_exports.string().datetime(),
   updatedAt: external_exports.string().datetime()
 });
 var exhibitionHallPublicSchema = exhibitionHallSchema.extend({
+  artworkCount: external_exports.number().int().nonnegative(),
   artist: external_exports.object({
     id: external_exports.string().uuid(),
     displayName: external_exports.string().nullable(),
-    avatarUrl: external_exports.string().nullable()
+    avatarUrl: external_exports.string().nullable(),
+    verified: external_exports.boolean(),
+    location: external_exports.string().nullable()
   }),
   artworks: external_exports.array(
     external_exports.object({
       id: external_exports.string().uuid(),
       title: external_exports.string(),
-      images: external_exports.array(external_exports.string()),
+      posterUrl: external_exports.string().nullable(),
+      modelUrl: external_exports.string().nullable(),
+      mediaType: external_exports.enum(["IMAGE_2D", "MODEL_3D"]),
       category: external_exports.string(),
       price: external_exports.string().nullable(),
       currency: external_exports.string(),
@@ -122213,7 +122219,7 @@ var hallCustomizationSchema = external_exports.object({
 var updateHallSchema = external_exports.object({
   title: external_exports.string().trim().min(1).max(200).optional(),
   description: external_exports.string().trim().max(5e3).optional(),
-  coverImageUrl: external_exports.string().trim().url().optional(),
+  coverImageUrl: external_exports.string().trim().url().nullable().optional(),
   layoutConfig: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
   theme: external_exports.string().trim().max(50).optional(),
   customization: hallCustomizationSchema.optional(),
@@ -126155,17 +126161,24 @@ var HallService = class {
     if (artist.userId !== userId) throw new ForbiddenError("Not your hall");
   }
   async getBySlug(slug, opts) {
-    const where = { slug };
-    if (opts?.publishedOnly) where.isPublished = true;
     const hall = await this.prisma.exhibitionHall.findUnique({
-      where,
+      where: { slug },
       include: {
         artist: { include: { user: true } }
       }
     });
     if (!hall) return null;
+    const isOwner = !!opts?.viewerUserId && hall.artist.userId === opts.viewerUserId;
+    const isAdmin = opts?.viewerRole === "ADMIN";
+    if (opts?.publishedOnly && !hall.isPublished && !isOwner && !isAdmin) {
+      return null;
+    }
+    const isViewer = isOwner || isAdmin;
     const artworks = await this.prisma.artwork.findMany({
-      where: { artistId: hall.artistId, status: { in: ["LISTED", "IN_EXHIBITION"] } },
+      where: {
+        artistId: hall.artistId,
+        ...isViewer ? {} : { status: { in: ["LISTED", "IN_EXHIBITION"] } }
+      },
       orderBy: { createdAt: "desc" }
     });
     return toHallPublicDto({ ...hall, artworks });
@@ -127361,11 +127374,13 @@ var UploadService = class {
   max3DBytes;
   storage;
   baseDir;
+  localUploads;
   constructor(config3) {
     this.maxImageBytes = config3.maxImageBytes;
     this.max3DBytes = config3.max3DBytes;
     this.storage = config3.storage ?? null;
     this.baseDir = config3.baseDir;
+    this.localUploads = config3.localUploads ?? false;
   }
   // ── Local disk upload (existing) ──
   async processUploads(userId, formData) {
@@ -127503,7 +127518,7 @@ var UploadService = class {
   }
   // ── Presigned upload (Spaces/S3) ──
   async createPresignedUpload(opts) {
-    if (!this.storage) {
+    if (!this.storage && !this.localUploads) {
       throw new Error("Storage service is not configured. Use local upload or set SPACES_* env vars.");
     }
     const ext = extension(opts.fileName);
@@ -127513,6 +127528,10 @@ var UploadService = class {
     if (opts.byteSize > maxSize) {
       const maxMB = Math.round(maxSize / 1024 / 1024);
       throw new UploadValidationError(`File too large: ${opts.fileName} (max ${maxMB} MB)`);
+    }
+    if (!this.storage) {
+      if (opts.visibility === "private") throw new UploadValidationError("Local uploads do not support private visibility");
+      return { transport: "local", uploadUrl: "/api/uploads" };
     }
     const now = /* @__PURE__ */ new Date();
     const datePath = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}`;
@@ -128026,9 +128045,14 @@ function createHallRoutes() {
     const halls = await svc.getAllPublished();
     return c5.json(halls);
   });
-  routes.get("/:slug", async (c5) => {
+  routes.get("/:slug", optionalAuth(), async (c5) => {
     const svc = c5.get("hallService");
-    const hall = await svc.getBySlug(c5.req.param("slug"), { publishedOnly: true });
+    const authUser = getAuthUser(c5);
+    const hall = await svc.getBySlug(c5.req.param("slug"), {
+      publishedOnly: true,
+      viewerUserId: authUser?.userId,
+      viewerRole: authUser?.role
+    });
     if (!hall) return c5.json(errorResponse("NOT_FOUND", "Hall not found"), 404);
     svc.incrementViewCount(c5.req.param("slug")).catch(() => {
     });
@@ -129850,7 +129874,8 @@ async function createApp({ env: env2, prisma }) {
     maxImageBytes: env2.UPLOAD_MAX_IMAGE_BYTES,
     max3DBytes: env2.UPLOAD_MAX_3D_BYTES,
     storage: storageService,
-    baseDir: isVercel ? "/tmp/uploads" : "uploads"
+    baseDir: isVercel ? "/tmp/uploads" : "uploads",
+    localUploads: env2.NODE_ENV === "development" && !isVercel
   });
   const provenanceTransferService = new ProvenanceTransferService(prisma, signingService);
   let signingInitError = null;
@@ -129908,7 +129933,7 @@ async function createApp({ env: env2, prisma }) {
     await next();
   });
   if (serveStatic) {
-    app2.use("/uploads/*", serveStatic({ root: "./" }));
+    app2.use("/uploads/*", serveStatic({ root: "./", rewriteRequestPath: (path2) => path2.replace(/^\/api(?=\/uploads\/)/, "") }));
   } else if (isVercel) {
     app2.get("/uploads/*", async (c5) => {
       const { readFile: readFile6 } = await import("node:fs/promises");
