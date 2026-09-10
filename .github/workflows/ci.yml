@@ -54,7 +54,7 @@ jobs:
         run: bun run --cwd webapp e2e:install
 
       - name: Start E2E PostgreSQL
-        run: docker compose -p duo-mesh-ci up -d postgres_test
+        run: docker compose -p duo-mesh-ci up -d --wait postgres_test
 
       - name: Apply E2E database migrations
         env:
