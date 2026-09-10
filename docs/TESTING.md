@@ -79,7 +79,7 @@ The webapp E2E flow:
 Useful env:
 
 ```bash
-TEST_DATABASE_URL="postgresql://superuser:superpassword@localhost:<test-port>/web_app_demo_test?schema=public"
+TEST_DATABASE_URL="postgresql://superuser:superpassword@localhost:<test-port>/duo_mesh_test?schema=public"
 POSTGRES_TEST_PORT=<test-port>
 E2E_BACKEND_PORT=<backend-port>
 E2E_WEB_PORT=<web-port>

@@ -13,7 +13,7 @@ export const defaultBackendPort =
   process.env.E2E_BACKEND_PORT ?? String(50000 + (Number.parseInt(repositoryHash.slice(6, 12), 16) % 5000))
 export const defaultWebPort =
   process.env.E2E_WEB_PORT ?? String(55000 + (Number.parseInt(repositoryHash.slice(0, 6), 16) % 5000))
-export const defaultDatabaseUrl = `postgresql://superuser:superpassword@localhost:${defaultPostgresTestPort}/web_app_demo_test?schema=public`
+export const defaultDatabaseUrl = `postgresql://superuser:superpassword@localhost:${defaultPostgresTestPort}/duo_mesh_test?schema=public`
 
 export function composeEnv(extra: NodeJS.ProcessEnv = {}) {
   const explicitDatabaseUrl =

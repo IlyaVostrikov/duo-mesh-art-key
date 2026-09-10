@@ -65,7 +65,7 @@ export default defineConfig({
       command: 'bun run start',
       cwd: backendRoot,
       env: backendEnv,
-      url: `${backendUrl}/health`,
+      url: `${backendUrl}/api/health`,
       reuseExistingServer: false,
       timeout: 120_000,
     },
