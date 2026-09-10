@@ -4,7 +4,7 @@ import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { ArtworkCard } from '@/components/artwork/ArtworkCard'
 import { Hall3DCanvas } from '@/components/hall3d/Hall3DCanvas'
 import { MultiHallScene } from '@/components/hall3d/MultiHallScene'
-import { computeSlots } from '@/components/hall3d/layoutTemplates'
+import { resolveHallLayout } from '@/components/hall3d/layoutTemplates'
 import type { Hall3DArtwork } from '@/components/hall3d/Hall3DScene'
 import type { HallData } from '@/components/hall3d/hallOrdering'
 import { parseBilingualTitle } from '@/lib/utils'
@@ -50,35 +50,12 @@ export function HallWorksGrid({ artworks, artistName, layoutConfig, isMobile, ha
     id: aw.id,
     title: aw.title,
     posterUrl: aw.posterUrl ? assetUrl(aw.posterUrl) : null,
-    modelUrl: aw.modelUrl ?? null,
+    modelUrl: aw.modelUrl ? assetUrl(aw.modelUrl) : null,
     mediaType: aw.mediaType,
     displayTitle: parseBilingualTitle(aw.title)[0],
   }))
 
-  const layout3d = layoutConfig?.slots?.length
-    ? {
-        name: layoutConfig.template,
-        capacity: layoutConfig.slots.length,
-        slots: layoutConfig.slots.map((s) => ({ x: s.x, y: s.y, z: s.z, width: s.width, height: s.height })),
-      }
-    : { name: 'auto', capacity: artworks.length, slots: computeSlots(artworks.length) }
-
-  // Sort artworks by layout slot order, then append unmatched
-  const sorted3dArtworks = layoutConfig?.slots
-    ? (() => {
-        const map = new Map(hall3dArtworks.map((a) => [a.id, a]))
-        const result: Hall3DArtwork[] = []
-        const used = new Set<string>()
-        for (const slot of layoutConfig.slots) {
-          if (slot.artworkId && map.has(slot.artworkId)) {
-            result.push(map.get(slot.artworkId)!)
-            used.add(slot.artworkId)
-          }
-        }
-        for (const a of hall3dArtworks) if (!used.has(a.id)) result.push(a)
-        return result
-      })()
-    : hall3dArtworks
+  const layout3d = resolveHallLayout(hall3dArtworks, layoutConfig)
 
   const handleArtworkClick = (id: string) => {
     navigate({ to: '/artwork/$artworkId', params: { artworkId: id } })
@@ -103,7 +80,7 @@ export function HallWorksGrid({ artworks, artistName, layoutConfig, isMobile, ha
     return (
       <section className="pb-0">
         <Hall3DCanvas
-          artworks={sorted3dArtworks}
+          artworks={hall3dArtworks}
           layout={layout3d}
           onArtworkClick={handleArtworkClick}
         />

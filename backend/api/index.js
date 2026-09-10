@@ -121973,6 +121973,7 @@ var apiErrorCodeSchema = external_exports.enum([
   "INTERNAL_ERROR",
   "NOT_IMPLEMENTED",
   "NOT_CONFIGURED",
+  "STORAGE_ERROR",
   "DELETE_FAILED",
   "ALREADY_REVOKED",
   "PDF_GENERATION_FAILED"
@@ -124911,7 +124912,11 @@ function hexToBytes2(hex3) {
 }
 
 // ../packages/verifier/src/verify.ts
-var DUO_MESH_PLATFORM_PUBKEY = "3ac4ff474fe8dc1825e53d7c92c3125dde8cf82eebabd29b96ad94de5cdce871";
+var DEFAULT_PLATFORM_PUBKEY = "f190392e486d5ceb341ad9468c2342039964a1b9ac50775c503c3718375453ef";
+function resolvePlatformPubKey(env2 = {}) {
+  return env2.DUO_MESH_PLATFORM_PUBKEY || DEFAULT_PLATFORM_PUBKEY;
+}
+var DUO_MESH_PLATFORM_PUBKEY = typeof process !== "undefined" ? resolvePlatformPubKey(process.env) : DEFAULT_PLATFORM_PUBKEY;
 
 // src/services/signing.service.ts
 var SigningService = class {

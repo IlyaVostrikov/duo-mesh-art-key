@@ -48,7 +48,7 @@ import PageFooter from "../../components/PageFooter.astro";
             hall.artworks.map((aw: any) => `
               <a href="/artworks/${aw.id}" class="aw-card">
                 <div class="aw-img">${aw.images[0] ? `<img src="${escapeHtml(aw.images[0])}" alt="${escapeHtml(aw.title)}" loading="lazy" />` : '<div class="aw-noimg"></div>'}</div>
-                <div class="aw-body"><h3>${escapeHtml(aw.title)}</h3>${aw.price ? `<p class="aw-price">${Number(aw.price).toLocaleString()} ${aw.currency}</p>` : ''}</div>
+                <div class="aw-body"><h3>${escapeHtml(aw.title)}</h3>${aw.price ? `<p class="aw-price">${Number(aw.price).toLocaleString()} ${escapeHtml(aw.currency)}</p>` : ''}</div>
               </a>
             `).join('')
           }

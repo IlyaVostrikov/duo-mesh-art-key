@@ -11,7 +11,7 @@ import { joinBilingualTitle, joinBilingual } from '@/lib/utils'
 import { BilingualField } from '@/components/BilingualField'
 import { useArtistOnboarding, type OnboardingProfile, type CreatedArtist } from '@/hooks/use-artist-onboarding'
 import { apiBaseUrl } from '@/lib/api'
-import type { UploadProgress } from '@/lib/upload'
+import { uploadFiles, type UploadProgress } from '@/lib/upload'
 import { UploadProgressView } from '@/components/ui/upload-progress'
 
 type Step = 'profile' | 'artwork' | 'done'
@@ -21,7 +21,7 @@ const CATEGORIES = ['DIGITAL', 'PAINTING', 'SCULPTURE', 'PHOTOGRAPHY', 'DRAWING'
 export function ArtistOnboarding() {
   const auth = useAuth()
   const navigate = useNavigate()
-  const { submitting, error, createProfile, uploadFile, uploadModelFile, clearError } = useArtistOnboarding()
+  const { submitting, error, createProfile, clearError } = useArtistOnboarding()
   const [lang, setLang] = useState<'ru' | 'en'>('ru')
   const [step, setStep] = useState<Step>('profile')
   const [artist, setArtist] = useState<CreatedArtist | null>(null)
@@ -107,14 +107,18 @@ export function ArtistOnboarding() {
     try {
       let posterUrl = 'seed/placeholder-poster.svg'
       let modelUrl: string | undefined
+      const fileHashes: Record<string, string> = {}
       if (posterFile) {
-        const url = await uploadFile(posterFile, setUploadProgress)
-        if (url) posterUrl = url
+        const upload = await uploadFiles([posterFile], auth.accessToken!, setUploadProgress)
+        posterUrl = upload.files[0].url
+        Object.assign(fileHashes, upload.hashes)
       }
 
       if (awMediaType === 'MODEL_3D') {
         if (!awModelFile) throw new Error('Загрузите 3D-модель GLB или ZIP-набор / Upload a GLB or ZIP bundle')
-        modelUrl = await uploadModelFile(awModelFile, setUploadProgress) ?? undefined
+        const upload = await uploadFiles([awModelFile], auth.accessToken!, setUploadProgress, { finalizeModels: true })
+        modelUrl = upload.files[0]?.url
+        Object.assign(fileHashes, upload.hashes)
         if (!modelUrl) throw new Error('Не удалось загрузить 3D-модель / 3D model upload failed')
       }
 
@@ -125,6 +129,7 @@ export function ArtistOnboarding() {
         mediaType: awMediaType,
         posterUrl,
         modelUrl,
+        fileHashes,
         price: awPrice ? Number(awPrice) : undefined,
         currency: awCurrency,
       }

@@ -1,3 +1,4 @@
+import type { SavedHallLayout } from './layoutTemplates'
 import type { Hall3DArtwork } from './Hall3DScene'
 import type { HallCustomization } from './customization'
 
@@ -7,6 +8,7 @@ export interface HallData {
   theme: string | null
   coverImageUrl: string | null
   customization?: HallCustomization | null
+  layoutConfig?: SavedHallLayout | null
   artworks: Hall3DArtwork[]
 }
 

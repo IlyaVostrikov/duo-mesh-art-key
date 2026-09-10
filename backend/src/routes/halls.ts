@@ -22,10 +22,15 @@ export function createHallRoutes() {
     return c.json(halls)
   })
 
-  // Public: get published hall by slug
-  routes.get('/:slug', async (c) => {
+  // Get hall by slug — public for published halls; owner/admin also see their own unpublished hall.
+  routes.get('/:slug', optionalAuth(), async (c) => {
     const svc = c.get('hallService')
-    const hall = await svc.getBySlug(c.req.param('slug'), { publishedOnly: true })
+    const authUser = getAuthUser(c)
+    const hall = await svc.getBySlug(c.req.param('slug'), {
+      publishedOnly: true,
+      viewerUserId: authUser?.userId,
+      viewerRole: authUser?.role,
+    })
     if (!hall) return c.json(errorResponse('NOT_FOUND', 'Hall not found'), 404)
     svc.incrementViewCount(c.req.param('slug')).catch(() => { /* fire-and-forget */ })
     return c.json(hall)

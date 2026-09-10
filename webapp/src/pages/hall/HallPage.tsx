@@ -8,6 +8,7 @@ import { VerifiedBadge } from '@/components/ui/verified-badge'
 import { assetUrl } from '@/lib/asset-url'
 import { parseBilingualTitle, parseBilingual } from '@/lib/utils'
 import { apiBaseUrl } from '@/lib/api'
+import { useAuth } from '@/lib/use-auth'
 import Container from '@/components/layout/Container'
 
 interface HallArtwork {
@@ -121,6 +122,7 @@ function HallOverlay({
 
 export function HallPage() {
   const { hallSlug } = useParams({ from: '/hall/$hallSlug' })
+  const auth = useAuth()
   const [halls, setHalls] = useState<HallDetail[]>([])
   const [currentSlug, setCurrentSlug] = useState(hallSlug)
   const [loading, setLoading] = useState(true)
@@ -149,7 +151,9 @@ export function HallPage() {
       // (artist's own hall may be unpublished — direct endpoint returns it)
       if (!published.find((h) => h.slug === hallSlug)) {
         try {
-          const direct = await fetch(`${apiBaseUrl}/api/halls/${hallSlug}`)
+          const direct = await fetch(`${apiBaseUrl}/api/halls/${hallSlug}`, {
+            headers: auth.accessToken ? { Authorization: `Bearer ${auth.accessToken}` } : undefined,
+          })
           if (direct.ok) {
             const hall: HallDetail = await direct.json()
             if (!cancelled) { setHalls([hall, ...published]); setCurrentSlug(hallSlug) }
@@ -165,7 +169,7 @@ export function HallPage() {
       .catch((err) => { if (!cancelled) setError(err.message) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [hallSlug])
+  }, [hallSlug, auth.accessToken])
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768)
@@ -201,12 +205,13 @@ export function HallPage() {
     title: h.title,
     theme: h.theme,
     coverImageUrl: h.coverImageUrl,
+    layoutConfig: h.layoutConfig,
     customization: h.customization as HallData['customization'],
     artworks: h.artworks.map((aw) => ({
       id: aw.id,
       title: aw.title,
       posterUrl: aw.posterUrl ? assetUrl(aw.posterUrl) : null,
-      modelUrl: aw.modelUrl ?? null,
+      modelUrl: aw.modelUrl ? assetUrl(aw.modelUrl) : null,
       mediaType: aw.mediaType,
       displayTitle: parseBilingualTitle(aw.title)[0],
     })),

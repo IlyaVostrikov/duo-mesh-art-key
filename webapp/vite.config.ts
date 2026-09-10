@@ -15,6 +15,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
-    dedupe: ['react', 'react-dom', 'three'],
+    // model-viewer requires its own Three version: newer Object3D.pivot conflicts with ModelScene.pivot.
+    dedupe: ['react', 'react-dom'],
   },
 })

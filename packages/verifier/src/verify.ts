@@ -129,8 +129,23 @@ async function verifyEd25519(
 // provenance record carries a valid Ed25519 signature from THIS key.
 // The `platform.publicKey` field in the export is informational only
 // and MUST NOT be used for verification.
-/** Pinned DUO MESH platform public key — the root of trust. */
-export const DUO_MESH_PLATFORM_PUBKEY = '3ac4ff474fe8dc1825e53d7c92c3125dde8cf82eebabd29b96ad94de5cdce871'
+/**
+ * Pinned DUO MESH platform public key — the root of trust.
+ *
+ * Defaults to the production platform key. Overridable at runtime via the
+ * DUO_MESH_PLATFORM_PUBKEY env var so a key rotation does not require a code
+ * deploy.
+ */
+const DEFAULT_PLATFORM_PUBKEY = 'f190392e486d5ceb341ad9468c2342039964a1b9ac50775c503c3718375453ef'
+
+/** Resolve the trust anchor: explicit env override wins, else the prod default. */
+export function resolvePlatformPubKey(env: Record<string, string | undefined> = {}): string {
+  return env.DUO_MESH_PLATFORM_PUBKEY || DEFAULT_PLATFORM_PUBKEY
+}
+
+/** Browser-safe: `process` is undefined outside Bun/Node. */
+export const DUO_MESH_PLATFORM_PUBKEY =
+  typeof process !== 'undefined' ? resolvePlatformPubKey(process.env) : DEFAULT_PLATFORM_PUBKEY
 
 // ── Supported export versions ──
 

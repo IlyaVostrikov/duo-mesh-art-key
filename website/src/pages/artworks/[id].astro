@@ -41,7 +41,7 @@ import PageFooter from "../../components/PageFooter.astro";
           ).join('')
         : '<div class="aw-no-img">Нет изображения</div>'
 
-      const price = aw.price ? `${Number(aw.price).toLocaleString()} ${aw.currency}` : 'Цена не указана'
+      const price = aw.price ? `${Number(aw.price).toLocaleString()} ${escapeHtml(aw.currency)}` : 'Цена не указана'
 
       container.innerHTML = `
         <a href="/artworks" style="display:inline-block;margin-bottom:1.5rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);opacity:.55;text-decoration:none">&larr; Назад к каталогу</a>

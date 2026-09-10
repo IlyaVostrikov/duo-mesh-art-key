@@ -38,6 +38,7 @@ Context: DUO MESH is a digital art gallery. Each artwork carries an **ArtKey cer
 ## 7. Platform co-signature is the root of trust
 - **Implements:** `packages/verifier/src/verify.ts` (`DUO_MESH_PLATFORM_PUBKEY`, pinned)
 - **Rule:** At least one provenance record must carry `signerRole: 'PLATFORM'` with a valid Ed25519 signature over its `recordHash`, verified against the **pinned** `DUO_MESH_PLATFORM_PUBKEY`. The export's `platform.publicKey` field is informational and MUST NOT be used for verification.
+- **Pin source:** defaults to the production platform key; overridable at runtime via the `DUO_MESH_PLATFORM_PUBKEY` env var (rotation = env update, not a code deploy). The backend logs `[TRUST-ANCHOR]` on cold start when the active DB platform key ≠ the resolved pin.
 
 ## 8. Custodial key storage (AES-256-GCM + PBKDF2)
 - **Implements:** `backend/src/crypto/keystore.ts` (`KeyStore`, `deriveKey`)

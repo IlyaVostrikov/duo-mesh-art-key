@@ -17,20 +17,34 @@ export class HallService {
     if (artist.userId !== userId) throw new ForbiddenError('Not your hall')
   }
 
-  async getBySlug(slug: string, opts?: { publishedOnly?: boolean }) {
-    const where: { slug: string; isPublished?: boolean } = { slug }
-    if (opts?.publishedOnly) where.isPublished = true
-
+  async getBySlug(
+    slug: string,
+    opts?: { publishedOnly?: boolean; viewerUserId?: string; viewerRole?: string },
+  ) {
     const hall = await this.prisma.exhibitionHall.findUnique({
-      where,
+      where: { slug },
       include: {
         artist: { include: { user: true } },
       },
     })
     if (!hall) return null
 
+    const isOwner = !!opts?.viewerUserId && hall.artist.userId === opts.viewerUserId
+    const isAdmin = opts?.viewerRole === 'ADMIN'
+
+    // Unpublished halls stay hidden from everyone except the owner and admins.
+    if (opts?.publishedOnly && !hall.isPublished && !isOwner && !isAdmin) {
+      return null
+    }
+
+    // Owners/admins see every work in their own hall; the public sees only
+    // works that are actively listed or in exhibition.
+    const isViewer = isOwner || isAdmin
     const artworks = await this.prisma.artwork.findMany({
-      where: { artistId: hall.artistId, status: { in: ['LISTED', 'IN_EXHIBITION'] } },
+      where: {
+        artistId: hall.artistId,
+        ...(isViewer ? {} : { status: { in: ['LISTED', 'IN_EXHIBITION'] } }),
+      },
       orderBy: { createdAt: 'desc' },
     })
 
@@ -68,7 +82,7 @@ export class HallService {
   async update(artistId: string, data: {
     title?: string
     description?: string
-    coverImageUrl?: string
+    coverImageUrl?: string | null
     layoutConfig?: Record<string, unknown>
     customization?: Record<string, unknown>
     theme?: string

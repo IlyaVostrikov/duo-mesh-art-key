@@ -105,6 +105,8 @@ If product records store public media URLs instead of only object keys, shared A
 
 When browser clients upload directly to Spaces, configure Spaces CORS for the deployed origins and allowed upload headers such as `Content-Type` and `Cache-Control` (the ACL travels as a signed query parameter, not a header). If the Spaces CDN is enabled and CORS changed after files were cached, purge the CDN cache.
 
+To apply bucket CORS idempotently (adds a `GET`/`HEAD` rule for 3D model loading without touching existing upload rules), run `backend/scripts/configure-spaces-cors.mjs` with `SPACES_CORS_ALLOWED_ORIGINS` set to the exact webapp origin(s).
+
 ## Images And Optimization
 
 DigitalOcean Spaces and Spaces CDN store and deliver images, but they do not provide first-party dynamic image resizing, compression, cropping, or format transformation.

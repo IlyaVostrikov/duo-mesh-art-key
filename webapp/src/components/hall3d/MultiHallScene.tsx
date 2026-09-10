@@ -4,24 +4,14 @@ import { useTextureCache } from '@/hooks/useTextureCache'
 import { useKeyboardCamera } from '@/hooks/useKeyboardCamera'
 import { useEnvironmentMap } from '@/hooks/useEnvironmentMap'
 import { RoomGroup, EYE } from './RoomGroup'
-import { type SlotLayout, computeSlots, computeWallWidth } from './layoutTemplates'
+import { type SlotLayout, resolveHallLayout, computeWallWidth } from './layoutTemplates'
 import { roomCenterX, type HallData } from './hallOrdering'
 import {
   FOV, CAMERA_Z_FAR, CAMERA_Z_NEAR, LERP_SPEED, MOUSE_YAW_DEG, MOUSE_PITCH_DEG,
   TRANSITION_DURATION, toRad, easeInOutCubic,
 } from './constants'
-import { LIGHTING_PRESETS } from './customization'
+import { LIGHTING_PRESETS, ROOM_SHAPE_SCALES } from './customization'
 import * as THREE from 'three'
-
-function resolveLayout(hall: HallData): SlotLayout {
-  const count = hall.artworks.length
-  if (count === 0) return { name: 'empty', capacity: 0, slots: [] }
-  return {
-    name: count <= 4 ? 'Один ряд / Single Row' : 'Салонная развеска / Salon Hang',
-    capacity: count,
-    slots: computeSlots(count),
-  }
-}
 
 // ─── In-Canvas content ───
 
@@ -264,8 +254,8 @@ interface MultiHallSceneProps {
 }
 
 export function MultiHallScene({ halls, initialRoomIndex, onRoomChange, onArtworkClick }: MultiHallSceneProps) {
-  const layouts = useMemo(() => halls.map((h) => resolveLayout(h)), [halls])
-  const wallWidths = useMemo(() => layouts.map((l) => computeWallWidth(l.slots)), [layouts])
+  const layouts = useMemo(() => halls.map((h) => resolveHallLayout(h.artworks, h.layoutConfig)), [halls])
+  const wallWidths = useMemo(() => layouts.map((l, i) => computeWallWidth(l.slots) * (ROOM_SHAPE_SCALES[halls[i]?.customization?.roomShape ?? 'rectangle']?.widthScale ?? 1)), [layouts, halls])
   const centers = useMemo(() => wallWidths.map((_, i) => roomCenterX(i, wallWidths)), [wallWidths])
 
   const handleCreated = useCallback((state: { gl: THREE.WebGLRenderer }) => {

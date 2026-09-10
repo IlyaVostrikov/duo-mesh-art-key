@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { verifySignedExport, type SignedExport } from './verify'
+import { verifySignedExport, resolvePlatformPubKey, DUO_MESH_PLATFORM_PUBKEY, type SignedExport } from './verify'
 
 /** Sign a payload with a CryptoKey, returning { recordHash, signature }. */
 async function signPayload(
@@ -348,5 +348,22 @@ describe('verifySignedExport', () => {
 
     const result = await verifySignedExport(exportData, { platformPubKey: platformPubHex })
     expect(result.verified).toBe(false)
+  })
+})
+
+describe('trust anchor resolution', () => {
+  const PROD_PUBKEY = 'f190392e486d5ceb341ad9468c2342039964a1b9ac50775c503c3718375453ef'
+
+  test('defaults to the production platform key', () => {
+    expect(resolvePlatformPubKey({})).toBe(PROD_PUBKEY)
+  })
+
+  test('env override wins over the default', () => {
+    const override = '0'.repeat(64)
+    expect(resolvePlatformPubKey({ DUO_MESH_PLATFORM_PUBKEY: override })).toBe(override)
+  })
+
+  test('exported constant is the production key when no env is set', () => {
+    expect(DUO_MESH_PLATFORM_PUBKEY).toBe(PROD_PUBKEY)
   })
 })

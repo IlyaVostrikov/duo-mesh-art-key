@@ -9,6 +9,7 @@ export const exhibitionHallSchema = z.object({
   coverImageUrl: z.string().nullable(),
   layoutConfig: z.unknown().nullable(),
   theme: z.string().nullable(),
+  customization: z.unknown().nullable(),
   isPublished: z.boolean(),
   viewCount: z.number().int(),
   createdAt: z.string().datetime(),
@@ -16,16 +17,21 @@ export const exhibitionHallSchema = z.object({
 })
 
 export const exhibitionHallPublicSchema = exhibitionHallSchema.extend({
+  artworkCount: z.number().int().nonnegative(),
   artist: z.object({
     id: z.string().uuid(),
     displayName: z.string().nullable(),
     avatarUrl: z.string().nullable(),
+    verified: z.boolean(),
+    location: z.string().nullable(),
   }),
   artworks: z.array(
     z.object({
       id: z.string().uuid(),
       title: z.string(),
-      images: z.array(z.string()),
+      posterUrl: z.string().nullable(),
+      modelUrl: z.string().nullable(),
+      mediaType: z.enum(['IMAGE_2D', 'MODEL_3D']),
       category: z.string(),
       price: z.string().nullable(),
       currency: z.string(),
@@ -49,7 +55,7 @@ export const hallCustomizationSchema = z.object({
 export const updateHallSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   description: z.string().trim().max(5000).optional(),
-  coverImageUrl: z.string().trim().url().optional(),
+  coverImageUrl: z.string().trim().url().nullable().optional(),
   layoutConfig: z.record(z.string(), z.unknown()).optional(),
   theme: z.string().trim().max(50).optional(),
   customization: hallCustomizationSchema.optional(),

@@ -3,6 +3,7 @@ export interface ArtworkSlot {
   x: number
   y: number
   z: number
+  artworkId?: string | null
   width?: number
   height?: number
 }
@@ -69,4 +70,27 @@ export const layoutTemplates: SlotLayout[] = [singleRow, salonHang, sculptureRow
 
 export function getLayoutByName(name: string): SlotLayout | undefined {
   return layoutTemplates.find((l) => l.name === name)
+}
+
+export interface SavedHallLayout { template: string; slots: ArtworkSlot[] }
+
+export function resolveHallLayout(artworks: readonly { id: string }[], config?: SavedHallLayout | null): SlotLayout {
+  if (config?.slots?.length) return { name: config.template, capacity: config.slots.length, slots: config.slots }
+  return { name: 'auto', capacity: artworks.length, slots: computeSlots(artworks.length) }
+}
+
+/** Explicit assignments preserve empty/private slots; older layouts remain positional. */
+export function resolveSlottedArtworks<T extends { id: string; mediaType: string }>(artworks: readonly T[], layout: SlotLayout) {
+  const assigned = layout.slots.some(slot => Object.prototype.hasOwnProperty.call(slot, 'artworkId'))
+  const byId = new Map(artworks.map(artwork => [artwork.id, artwork]))
+  const used = new Set<string>()
+  const result: Array<{ artwork: T; slot: ArtworkSlot }> = []
+  layout.slots.forEach((raw, index) => {
+    const artwork = assigned ? (raw.artworkId ? byId.get(raw.artworkId) : undefined) : artworks[index]
+    if (!artwork || used.has(artwork.id)) return
+    used.add(artwork.id)
+    const slot = artwork.mediaType === 'MODEL_3D' ? { ...raw, y: 0, z: raw.z === 0 ? 1.5 : raw.z } : raw
+    result.push({ artwork, slot })
+  })
+  return result
 }

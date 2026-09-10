@@ -7,6 +7,12 @@ test('detail loads query URLs, survives failure and replaces the scene', async (
   const viewer = page.locator('model-viewer')
   await expect.poll(() => viewer.evaluate((el: any) => el.loaded && el.modelIsVisible)).toBe(true)
   await expect(page.getByRole('status').filter({ hasText: '3D model' })).toHaveCount(0)
+  // Loaded/visible can both be true while an incompatible Three version produces NaN transforms.
+  await expect.poll(() => viewer.evaluate((el: any) => {
+    const sceneKey = Object.getOwnPropertySymbols(el).find(key => key.description === 'scene')
+    const scene = sceneKey ? el[sceneKey] : null
+    return scene && scene.matrixWorld.elements.every(Number.isFinite)
+  })).toBe(true)
   await page.getByText('Missing model', { exact: true }).click()
   await expect(page.getByRole('alert')).toBeVisible()
   await page.getByText('Unsupported model', { exact: true }).click()

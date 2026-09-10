@@ -6,6 +6,7 @@ export type UploadedFile = {
   key: string // R2 object key for download/delete
   size: number
   type: string
+  modelFinalized?: boolean
 }
 
 export type UploadResult = {
@@ -65,7 +66,21 @@ export async function uploadFile(
     throw new Error(msg ?? `Upload failed (HTTP ${presignedRes.status})`)
   }
 
-  const { key, uploadUrl, headers: uploadHeaders, publicUrl } = await presignedRes.json()
+  const intent = await presignedRes.json()
+  if (intent.transport === 'local') {
+    const uploadOrigin = new URL(apiBaseUrl || '/', window.location.href).href
+    const body = new FormData()
+    body.append('file', file)
+    const response = await uploadWithProgress(file, new URL(intent.uploadUrl, uploadOrigin).href,
+      { Authorization: 'Bearer ' + accessToken }, report, 'POST', body)
+    const result = JSON.parse(response) as { files: Array<{ name: string; url: string; size: number; type: string }> }
+    const isBundle = file.name.toLowerCase().endsWith('.zip')
+    const stored = isBundle ? result.files.find(item => /\.(gltf|glb)$/i.test(item.name)) : result.files[0]
+    if (!stored) throw new Error('Upload did not return a viewable file')
+    return { ...stored, url: new URL(stored.url, uploadOrigin).href,
+      key: stored.url.replace(/^\/api\//, ''), modelFinalized: isBundle }
+  }
+  const { key, uploadUrl, headers: uploadHeaders, publicUrl } = intent
 
   // Step 2: PUT file directly to R2 via XHR so large uploads are visible.
   await uploadWithProgress(file, uploadUrl, uploadHeaders as Record<string, string>, report)
@@ -95,7 +110,7 @@ export async function uploadModelFile(
   }
 
   const uploaded = await uploadFile(file, accessToken, onProgress)
-  if (!file.name.toLowerCase().endsWith('.zip')) return uploaded
+  if (uploaded.modelFinalized || !file.name.toLowerCase().endsWith('.zip')) return uploaded
 
   onProgress?.({
     phase: 'processing',
@@ -159,12 +174,14 @@ async function uploadWithProgress(
   uploadUrl: string,
   headers: Record<string, string>,
   report: (progress: Omit<UploadProgress, 'fileName'>) => void,
-): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
+  method: 'PUT' | 'POST' = 'PUT',
+  body: File | FormData = file,
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     const startedAt = performance.now()
 
-    xhr.open('PUT', uploadUrl)
+    xhr.open(method, uploadUrl)
     for (const [name, value] of Object.entries(headers)) xhr.setRequestHeader(name, value)
 
     const updateProgress = (loaded: number, phase: UploadPhase = 'uploading') => {
@@ -187,14 +204,14 @@ async function uploadWithProgress(
     xhr.addEventListener('load', () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         updateProgress(file.size, 'complete')
-        resolve()
+        resolve(xhr.responseText)
       } else {
         reject(new Error(`Storage upload failed (HTTP ${xhr.status})`))
       }
     })
     xhr.addEventListener('error', () => reject(new Error('Storage upload failed: network error')))
     xhr.addEventListener('abort', () => reject(new Error('Storage upload cancelled')))
-    xhr.send(file)
+    xhr.send(body)
     updateProgress(0)
   })
 }

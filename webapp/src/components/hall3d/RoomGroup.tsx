@@ -1,3 +1,4 @@
+import { resolveSlottedArtworks } from './layoutTemplates'
 import { useMemo, memo } from 'react'
 import * as THREE from 'three'
 import { GalleryWall } from './GalleryWall'
@@ -9,7 +10,6 @@ import { GlassDoor } from './GlassDoor'
 import { ArtworkLighting, PedestalSpot } from './Lighting'
 import { AccentLighting } from './AccentLighting'
 import type { SlotLayout } from './layoutTemplates'
-import type { Hall3DArtwork } from './Hall3DScene'
 import type { HallData } from './hallOrdering'
 import { ROOM_SHAPE_SCALES, DEFAULT_CUSTOMIZATION } from './customization'
 import type { HallCustomization } from './customization'
@@ -45,22 +45,11 @@ export const RoomGroup = memo(function RoomGroup({
 }: RoomGroupProps) {
   const c = { ...DEFAULT_CUSTOMIZATION, ...(hall.customization ?? {}) } as Required<Omit<HallCustomization, 'wallColor'>> & { wallColor?: string }
   const shape = ROOM_SHAPE_SCALES[c.roomShape] ?? ROOM_SHAPE_SCALES.rectangle
-  const scaledWidth = wallWidth * shape.widthScale
+  const scaledWidth = wallWidth
   const scaledDepth = FLOOR_DEPTH * shape.depthScale
   const halfW = scaledWidth / 2
 
-  const slottedArtworks = useMemo(() => {
-    const result: Array<{ artwork: Hall3DArtwork; slot: SlotLayout['slots'][number] }> = []
-    hall.artworks.forEach((aw, i) => {
-      if (i < layout.slots.length) {
-        const raw = layout.slots[i]
-        // Sculptures belong on the floor; legacy layouts often contain wall slots.
-        const slot = aw.mediaType === 'MODEL_3D' ? { ...raw, y: 0, z: raw.z === 0 ? 1.5 : raw.z } : raw
-        result.push({ artwork: aw, slot })
-      }
-    })
-    return result
-  }, [hall.artworks, layout])
+  const slottedArtworks = useMemo(() => resolveSlottedArtworks(hall.artworks, layout), [hall.artworks, layout])
 
   const showArtworks = isCurrentRoom || isAdjacentRoom
 
@@ -75,7 +64,7 @@ export const RoomGroup = memo(function RoomGroup({
       />
       <GalleryFloor width={scaledWidth} depth={scaledDepth} floorType={c.floorType} />
       <GalleryCeiling width={scaledWidth} depth={scaledDepth} wallHeight={WALL_HEIGHT} ceilingStyle={c.ceilingStyle} />
-      <RoomWalls halfW={halfW} />
+      <RoomWalls halfW={halfW} depth={scaledDepth} />
 
       {/* ─── Accent lights (current room only) ─── */}
       {isCurrentRoom && <AccentLighting width={scaledWidth} depth={scaledDepth} wallHeight={WALL_HEIGHT} accentLight={c.accentLight} />}
@@ -147,28 +136,29 @@ export const RoomGroup = memo(function RoomGroup({
 // ─── Sub-components ───
 
 interface RoomWallsProps {
+  depth: number
   halfW: number
 }
 
 /** Side + back enclosure walls. Doors render slightly in front of side walls. */
-export function RoomWalls({ halfW }: RoomWallsProps) {
+export function RoomWalls({ halfW, depth }: RoomWallsProps) {
   const halfH = WALL_HEIGHT / 2
-  const halfD = FLOOR_DEPTH / 2
+  const halfD = depth / 2
 
   return (
     <group>
       {/* Left side wall — always rendered; door sits slightly in front */}
       <mesh position={[-halfW, halfH, halfD]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[FLOOR_DEPTH, WALL_HEIGHT]} />
+        <planeGeometry args={[depth, WALL_HEIGHT]} />
         <meshStandardMaterial color="#f5f2eb" roughness={0.93} metalness={0} side={THREE.DoubleSide} />
       </mesh>
       {/* Right side wall */}
       <mesh position={[halfW, halfH, halfD]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[FLOOR_DEPTH, WALL_HEIGHT]} />
+        <planeGeometry args={[depth, WALL_HEIGHT]} />
         <meshStandardMaterial color="#f5f2eb" roughness={0.93} metalness={0} side={THREE.DoubleSide} />
       </mesh>
       {/* Back wall — always present */}
-      <mesh position={[0, halfH, FLOOR_DEPTH]} receiveShadow>
+      <mesh position={[0, halfH, depth]} receiveShadow>
         <planeGeometry args={[halfW * 2, WALL_HEIGHT]} />
         <meshStandardMaterial color="#f5f2eb" roughness={0.93} metalness={0} />
       </mesh>

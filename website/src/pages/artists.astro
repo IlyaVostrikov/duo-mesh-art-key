@@ -46,7 +46,7 @@ import PageFooter from "../components/PageFooter.astro";
         const name = a.displayName ?? 'Анонимный художник'
         const link = a.hall?.slug ? `/halls/${a.hall.slug}` : `/artists/${a.id}`
         const avatar = a.avatarUrl ? `<img src="${escapeHtml(a.avatarUrl)}" alt="${escapeHtml(name)}" />` : `<div class="a-placeholder">${escapeHtml(name[0])}</div>`
-        return `<a href="${link}" class="a-card">
+        return `<a href="${escapeHtml(link)}" class="a-card">
           <div class="a-avatar">${avatar}${a.verified ? '<span class="a-verified">&#10003;</span>' : ''}</div>
           <div class="a-info"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(a.location ?? '')}</p><p class="a-followers">${a.followersCount} подписчиков</p></div>
         </a>`

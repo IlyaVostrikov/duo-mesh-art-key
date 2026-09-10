@@ -51,7 +51,9 @@ export function DashboardHallLayout() {
         }
 
         // Get hall detail
-        const hallRes = await fetch(`${apiBaseUrl}/api/halls/${artist.hall.slug}`)
+        const hallRes = await fetch(`${apiBaseUrl}/api/halls/${artist.hall.slug}`, {
+          headers: { Authorization: `Bearer ${auth.accessToken}` },
+        })
         if (!hallRes.ok) throw new Error('Failed to load hall')
         const hallData = await hallRes.json()
 

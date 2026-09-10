@@ -78,6 +78,7 @@ export interface UploadConfig {
   max3DBytes: number
   storage?: StorageService | null
   baseDir: string
+  localUploads?: boolean
 }
 
 export class UploadService {
@@ -85,12 +86,14 @@ export class UploadService {
   private readonly max3DBytes: number
   private readonly storage: StorageService | null
   private readonly baseDir: string
+  private readonly localUploads: boolean
 
   constructor(config: UploadConfig) {
     this.maxImageBytes = config.maxImageBytes
     this.max3DBytes = config.max3DBytes
     this.storage = config.storage ?? null
     this.baseDir = config.baseDir
+    this.localUploads = config.localUploads ?? false
   }
 
   // ── Local disk upload (existing) ──
@@ -295,7 +298,7 @@ export class UploadService {
     byteSize: number
     visibility?: 'public' | 'private'
   }) {
-    if (!this.storage) {
+    if (!this.storage && !this.localUploads) {
       throw new Error('Storage service is not configured. Use local upload or set SPACES_* env vars.')
     }
 
@@ -307,6 +310,11 @@ export class UploadService {
     if (opts.byteSize > maxSize) {
       const maxMB = Math.round(maxSize / 1024 / 1024)
       throw new UploadValidationError(`File too large: ${opts.fileName} (max ${maxMB} MB)`)
+    }
+
+    if (!this.storage) {
+      if (opts.visibility === 'private') throw new UploadValidationError('Local uploads do not support private visibility')
+      return { transport: 'local' as const, uploadUrl: '/api/uploads' }
     }
 
     const now = new Date()

@@ -1,3 +1,4 @@
+import { resolveSlottedArtworks } from './layoutTemplates'
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
@@ -113,17 +114,7 @@ function SceneContent({
     pcam.lookAt(lookX, lookY, 0)
   })
 
-  const slottedArtworks = useMemo(() => {
-    const result: Array<{ artwork: Hall3DArtwork; slot: SlotLayout['slots'][number] }> = []
-    artworks.forEach((aw, i) => {
-      if (i < layout.slots.length) {
-        const raw = layout.slots[i]
-        const slot = aw.mediaType === 'MODEL_3D' ? { ...raw, y: 0, z: raw.z === 0 ? 1.5 : raw.z } : raw
-        result.push({ artwork: aw, slot })
-      }
-    })
-    return result
-  }, [artworks, layout])
+  const slottedArtworks = useMemo(() => resolveSlottedArtworks(artworks, layout), [artworks, layout])
 
   return (
     <>
@@ -138,7 +129,7 @@ function SceneContent({
       />
       <GalleryFloor width={scaledWidth} depth={scaledDepth} floorType={c.floorType} />
       <GalleryCeiling width={scaledWidth} depth={scaledDepth} wallHeight={WALL_HEIGHT} ceilingStyle={c.ceilingStyle} />
-      <RoomWalls halfW={scaledWidth / 2} />
+      <RoomWalls halfW={scaledWidth / 2} depth={scaledDepth} />
 
       {/* Accent lights */}
       <AccentLighting width={scaledWidth} depth={scaledDepth} wallHeight={WALL_HEIGHT} accentLight={c.accentLight} />

@@ -127,6 +127,7 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
     max3DBytes: env.UPLOAD_MAX_3D_BYTES,
     storage: storageService,
     baseDir: isVercel ? '/tmp/uploads' : 'uploads',
+    localUploads: env.NODE_ENV === 'development' && !isVercel,
   })
   const provenanceTransferService = new ProvenanceTransferService(prisma, signingService)
 
@@ -194,7 +195,7 @@ export async function createApp({ env, prisma }: CreateAppOptions) {
     await next()
   })
   if (serveStatic) {
-    app.use('/uploads/*', serveStatic({ root: './' }))
+    app.use('/uploads/*', serveStatic({ root: './', rewriteRequestPath: (path) => path.replace(/^\/api(?=\/uploads\/)/, '') }))
   } else if (isVercel) {
     app.get('/uploads/*', async (c) => {
       const { readFile } = await import('node:fs/promises')

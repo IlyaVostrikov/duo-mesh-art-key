@@ -21,7 +21,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
     <div
       style={{
         opacity: mounted ? 1 : 0,
-        transform: mounted ? 'translateY(0)' : 'translateY(10px)',
+        transform: mounted ? 'none' : 'translateY(10px)',
         transition: `opacity 0.35s cubic-bezier(0.16,1,0.3,1), transform 0.35s cubic-bezier(0.16,1,0.3,1)`,
       }}
     >
